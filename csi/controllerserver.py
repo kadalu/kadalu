@@ -92,7 +92,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         pass
 
 
-def serve():
+def main():
+    logging.basicConfig()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     csi_pb2_grpc.add_ControllerServicer_to_server(ControllerServer(), server)
     server.add_insecure_port('[::]:50051')
@@ -105,5 +106,4 @@ def serve():
 
 
 if __name__ == '__main__':
-    logging.basicConfig()
-    serve()
+    main()

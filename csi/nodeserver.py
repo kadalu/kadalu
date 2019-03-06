@@ -67,7 +67,8 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         )
 
 
-def serve():
+def main():
+    logging.basicConfig()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     csi_pb2_grpc.add_NodeServicer_to_server(NodeServer(), server)
     server.add_insecure_port('[::]:50051')
@@ -80,5 +81,4 @@ def serve():
 
 
 if __name__ == '__main__':
-    logging.basicConfig()
-    serve()
+    main()

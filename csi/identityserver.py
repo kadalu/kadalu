@@ -32,7 +32,8 @@ class IdentityServer(csi_pb2_grpc.IdentityServicer):
         return csi_pb2.Probe()
 
 
-def serve():
+def main():
+    logging.basicConfig()
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     csi_pb2_grpc.add_IdentityServicer_to_server(IdentityServer(), server)
     server.add_insecure_port('[::]:50051')
@@ -45,5 +46,4 @@ def serve():
 
 
 if __name__ == '__main__':
-    logging.basicConfig()
-    serve()
+    main()
