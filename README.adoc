@@ -1,7 +1,10 @@
 = KaDalu
 
-**Note:** KaDalu is a super-young project, not yet ready for
+**Note 1:** KaDalu is a super-young project, not yet ready for
 Production use.
+
+**Note 2:** Not yet works with minikube, facing some issue to deploy
+  CSI pods.
 
 On an already running kubernetes cluster, login to any one node and
 create a brick directory. For testing, create a loopback file and
