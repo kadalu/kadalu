@@ -37,10 +37,12 @@ if __name__ == "__main__":
         "csi.yaml",
         "storageclass.yaml",
         "services.yaml",
-        "sample-app.yaml"
+        "sample-app.yaml",
+        "sample-pvc.yaml"
     ]
 
     for filename in manifest_files:
         template(filename, template_args=template_args)
-        print("kubectl create -f manifests/%s" % filename)
+        if not filename.startswith("sample-"):
+            print("kubectl create -f manifests/%s" % filename)
 

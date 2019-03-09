@@ -1,0 +1,69 @@
+= KaDalu
+
+**Note:** KaDalu is a super-young project, not yet ready for
+Production use.
+
+On an already running kubernetes cluster, login to any one node and
+create a brick directory. For testing, create a loopback file and
+create brick directory.
+
+----
+$ truncate -s 10G brick.img
+$ mkdir /mnt/data
+$ mount brick.img /mnt/data
+----
+
+Now from the Kubernetes master node, clone this repo and generate the
+manifest files using,
+
+----
+NODE=<node-name> BRICK=<brick-dir> make gen-manifest
+----
+
+Where, `node-name` is node name as shown in `kubectl get
+nodes`. `brick-dir` is brick directory created in previous step. For
+example,
+
+----
+NODE=kube1 BRICK=/mnt/data make gen-manifest
+----
+
+This generates the manifest files and prints the respective `kubectl
+create` commands as below,
+
+----
+kubectl create -f manifests/namespace.yaml
+kubectl create -f manifests/configmap.yaml
+kubectl create -f manifests/server.yaml
+kubectl create -f manifests/csi.yaml
+kubectl create -f manifests/storageclass.yaml
+kubectl create -f manifests/services.yaml
+----
+
+Once the above commands run, `kadalu` cluster is ready.
+
+----
+$ kubectl get pods -nkadalu
+NAME                          READY   STATUS    RESTARTS   AGE
+glustervol-kube1-0            1/1     Running   0          84s
+kadalu-csi-attacher-0         2/2     Running   0          84s
+kadalu-csi-nodeplugin-lvtw8   2/2     Running   0          84s
+kadalu-csi-nodeplugin-mskrl   2/2     Running   0          84s
+kadalu-csi-nodeplugin-n4qcp   2/2     Running   0          84s
+kadalu-csi-provisioner-0      3/3     Running   0          84s
+----
+
+Create PVC using,
+
+----
+$ kubectl create -f manifests/sample-pvc.yaml
+persistentvolumeclaim/pv1 created
+----
+
+and check the status of PVC using,
+
+----
+$ kubectl get pvc
+NAME   STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS     AGE
+pv1    Bound    pvc-8cbe80f1-428f-11e9-b31e-525400f59aef   1Gi        RWO            kadalu.gluster   42s
+----
