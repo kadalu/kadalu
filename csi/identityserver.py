@@ -1,17 +1,6 @@
-from concurrent import futures
-import time
-import logging
-
-import grpc
-
 import csi_pb2
 import csi_pb2_grpc
-
-_ONE_DAY_IN_SECONDS = 60 * 60 * 24
-
-
-DRIVER_NAME = "org.gluster.glusterfs"
-DRIVER_VERSION = "0.1.0"
+from utils import DRIVER_NAME, DRIVER_VERSION
 
 
 class IdentityServer(csi_pb2_grpc.IdentityServicer):
@@ -23,27 +12,16 @@ class IdentityServer(csi_pb2_grpc.IdentityServicer):
         )
 
     def GetPluginCapabilities(self, request, context):
-        # TODO: Update Capabilities
+        capabilityType = csi_pb2.PluginCapability.Service.Type.Value
         return csi_pb2.GetPluginCapabilitiesResponse(
-            capabilities=[]
+            capabilities=[
+                {
+                    "service": {
+                        "type": capabilityType("CONTROLLER_SERVICE")
+                    }
+                }
+            ]
         )
 
     def Probe(self, request, context):
-        return csi_pb2.Probe()
-
-
-def main():
-    logging.basicConfig()
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    csi_pb2_grpc.add_IdentityServicer_to_server(IdentityServer(), server)
-    server.add_insecure_port('[::]:50051')
-    server.start()
-    try:
-        while True:
-            time.sleep(_ONE_DAY_IN_SECONDS)
-    except KeyboardInterrupt:
-        server.stop(0)
-
-
-if __name__ == '__main__':
-    main()
+        return csi_pb2.ProbeResponse()

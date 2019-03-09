@@ -1,0 +1,22 @@
+# -*- mode: yaml -*-
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{ volname }}
+  namespace: {{ namespace }}
+  labels:
+    app.kubernetes.io/part-of: kadalu
+    app.kubernetes.io/component: server
+    app.kubernetes.io/name: {{ volname }}-service
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/part-of: kadalu
+    app.kubernetes.io/component: server
+    app.kubernetes.io/name: server
+  ports:
+    - name: brickport
+      protocol: TCP
+      port: 24007
+      targetPort: 24007

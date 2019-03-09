@@ -1,0 +1,5 @@
+[gluster-6-rc0]
+name=Gluster Release 6 RC0
+baseurl=https://download.gluster.org/pub/gluster/glusterfs/qa-releases/6.0rc0/Fedora/f29/
+enabled=1
+gpgcheck=0

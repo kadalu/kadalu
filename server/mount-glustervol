@@ -1,0 +1,7 @@
+#!/bin/bash
+
+mkdir /glustervol
+/usr/sbin/glusterfs --process-name fuse \
+                    --volfile-id=glustervol \
+                    -f /var/lib/gluster/glustervol.fuse.vol \
+                    /glustervol

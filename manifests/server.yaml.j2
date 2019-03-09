@@ -1,0 +1,87 @@
+# -*- mode: yaml -*-
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: {{ volname }}-{{ kube_hostname }}
+  namespace: {{ namespace }}
+  labels:
+    app.kubernetes.io/part-of: kadalu
+    app.kubernetes.io/component: server
+    app.kubernetes.io/name: server
+spec:
+  serviceName: {{ volname }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: kadalu
+      app.kubernetes.io/component: server
+      app.kubernetes.io/name: server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: kadalu
+        app.kubernetes.io/component: server
+        app.kubernetes.io/name: server
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: kubernetes.io/hostname
+                  operator: In
+                  values:
+                    - {{ kube_hostname }}
+      containers:
+        - name: glusterfsd
+          image: docker.io/aravindavk/kadalu-server:{{ kadalu_version }}
+          # livenessProbe:
+          #   exec:
+          #     command:
+          #       - /usr/bin/ps -ef | grep glusterfsd
+          #   initialDelaySeconds: 120
+          #   periodSeconds: 30
+          env:
+            - name: HOSTNAME
+              value: "localhost"
+            - name: VOLUME
+              value: "glustervol"
+            - name: BRICK_PATH_NAME
+              value: "data-brick"
+            - name: BRICK_PATH
+              value: "/data/brick"
+            - name: VOLUME_ID
+              value: "74f52147-21bd-4285-ad30-8eacdbcd872a"
+          securityContext:
+            capabilities: {}
+            privileged: true
+          volumeMounts:
+            - name: gluster-dev
+              mountPath: "/dev"
+            - name: gluster-cgroup
+              mountPath: "/sys/fs/cgroup"
+              readOnly: true
+            - name: gluster-kmods
+              mountPath: "/usr/lib/modules"
+              readOnly: true
+            - name: glusterfsd-volfilesdir
+              mountPath: "/var/lib/gluster"
+            - name: glusterfsd-datadir
+              mountPath: "/data"
+      volumes:
+        - name: gluster-dev
+          hostPath:
+            path: "/dev"
+        - name: gluster-cgroup
+          hostPath:
+            path: "/sys/fs/cgroup"
+        - name: gluster-kmods
+          hostPath:
+            path: "/usr/lib/modules"
+        - name: glusterfsd-volfilesdir
+          configMap:
+            name: "kadalu-volfiles"
+        - name: glusterfsd-datadir
+          hostPath:
+            path: "{{ host_brick_path }}"
+            type: Directory

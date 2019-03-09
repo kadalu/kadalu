@@ -1,78 +1,72 @@
-from concurrent import futures
-import time
-import logging
-
-import grpc
+import os
 
 import csi_pb2
 import csi_pb2_grpc
+from utils import mount_glusterfs, execute
 
-_ONE_DAY_IN_SECONDS = 60 * 60 * 24
-HOSTVOL_MOUNTDIR = "/mnt/"
+HOSTVOL_MOUNTDIR = "/mnt"
 GLUSTERFS_CMD = "/usr/sbin/glusterfs"
 MOUNT_CMD = "/usr/bin/mount"
 UNMOUNT_CMD = "/usr/bin/umount"
-
-
-def get_value_from_context(context, key):
-    for k, v in context:
-        if k == key:
-            return v
-
-    return ""
+mkfs_xfs_cmd = "/usr/sbin/mkfs.xfs"
 
 
 class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
     def CreateVolume(self, request, context):
         # TODO: Get Hosting Volume name from Storage Class Option
-        hostVol = "ghostvol"
+        hostVol = "glustervol"
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostVol)
 
         # # Try to mount the Host Volume, handle failure if already mounted
-        # # TODO: Get Glusterfs command with static Volfile
-        execute(GLUSTERFS_CMD,)
+        mount_glusterfs(hostVol, mntdir)
 
         # TODO: Get Volume capacity from PV claim
         pvsize = 1073741824  # 1GiB
-        
+
         # TODO: get pvtype from storage class
         pvtype = "virtblock"
+        volpath = os.path.join(mntdir, request.name)
         if pvtype == "virtblock":
             # Create a file with required size
+            fd = os.open(volpath, os.O_CREAT | os.O_RDWR)
+            os.close(fd)
+            os.truncate(volpath, pvsize)
             # Mkfs.xfs or based on storage class option
-            pass
+            execute(mkfs_xfs_cmd, volpath)
         else:
             # Create a subdir
-            # Set BackendQuota using RPC to sidecar container of each glusterfsd pod
-            pass
+            os.makedirs(volpath)
+            # TODO: Set BackendQuota using RPC to sidecar
+            # container of each glusterfsd pod
 
         return csi_pb2.CreateVolumeResponse(
-            volume_id=request.volume_id,
-            capacity_bytes=pvsize,
-            volume_context=[
-                {"key": "glustervol", "value": hostVol},
-                {"key": "pvtype", "value": pvtype}
-            ]
+            volume={
+                "volume_id": request.name,
+                "capacity_bytes": pvsize,
+                "volume_context": {
+                    "glustervol": hostVol,
+                    "pvtype": pvtype
+                }
+            }
         )
 
     def DeleteVolume(self, request, context):
         # TODO: Get Hosting Volume name from Storage Class Option
-        hostVol = "ghostvol"
+        hostVol = "glustervol"
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostVol)
 
-        # # Try to mount the Host Volume, handle failure if already mounted
-        # # TODO: Get Glusterfs command with static Volfile
-        execute(GLUSTERFS_CMD,)
+        # Try to mount the Host Volume, handle
+        # failure if already mounted
+        mount_glusterfs(hostVol, mntdir)
 
         # TODO: get pvtype from storage class
         pvtype = "virtblock"
+        volpath = os.path.join(mntdir, request.name)
         if pvtype == "virtblock":
-            # Remove file
-            pass
+            os.remove(volpath)
         else:
-            # Remove directory
-            pass
+            os.removedirs(volpath)
 
         return csi_pb2.DeleteVolumeResponse()
 
@@ -86,24 +80,20 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         # Listdir and return the list
         # Volume capacity need to be stored somewhere
         pass
-    
+
     def ControllerGetCapabilities(self, request, context):
-        # TODO
-        pass
-
-
-def main():
-    logging.basicConfig()
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    csi_pb2_grpc.add_ControllerServicer_to_server(ControllerServer(), server)
-    server.add_insecure_port('[::]:50051')
-    server.start()
-    try:
-        while True:
-            time.sleep(_ONE_DAY_IN_SECONDS)
-    except KeyboardInterrupt:
-        server.stop(0)
-
-
-if __name__ == '__main__':
-    main()
+        capabilityType = csi_pb2.ControllerServiceCapability.RPC.Type.Value
+        return csi_pb2.ControllerGetCapabilitiesResponse(
+            capabilities=[
+                {
+                    "rpc": {
+                        "type": capabilityType("CREATE_DELETE_VOLUME")
+                    }
+                },
+                {
+                    "rpc": {
+                        "type": capabilityType("LIST_VOLUMES")
+                    }
+                }
+            ]
+        )
