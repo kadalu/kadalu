@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg8"
+   inkscape:version="0.92.4 (unknown)"
+   sodipodi:docname="drawings.svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.49497475"
+     inkscape:cx="628.75501"
+     inkscape:cy="479.05777"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     showguides="true"
+     inkscape:guide-bbox="true"
+     inkscape:window-width="1920"
+     inkscape:window-height="1021"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1">
+    <sodipodi:guide
+       position="43.467261,154.21429"
+       orientation="1,0"
+       id="guide863"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#999999;fill-opacity:1;stroke:none;stroke-width:0.21173041;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect4649"
+       width="345.84677"
+       height="138.44562"
+       x="22.985178"
+       y="24.38508"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75" />
+    <rect
+       style="fill:#fffbc0;fill-opacity:1;stroke:none;stroke-width:0.43602458;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect815-50"
+       width="329.99054"
+       height="40.875153"
+       x="30.646032"
+       y="87.921425"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75" />
+    <rect
+       style="fill:#fffbc0;fill-opacity:1;stroke:none;stroke-width:0.25451148;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect815-5"
+       width="112.43313"
+       height="40.875153"
+       x="247.62061"
+       y="35.818077"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75" />
+    <rect
+       style="fill:#fffbc0;fill-opacity:1;stroke:none;stroke-width:0.24900687;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect815-8"
+       width="107.62228"
+       height="40.875153"
+       x="134.31227"
+       y="35.48531"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75" />
+    <rect
+       style="fill:#fffbc0;fill-opacity:1;stroke:none;stroke-width:0.23566326;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect815"
+       width="96.396957"
+       height="40.875153"
+       x="32.505951"
+       y="35.440475"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="42.711308"
+       y="53.356499"
+       id="text819"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         x="42.711308"
+         y="53.356499"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:10.58333302px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';stroke-width:0.26458332"
+         id="tspan821">csi-attacher</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="144.18031"
+       y="52.830585"
+       id="text827"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan825"
+         x="144.18031"
+         y="52.830585"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';stroke-width:0.26458332">csi-nodeplugin</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="258.08203"
+       y="52.174438"
+       id="text831"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan829"
+         x="258.08203"
+         y="52.174438"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';stroke-width:0.26458332">csi-provisioner</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="41.118023"
+       y="101.88068"
+       id="text835"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan833"
+         x="41.118023"
+         y="101.88068"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';stroke-width:0.26458332">server-&lt;gluster-volume-name&gt;-&lt;kube-node-name&gt;</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="43.467258"
+       y="60.538078"
+       id="text4570"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan4568"
+         x="43.467258"
+         y="60.538078"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05555534px;font-family:'Latin Modern Sans';-inkscape-font-specification:'Latin Modern Sans';fill:#501616;stroke-width:0.26458332">(one pod per namespace)</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="145.87177"
+       y="61.77615"
+       id="text4570-5"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan4568-0"
+         x="145.87177"
+         y="61.77615"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05555534px;font-family:'Latin Modern Sans';-inkscape-font-specification:'Latin Modern Sans';fill:#501616;stroke-width:0.26458332">(one pod per node)</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="259.01752"
+       y="60.363914"
+       id="text4570-6"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan4568-08"
+         x="259.01752"
+         y="60.363914"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05555534px;font-family:'Latin Modern Sans';-inkscape-font-specification:'Latin Modern Sans';fill:#501616;stroke-width:0.26458332">(one pod per namespace)</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="42.04319"
+       y="109.69228"
+       id="text4570-3"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan4568-7"
+         x="42.04319"
+         y="109.69228"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05555534px;font-family:'Latin Modern Sans';-inkscape-font-specification:'Latin Modern Sans';fill:#501616;stroke-width:0.26458332">(one pod per brick for each volume)</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:17.80986023px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.44524649"
+       x="117.47553"
+       y="147.53075"
+       id="text4653"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan4651"
+         x="117.47553"
+         y="147.53075"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:'Latin Modern Sans';-inkscape-font-specification:'Latin Modern Sans Bold';fill:#e6e6e6;stroke-width:0.44524649">KaDalu Namespace</tspan></text>
+    <rect
+       style="fill:#999999;fill-opacity:1;stroke:none;stroke-width:0.21173042;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect4649-4"
+       width="345.84677"
+       height="138.44562"
+       x="23.252455"
+       y="189.82492"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75" />
+    <rect
+       style="fill:#fffbc0;fill-opacity:1;stroke:none;stroke-width:0.26691446;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect815-5-8"
+       width="123.65846"
+       height="40.875153"
+       x="238.89217"
+       y="201.25792"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75" />
+    <rect
+       style="fill:#fffbc0;fill-opacity:1;stroke:none;stroke-width:0.23761538;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect815-8-6"
+       width="98.000572"
+       height="40.875153"
+       x="134.57956"
+       y="200.92516"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75" />
+    <rect
+       style="fill:#fffbc0;fill-opacity:1;stroke:none;stroke-width:0.23566326;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect815-3"
+       width="96.396957"
+       height="40.875153"
+       x="32.773224"
+       y="200.88033"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="42.978577"
+       y="218.79634"
+       id="text819-7"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         x="42.978577"
+         y="218.79634"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:10.58333302px;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';stroke-width:0.26458332"
+         id="tspan821-7">glusterfsd</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="144.44759"
+       y="218.27043"
+       id="text827-2"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan825-3"
+         x="144.44759"
+         y="218.27043"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';stroke-width:0.26458332">glustershd</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="258.3493"
+       y="217.61429"
+       id="text831-7"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan829-2"
+         x="258.3493"
+         y="217.61429"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';stroke-width:0.26458332">metrics-exporter</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="43.734528"
+       y="225.97792"
+       id="text4570-7"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan4568-6"
+         x="43.734528"
+         y="225.97792"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05555534px;font-family:'Latin Modern Sans';-inkscape-font-specification:'Latin Modern Sans';fill:#501616;stroke-width:0.26458332">(brick process)</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="146.13904"
+       y="227.21599"
+       id="text4570-5-8"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan4568-0-1"
+         x="146.13904"
+         y="227.21599"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05555534px;font-family:'Latin Modern Sans';-inkscape-font-specification:'Latin Modern Sans';fill:#501616;stroke-width:0.26458332">(Self-heal daemon)</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="259.28479"
+       y="225.80376"
+       id="text4570-6-3"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan4568-08-6"
+         x="259.28479"
+         y="225.80376"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05555534px;font-family:'Latin Modern Sans';-inkscape-font-specification:'Latin Modern Sans';fill:#501616;stroke-width:0.26458332">(Prometheus)</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:17.80986023px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.44524649"
+       x="117.74281"
+       y="312.97058"
+       id="text4653-3"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan4651-5"
+         x="117.74281"
+         y="312.97058"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:'Latin Modern Sans';-inkscape-font-specification:'Latin Modern Sans Bold';fill:#e6e6e6;stroke-width:0.44524649">KaDalu Server Pod</tspan></text>
+    <rect
+       style="fill:#fffbc0;fill-opacity:1;stroke:none;stroke-width:0.31653109;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect815-5-8-8"
+       width="173.90514"
+       height="40.875153"
+       x="188.10654"
+       y="251.60548"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75" />
+    <rect
+       style="fill:#fffbc0;fill-opacity:1;stroke:none;stroke-width:0.29330122;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect815-8-6-5"
+       width="149.31631"
+       height="40.875153"
+       x="32.478165"
+       y="251.27272"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="43.391075"
+       y="268.61798"
+       id="text827-2-0"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan825-3-9"
+         x="43.391075"
+         y="268.61798"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';stroke-width:0.26458332">logging-helper</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="207.56366"
+       y="267.96182"
+       id="text831-7-9"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan829-2-8"
+         x="207.56366"
+         y="267.96182"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:FreeMono;-inkscape-font-specification:'FreeMono Bold';stroke-width:0.26458332">mgmt-apis</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="45.082512"
+       y="277.56354"
+       id="text4570-5-8-0"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan4568-0-1-2"
+         x="45.082512"
+         y="277.56354"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05555534px;font-family:'Latin Modern Sans';-inkscape-font-specification:'Latin Modern Sans';fill:#501616;stroke-width:0.26458332">(collect logs from multiple processes)</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="208.49915"
+       y="276.15131"
+       id="text4570-6-3-4"
+       inkscape:export-xdpi="58.75"
+       inkscape:export-ydpi="58.75"><tspan
+         sodipodi:role="line"
+         id="tspan4568-08-6-9"
+         x="208.49915"
+         y="276.15131"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05555534px;font-family:'Latin Modern Sans';-inkscape-font-specification:'Latin Modern Sans';fill:#501616;stroke-width:0.26458332">(optional)</tspan></text>
+  </g>
+</svg>

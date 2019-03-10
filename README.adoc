@@ -8,11 +8,15 @@ Production use.
 **Note 2:** Not yet works with minikube, facing some issue to deploy
   CSI pods.
 
-.KaDalu namespace
-image::doc/namespace.jpg[KaDalu namespace]
+== KaDalu namespace
 
-.KaDalu Server Pod
-image::doc/server-pod.jpg[KaDalu Server Pod]
+image::doc/namespace.png[KaDalu namespace]
+
+
+== KaDalu Server Pod
+image::doc/server-pod.png[KaDalu Server Pod]
+
+== Usage
 
 On an already running kubernetes cluster, login to any one node and
 create a brick directory. For testing, create a loopback file and
