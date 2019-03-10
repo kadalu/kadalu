@@ -25,7 +25,13 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         pvpath = os.path.join(mntdir, request.volume_id)
         # TODO: Handle Volume capability mount flags
         if pvtype == "virtblock":
-            execute(MOUNT_CMD, "-t", "xfs", pvpath, request.target_path)
+            execute(
+                MOUNT_CMD,
+                "-t",
+                request.volume_context.get("fstype", "xfs"),
+                pvpath,
+                request.target_path
+            )
         else:  # pv type is subdir
             execute(MOUNT_CMD, "--bind", pvpath, request.target_path)
 

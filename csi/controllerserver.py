@@ -45,8 +45,9 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                 "volume_id": request.name,
                 "capacity_bytes": pvsize,
                 "volume_context": {
-                    "glustervol": hostVol,
-                    "pvtype": pvtype
+                    "hostvol": hostVol,
+                    "pvtype": pvtype,
+                    "fstype": "xfs"
                 }
             }
         )
