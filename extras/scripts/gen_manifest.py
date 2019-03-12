@@ -31,12 +31,12 @@ if __name__ == "__main__":
     }
 
     manifest_files = [
-        "namespace.yaml",
-        "configmap.yaml",
-        "server.yaml",
-        "csi.yaml",
-        "storageclass.yaml",
-        "services.yaml",
+        "00-namespace.yaml",
+        "01-configmap.yaml",
+        "02-server.yaml",
+        "03-csi.yaml",
+        "04-storageclass.yaml",
+        "05-services.yaml",
         "sample-app.yaml",
         "sample-pvc.yaml"
     ]
