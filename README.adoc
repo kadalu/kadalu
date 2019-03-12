@@ -2,11 +2,10 @@
 
 = KaDalu
 
-**Note 1:** KaDalu is a super-young project, not yet ready for
-Production use.
+**Note 1:** kaDalu project is still in its infancy, not yet ready for production
+  use.
 
-**Note 2:** Not yet works with minikube, facing some issue to deploy
-  CSI pods.
+**Note 2:** Doesn't work with minikube yet, has some issues deploying CSI pods.
 
 == KaDalu namespace
 
