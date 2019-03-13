@@ -1,0 +1,169 @@
+volume {{ volname }}-distribute-0-client-0
+    type protocol/client
+    option transport.socket.keepalive-count 9
+    option transport.socket.read-fail-log off
+    option transport.socket.lowlat off
+    option client-bind-insecure off
+    option remote-subvolume {{ bricks[0]["brick_path"] }}
+    option event-threads 2
+    option non-blocking-io off
+    option transport.socket.ssl-enabled off
+    option transport.socket.keepalive-time 20
+    option transport.listen-backlog 1024
+    option transport.tcp-user-timeout 42
+    option ping-timeout 42
+    option filter-O_DIRECT disable
+    option remote-host server-{{ volname }}-{{ bricks[0]["node"] }}-0.{{ volname }}
+    option transport.socket.keepalive-interval 2
+    option send-gids on
+    option transport.socket.nodelay 1
+    option transport.socket.own-thread off
+    option transport.socket.keepalive 1
+    option transport-type socket
+    option frame-timeout 1800
+end-volume
+
+volume {{ volname }}-distribute
+    type cluster/distribute
+    option tier-mode test
+    option use-readdirp on
+    option tier-compact off
+    option assert-no-child-down off
+    option unhashed-sticky-bit off
+    option lookup-optimize on
+    option tier-max-files 10000
+    option tier-max-promote-file-size 0
+    option tier-cold-compact-frequency 604800
+    option read-freq-threshold 0
+    option rebal-throttle normal
+    option tier-hot-compact-frequency 604800
+    option watermark-low 75
+    option weighted-rebalance on
+    option tier-max-mb 4000
+    option tier-pause off
+    option lock-migration off
+    option randomize-hash-range-by-gfid off
+    option rebalance-stats off
+    option tier-query-limit 100
+    option watermark-hi 90
+    option xattr-name trusted.glusterfs.dht
+    option min-free-inodes 5%
+    option force-migration off
+    option tier-promote-frequency 120
+    option min-free-disk 10%
+    option readdir-optimize off
+    option lookup-unhashed on
+    option write-freq-threshold 0
+    option tier-demote-frequency 3600
+    subvolumes {{ volname }}-distribute-0-client-0
+end-volume
+
+volume {{ volname }}-utime
+    type features/utime
+    option noatime on
+    subvolumes {{ volname }}-distribute
+end-volume
+
+volume {{ volname }}-read-only
+    type features/read-only
+    option read-only off
+    subvolumes {{ volname }}-utime
+end-volume
+
+volume {{ volname }}-md-cache
+    type performance/md-cache
+    option cache-swift-metadata true
+    option cache-capability-xattrs true
+    option md-cache-statfs off
+    option md-cache-timeout 1
+    option cache-glusterfs-acl false
+    option cache-posix-acl false
+    option global-cache-invalidation true
+    option cache-invalidation false
+    option pass-through false
+    option force-readdirp true
+    option cache-selinux false
+    option md-cache on
+    option cache-samba-metadata false
+    option cache-ima-xattrs true
+    subvolumes {{ volname }}-read-only
+end-volume
+
+volume {{ volname }}-write-behind
+    type performance/write-behind
+    option cache-size 1MB
+    option flush-behind on
+    option write-behind on
+    option aggregate-size 128KB
+    option resync-failed-syncs-after-fsync off
+    option strict-write-ordering off
+    option strict-O_DIRECT off
+    option trickling-writes on
+    subvolumes {{ volname }}-md-cache
+end-volume
+
+volume {{ volname }}-io-cache
+    type performance/io-cache
+    option cache-timeout 1
+    option io-cache on
+    option pass-through false
+    option max-file-size 0
+    option min-file-size 0
+    option cache-size 32MB
+    subvolumes {{ volname }}-write-behind
+end-volume
+
+volume {{ volname }}-open-behind
+    type performance/open-behind
+    option use-anonymous-fd no
+    option open-behind on
+    option pass-through false
+    option read-after-open yes
+    option lazy-open yes
+    subvolumes {{ volname }}-io-cache
+end-volume
+
+volume {{ volname }}-nl-cache
+    type performance/nl-cache
+    option pass-through false
+    option nl-cache-timeout 60
+    option nl-cache-limit 131072
+    option nl-cache-positive-entry false
+    option nl-cache on
+    subvolumes {{ volname }}-open-behind
+end-volume
+
+volume {{ volname }}
+    type debug/io-stats
+    option client-threads 16
+    option brick-threads 16
+    option ios-dump-format json
+    option ios-sample-buf-size 65535
+    option unique-id /no/such/path
+    option client-log-flush-timeout 120
+    option ios-sample-interval 0
+    option ios-dump-interval 0
+    option sys-log-level CRITICAL
+    option ios-dnscache-ttl-sec 86400
+    option count-fop-hits off
+    option latency-measurement off
+    option global-threading off
+    option brick-log-flush-timeout 120
+    option client-log-format with-msg-id
+    option brick-logger gluster-log
+    option client-log-level INFO
+    option brick-log-buf-size 5
+    option client-log-buf-size 5
+    option log-buf-size 5
+    option brick-log-format with-msg-id
+    option client-logger gluster-log
+    option dump-fd-stats off
+    option log-flush-timeout 120
+    option brick-log-level INFO
+    subvolumes {{ volname }}-nl-cache
+end-volume
+
+volume meta-autoload
+    type meta
+    subvolumes {{ volname }}
+end-volume

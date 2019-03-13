@@ -3,7 +3,7 @@
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
-  name: {{ volname }}-{{ kube_hostname }}
+  name: server-{{ volname }}-{{ kube_hostname }}
   namespace: {{ namespace }}
   labels:
     app.kubernetes.io/part-of: kadalu
@@ -43,15 +43,15 @@ spec:
           #   periodSeconds: 30
           env:
             - name: HOSTNAME
-              value: "localhost"
+              value: {{ kube_hostname }}
             - name: VOLUME
-              value: "glustervol"
-            - name: BRICK_PATH_NAME
-              value: "data-brick"
+              value: {{ volname }}
             - name: BRICK_PATH
-              value: "/data/brick"
+              value: {{ brick_path }}
             - name: VOLUME_ID
-              value: "74f52147-21bd-4285-ad30-8eacdbcd872a"
+              value: {{ volume_id }}
+            - name: BRICK_INDEX
+              value: "{{ brick_index }}"
           securityContext:
             capabilities: {}
             privileged: true
@@ -80,7 +80,7 @@ spec:
             path: "/usr/lib/modules"
         - name: glusterfsd-volfilesdir
           configMap:
-            name: "kadalu-volfiles"
+            name: "kadalu-info"
         - name: glusterfsd-datadir
           hostPath:
             path: "{{ host_brick_path }}"

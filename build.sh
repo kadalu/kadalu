@@ -59,3 +59,4 @@ function build_container()
 
 build_container "kadalu-server" "server/Dockerfile"
 build_container "kadalu-csi" "csi/Dockerfile"
+build_container "kadalu-operator" "operator/Dockerfile"

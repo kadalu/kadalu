@@ -46,7 +46,7 @@ roleRef:
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
-  name: kadalu-csi-attacher
+  name: csi-attacher
   namespace: {{ namespace }}
   labels:
     app.kubernetes.io/part-of: kadalu
@@ -110,7 +110,7 @@ spec:
           emptyDir:
         - name: glusterfsd-volfilesdir
           configMap:
-            name: "kadalu-volfiles"
+            name: "kadalu-info"
         - name: gluster-dev
           hostPath:
             path: "/dev"
@@ -150,7 +150,7 @@ roleRef:
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
-  name: kadalu-csi-nodeplugin
+  name: csi-nodeplugin
   namespace: {{ namespace }}
   labels:
     app.kubernetes.io/part-of: kadalu
@@ -235,7 +235,7 @@ spec:
             type: Directory
         - name: glusterfsd-volfilesdir
           configMap:
-            name: "kadalu-volfiles"
+            name: "kadalu-info"
         - name: gluster-dev
           hostPath:
             path: "/dev"
@@ -306,14 +306,14 @@ roleRef:
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
-  name: kadalu-csi-provisioner
+  name: csi-provisioner
   namespace: {{ namespace }}
   labels:
     app.kubernetes.io/part-of: kadalu
     app.kubernetes.io/component: csi-driver
     app.kubernetes.io/name: csi-provisioner
 spec:
-  serviceName: kadalu-csi-provisioner
+  serviceName: csi-provisioner
   replicas: 1
   selector:
     matchLabels:
@@ -382,7 +382,7 @@ spec:
           emptyDir:
         - name: glusterfsd-volfilesdir
           configMap:
-            name: "kadalu-volfiles"
+            name: "kadalu-info"
         - name: gluster-dev
           hostPath:
             path: "/dev"

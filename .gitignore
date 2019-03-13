@@ -2,3 +2,5 @@ glustercs_csi.egg-info
 build
 dist
 manifests/*.yaml
+manifests/*.vol
+!manifests/kadalu-operator.yaml

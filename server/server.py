@@ -3,8 +3,11 @@
 import os
 import uuid
 import sys
+import json
 
 import xattr
+from jinja2 import Template
+
 
 brick_path = os.environ["BRICK_PATH"]
 test_xattr_name = "user.testattr"
@@ -13,11 +16,12 @@ volume_id_xattr_name = "trusted.glusterfs.volume-id"
 volume_id = os.environ["VOLUME_ID"]
 volume_id_bytes = uuid.UUID(volume_id).bytes
 brick_path_name = os.environ["BRICK_PATH"].strip("/").replace("/", "-")
-volfile_id = "%s.%s.%s" % (
-    os.environ["VOLUME"],
-    os.environ["HOSTNAME"],
-    brick_path_name
-)
+volname = os.environ["VOLUME"]
+nodename = os.environ["HOSTNAME"]
+volfiles_dir = "/kadalu/volfiles"
+templates_dir = "/kadalu/templates"
+info_dir = "/var/lib/gluster"
+
 
 # Create Brick directory and other directories required
 os.makedirs(os.path.join(brick_path, ".glusterfs"),
@@ -49,6 +53,24 @@ except Exception as err:
 
 # TODO: Generate Volfile based on Volinfo stored in Config map
 # For now, Generated Volfile is used in configmap
+data = {}
+with open(os.path.join(info_dir, "%s.info" % volname)) as f:
+    data = json.load(f)
+
+content = ""
+template_file = os.path.join(
+    templates_dir,
+    "%s.brick%s.vol.j2" % (data["type"], os.environ["BRICK_INDEX"])
+)
+with open(template_file) as f:
+    content = f.read()
+
+tmpl = Template(content)
+
+volfile_id = "%s.%s.%s" % (volname, nodename, brick_path_name)
+volfile_path = os.path.join(volfiles_dir, "%s.vol" % volfile_id)
+tmpl.stream(**data).dump(volfile_path)
+
 
 # Start glusterfsd process
 server_role = os.environ.get("KADALU_SERVER_ROLE", "glusterfsd")
@@ -71,8 +93,8 @@ if server_role == "glusterfsd":
             "--process-name", "brick",
             "--brick-port", "24007",
             "--xlator-option",
-            "%s-server.listen-port=24007" % os.environ["VOLUME"],
-            "-f", "/var/lib/gluster/%s.vol" % brick_path_name
+            "%s-server.listen-port=24007" % volname,
+            "-f", volfile_path
         ]
     )
 elif server_role == "glustershd":

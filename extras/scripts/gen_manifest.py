@@ -1,4 +1,5 @@
 import sys
+import os
 
 from jinja2 import Template
 
@@ -22,27 +23,10 @@ def template(filename, template_file=None, template_args={}):
 
 if __name__ == "__main__":
     template_args = {
-        "volname": "glustervol",
-        "kube_hostname": sys.argv[1],
         "namespace": "kadalu",
-        "brick_path": "/data/brick",
-        "host_brick_path": sys.argv[2],
         "kadalu_version": "latest",
     }
 
-    manifest_files = [
-        "00-namespace.yaml",
-        "01-configmap.yaml",
-        "02-server.yaml",
-        "03-csi.yaml",
-        "04-storageclass.yaml",
-        "05-services.yaml",
-        "sample-app.yaml",
-        "sample-pvc.yaml"
-    ]
-
-    for filename in manifest_files:
-        template(filename, template_args=template_args)
-        if not filename.startswith("sample-"):
-            print("kubectl create -f manifests/%s" % filename)
+    template("00-namespace.yaml", template_args=template_args)
+    template("operator.yaml", template_args=template_args)
 

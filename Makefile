@@ -15,7 +15,11 @@ build-containers:
 	bash build.sh
 
 gen-manifest:
-	@echo "Generating manifest files for node=${NODE} brick=${BRICK},"
-	@echo "run the following commands"
+	@echo "Generating manifest files, run the following commands"
 	@echo
 	@python3 extras/scripts/gen_manifest.py ${NODE} ${BRICK}
+	@cat manifests/00-namespace.yaml > manifests/kadalu-operator.yaml
+	@echo >> manifests/kadalu-operator.yaml
+	@cat manifests/operator.yaml >> manifests/kadalu-operator.yaml
+	@echo >> manifests/kadalu-operator.yaml
+	@echo "kubectl create -f manifests/kadalu-operator.yaml"

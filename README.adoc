@@ -1,3 +1,4 @@
+
 :!figure-caption:
 
 = KaDalu
@@ -17,55 +18,76 @@ image::doc/server-pod.png[KaDalu Server Pod]
 
 == Usage
 
-On an already running kubernetes cluster, login to any one node and
-create a brick directory. For testing, create a loopback file and
-create brick directory.
+Deploy KaDalu Operator using,
 
 ----
-$ truncate -s 10G brick.img
-$ mkdir /mnt/data
-$ mount brick.img /mnt/data
+kubectl create -f https://raw.githubusercontent.com/aravindavk/kadalu/master/manifests/kadalu-operator.yaml
 ----
 
-Now from the Kubernetes master node, clone this repo and generate the
-manifest files using,
-
-----
-NODE=<node-name> BRICK=<brick-dir> make gen-manifest
-----
-
-Where, `node-name` is node name as shown in `kubectl get
-nodes`. `brick-dir` is brick directory created in previous step. For
-example,
-
-----
-NODE=kube1 BRICK=/mnt/data make gen-manifest
-----
-
-This generates the manifest files and prints the respective `kubectl
-create` commands as below,
-
-----
-kubectl create -f manifests/namespace.yaml
-kubectl create -f manifests/configmap.yaml
-kubectl create -f manifests/server.yaml
-kubectl create -f manifests/csi.yaml
-kubectl create -f manifests/storageclass.yaml
-kubectl create -f manifests/services.yaml
-----
-
-Once the above commands run, `kadalu` cluster is ready.
+Check the status of Pods using,
 
 ----
 $ kubectl get pods -nkadalu
-NAME                          READY   STATUS    RESTARTS   AGE
-glustervol-kube1-0            1/1     Running   0          84s
-kadalu-csi-attacher-0         2/2     Running   0          84s
-kadalu-csi-nodeplugin-lvtw8   2/2     Running   0          84s
-kadalu-csi-nodeplugin-mskrl   2/2     Running   0          84s
-kadalu-csi-nodeplugin-n4qcp   2/2     Running   0          84s
-kadalu-csi-provisioner-0      3/3     Running   0          84s
+NAME                        READY   STATUS    RESTARTS   AGE
+csi-attacher-0              2/2     Running   0          30m
+csi-nodeplugin-5hfms        2/2     Running   0          30m
+csi-nodeplugin-924cc        2/2     Running   0          30m
+csi-nodeplugin-cbjl9        2/2     Running   0          30m
+csi-provisioner-0           3/3     Running   0          30m
+operator-6dfb65dcdd-r664t   1/1     Running   0          30m
 ----
+
+KaDalu Operator listens to PV Hosting volume configuration changes and
+starts the required pods. For example,
+
+[source,yaml]
+----
+# File: storage-gvol1.yaml
+---
+apiVersion: kadalu-operator.gluster/v1alpha1
+kind: KadaluVolume
+metadata:
+  # This will be used as name of PV Hosting Volume
+  name: gvol1
+spec:
+  type: Replica1
+  storage:
+    - node: kube1  # node name as shown in `kubectl get nodes`
+      path: /mnt/data  # Directory path xattrs support.
+  options: {}
+----
+
+For testing, login to any one node and create a virtual device as below.
+
+----
+$ truncate -s 10G gvol1.disk.img
+$ mkfs.xfs gvol1.disk.img
+$ mkdir /mnt/data
+$ mount gvol1.disk.img /mnt/data
+----
+
+Now request kadalu-operator to create hosting volume using,
+
+----
+$ kubectl create -f storage-gvol1.yaml
+----
+
+Operator will start the server pods as required.
+
+----
+$ kubectl get pods -nkadalu
+NAME                        READY   STATUS    RESTARTS   AGE
+server-gvol1-kube1-0        1/1     Running   0          84s
+csi-attacher-0              2/2     Running   0          30m
+csi-nodeplugin-5hfms        2/2     Running   0          30m
+csi-nodeplugin-924cc        2/2     Running   0          30m
+csi-nodeplugin-cbjl9        2/2     Running   0          30m
+csi-provisioner-0           3/3     Running   0          30m
+operator-6dfb65dcdd-r664t   1/1     Running   0          30m
+----
+
+Now we are ready to create Persistent volumes and use them in
+application Pods.
 
 Create PVC using,
 

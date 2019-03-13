@@ -5,12 +5,11 @@ COPY extras/release6-fedora.repo /etc/yum.repos.d/glusterfs-6-rc0.repo
 RUN yum update -y && \
     yum -y install procps-ng glusterfs-fuse xfsprogs && \
     yum clean all -y && \
-    rm -rf /var/cache/yum && \
-    rpm -qa | grep gluster | tee /gluster-rpm-versions.txt
+    rm -rf /var/cache/yum
 
 # Install Python GRPC library and copy all CSI related files
-RUN python3 -m pip install grpcio googleapis-common-protos
-RUN mkdir -p /kadalu-csi
+RUN python3 -m pip install grpcio googleapis-common-protos jinja2
+RUN mkdir -p /kadalu-csi/volfiles /kadalu-csi/templates
 
 COPY csi/controllerserver.py   /kadalu-csi/
 COPY csi/csi_pb2_grpc.py       /kadalu-csi/
@@ -19,6 +18,9 @@ COPY csi/identityserver.py     /kadalu-csi/
 COPY csi/main.py               /kadalu-csi/
 COPY csi/nodeserver.py         /kadalu-csi/
 COPY csi/utils.py              /kadalu-csi/
+
+COPY manifests/Replica1.client.vol.j2 /kadalu-csi/templates/
+COPY manifests/Replica3.client.vol.j2 /kadalu-csi/templates/
 
 ARG version="(unknown)"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')

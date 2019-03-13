@@ -1,0 +1,13 @@
+# -*- mode: yaml -*-
+---
+apiVersion: kadalu-operator.gluster/v1alpha1
+kind: KadaluVolume
+metadata:
+  name: glustervol
+spec:
+  type: SingleBrick
+  name: sumne
+  storage:
+    - node: kube1
+      path: /mnt/data
+  options: {}

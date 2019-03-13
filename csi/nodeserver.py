@@ -2,7 +2,7 @@ import os
 
 import csi_pb2
 import csi_pb2_grpc
-from utils import mount_glusterfs, execute
+from utils import mount_glusterfs, execute, PV_TYPE_VIRTBLOCK
 
 
 HOSTVOL_MOUNTDIR = "/mnt"
@@ -22,9 +22,9 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
 
         # Mount the PV
         pvtype = request.volume_context.get("pvtype", "")
-        pvpath = os.path.join(mntdir, request.volume_id)
+        pvpath = os.path.join(mntdir, pvtype, request.volume_id)
         # TODO: Handle Volume capability mount flags
-        if pvtype == "virtblock":
+        if pvtype == PV_TYPE_VIRTBLOCK:
             execute(
                 MOUNT_CMD,
                 "-t",
@@ -56,6 +56,5 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
 
     def NodeGetInfo(self, request, context):
         return csi_pb2.NodeGetInfoResponse(
-            # TODO: Set Node ID
             node_id=os.environ["NODE_ID"],
         )
