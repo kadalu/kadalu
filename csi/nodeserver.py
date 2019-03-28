@@ -1,3 +1,6 @@
+"""
+nodeserver implementation
+"""
 import os
 
 import csi_pb2
@@ -12,7 +15,11 @@ UNMOUNT_CMD = "/usr/bin/umount"
 
 
 class NodeServer(csi_pb2_grpc.NodeServicer):
-
+    """
+    NodeServer object is responsible for handling host
+    volume mount and PV mounts.
+    Ref:https://github.com/container-storage-interface/spec/blob/master/spec.md
+    """
     def NodePublishVolume(self, request, context):
         volume = request.volume_context.get("hostvol", "")
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, volume)

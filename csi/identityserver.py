@@ -1,10 +1,17 @@
+"""
+Identity Server implementation
+"""
 import csi_pb2
 import csi_pb2_grpc
 from utils import DRIVER_NAME, DRIVER_VERSION
 
 
 class IdentityServer(csi_pb2_grpc.IdentityServicer):
-
+    """
+    IdentityServer object is responsible for providing
+    CSI driver's identity
+    Ref:https://github.com/container-storage-interface/spec/blob/master/spec.md
+    """
     def GetPluginInfo(self, request, context):
         return csi_pb2.GetPluginInfoResponse(
             name=DRIVER_NAME,
@@ -12,12 +19,15 @@ class IdentityServer(csi_pb2_grpc.IdentityServicer):
         )
 
     def GetPluginCapabilities(self, request, context):
-        capabilityType = csi_pb2.PluginCapability.Service.Type.Value
+        # using getattr to avoid Pylint error
+        capability_type = getattr(
+            csi_pb2.PluginCapability.Service, "Type").Value
+
         return csi_pb2.GetPluginCapabilitiesResponse(
             capabilities=[
                 {
                     "service": {
-                        "type": capabilityType("CONTROLLER_SERVICE")
+                        "type": capability_type("CONTROLLER_SERVICE")
                     }
                 }
             ]

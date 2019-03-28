@@ -1,3 +1,6 @@
+"""
+controller server implementation
+"""
 import os
 
 import csi_pb2
@@ -9,11 +12,15 @@ HOSTVOL_MOUNTDIR = "/mnt"
 GLUSTERFS_CMD = "/usr/sbin/glusterfs"
 MOUNT_CMD = "/usr/bin/mount"
 UNMOUNT_CMD = "/usr/bin/umount"
-mkfs_xfs_cmd = "/usr/sbin/mkfs.xfs"
+MKFS_XFS_CMD = "/usr/sbin/mkfs.xfs"
 
 
 class ControllerServer(csi_pb2_grpc.ControllerServicer):
-
+    """
+    ControllerServer object is responsible for handling host
+    volume mount and PV creation.
+    Ref:https://github.com/container-storage-interface/spec/blob/master/spec.md
+    """
     def CreateVolume(self, request, context):
         pvsize = request.capacity_range.required_bytes
 
@@ -34,19 +41,22 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         pvtype = PV_TYPE_SUBVOL
         for vol_capability in request.volume_capabilities:
-            if vol_capability.access_mode.mode == \
-               csi_pb2.VolumeCapability.AccessMode.SINGLE_NODE_WRITER:
+            # using getattr to avoid Pylint error
+            single_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
+                                         "SINGLE_NODE_WRITER")
+
+            if vol_capability.access_mode.mode == single_node_writer:
                 pvtype = PV_TYPE_VIRTBLOCK
 
         volpath = os.path.join(HOSTVOL_MOUNTDIR, hostvol, pvtype, request.name)
         if pvtype == PV_TYPE_VIRTBLOCK:
             # Create a file with required size
             os.makedirs(os.path.dirname(volpath), exist_ok=True)
-            fd = os.open(volpath, os.O_CREAT | os.O_RDWR)
-            os.close(fd)
+            volpath_fd = os.open(volpath, os.O_CREAT | os.O_RDWR)
+            os.close(volpath_fd)
             os.truncate(volpath, pvsize)
             # TODO: Multiple FS support based on volume_capability mount option
-            execute(mkfs_xfs_cmd, volpath)
+            execute(MKFS_XFS_CMD, volpath)
         else:
             # Create a subdir
             os.makedirs(volpath)
@@ -95,17 +105,20 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         pass
 
     def ControllerGetCapabilities(self, request, context):
-        capabilityType = csi_pb2.ControllerServiceCapability.RPC.Type.Value
+        # using getattr to avoid Pylint error
+        capability_type = getattr(
+            csi_pb2.ControllerServiceCapability.RPC, "Type").Value
+
         return csi_pb2.ControllerGetCapabilitiesResponse(
             capabilities=[
                 {
                     "rpc": {
-                        "type": capabilityType("CREATE_DELETE_VOLUME")
+                        "type": capability_type("CREATE_DELETE_VOLUME")
                     }
                 },
                 {
                     "rpc": {
-                        "type": capabilityType("LIST_VOLUMES")
+                        "type": capability_type("LIST_VOLUMES")
                     }
                 }
             ]
