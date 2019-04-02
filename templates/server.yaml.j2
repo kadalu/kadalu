@@ -34,7 +34,7 @@ spec:
                     - {{ kube_hostname }}
       containers:
         - name: glusterfsd
-          image: docker.io/aravindavk/kadalu-server:{{ kadalu_version }}
+          image: docker.io/{{ docker_user }}/kadalu-server:{{ kadalu_version }}
           # livenessProbe:
           #   exec:
           #     command:
@@ -52,6 +52,8 @@ spec:
               value: {{ volume_id }}
             - name: BRICK_INDEX
               value: "{{ brick_index }}"
+            - name: BRICK_DEVICE
+              value: "{{ brick_device }}"
           securityContext:
             capabilities: {}
             privileged: true
@@ -67,7 +69,34 @@ spec:
             - name: glusterfsd-volfilesdir
               mountPath: "/var/lib/gluster"
             - name: glusterfsd-datadir
-              mountPath: "/data"
+              mountPath: "/bricks"
+              mountPropagation: Bidirectional
+        - name: quotad
+          image: docker.io/{{ docker_user }}/kadalu-server:{{ kadalu_version }}
+          env:
+            - name: HOSTNAME
+              value: {{ kube_hostname }}
+            - name: VOLUME
+              value: {{ volname }}
+            - name: BRICK_PATH
+              value: {{ brick_path }}
+            - name: VOLUME_ID
+              value: {{ volume_id }}
+            - name: BRICK_INDEX
+              value: "{{ brick_index }}"
+            - name: KADALU_SERVER_ROLE
+              value: "quotad"
+            - name: SUBVOL_ROOT
+              value: "subvol"
+            - name: BRICK_DEVICE
+              value: "{{ brick_device }}"
+          securityContext:
+            capabilities: {}
+            privileged: true
+          volumeMounts:
+            - name: glusterfsd-datadir
+              mountPath: "/bricks"
+              mountPropagation: Bidirectional
       volumes:
         - name: gluster-dev
           hostPath:
@@ -82,6 +111,10 @@ spec:
           configMap:
             name: "kadalu-info"
         - name: glusterfsd-datadir
+{% if brick_device == "" %}
           hostPath:
             path: "{{ host_brick_path }}"
             type: Directory
+{% else %}
+          emptyDir: {}
+{% endif %}

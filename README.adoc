@@ -31,29 +31,31 @@ csi-provisioner-0           3/3     Running   0          30m
 operator-6dfb65dcdd-r664t   1/1     Running   0          30m
 ----
 
-KaDalu Operator listens to PV Hosting volume configuration changes and
+KaDalu Operator listens to Storage setup configuration changes and
 starts the required pods. For example,
 
 [source,yaml]
 ----
 # File: storage-config.yaml
 ---
-apiVersion: kadalu-operator.gluster/v1alpha1
-kind: KadaluVolume
+apiVersion: kadalu-operator.storage/v1alpha1
+kind: KadaluStorage
 metadata:
   # This will be used as name of PV Hosting Volume
-  name: gvol1
+  name: storage-pool-1
 spec:
   type: Replica1
   storage:
-    - node: kube1  # node name as shown in `kubectl get nodes`
-      path: /mnt/data  # Directory path xattrs support.
-                       # This is the directory which would
-                       # export the storage to all the  PVs.
-  options: {}
+    - node: kube1      # node name as shown in `kubectl get nodes`
+      device: /dev/vdc # Device to provide storage to all PVs
+
+      # Optionally, path can be specified to provide storage
+      # directory directly. Note: Directory should support xattrs
+      # and project quota support(Ex: xfs). For example,
+      # path: /exports/data
 ----
 
-Now request kadalu-operator to create hosting volume using,
+Now request kadalu-operator to setup storage using,
 
 ----
 $ kubectl create -f storage-config.yaml
@@ -63,14 +65,14 @@ Operator will start the storage export pods as required.
 
 ----
 $ kubectl get pods -nkadalu
-NAME                        READY   STATUS    RESTARTS   AGE
-server-gvol1-kube1-0        1/1     Running   0          84s
-csi-attacher-0              2/2     Running   0          30m
-csi-nodeplugin-5hfms        2/2     Running   0          30m
-csi-nodeplugin-924cc        2/2     Running   0          30m
-csi-nodeplugin-cbjl9        2/2     Running   0          30m
-csi-provisioner-0           3/3     Running   0          30m
-operator-6dfb65dcdd-r664t   1/1     Running   0          30m
+NAME                             READY   STATUS    RESTARTS   AGE
+server-storage-pool-1-kube1-0    1/1     Running   0          84s
+csi-attacher-0                   2/2     Running   0          30m
+csi-nodeplugin-5hfms             2/2     Running   0          30m
+csi-nodeplugin-924cc             2/2     Running   0          30m
+csi-nodeplugin-cbjl9             2/2     Running   0          30m
+csi-provisioner-0                3/3     Running   0          30m
+operator-6dfb65dcdd-r664t        1/1     Running   0          30m
 ----
 
 Now we are ready to create Persistent volumes and use them in
@@ -79,7 +81,7 @@ application Pods.
 Create PVC using,
 
 ----
-$ kubectl create -f manifests/sample-pvc.yaml
+$ kubectl create -f examples/sample-pvc.yaml
 persistentvolumeclaim/pv1 created
 ----
 
@@ -88,7 +90,7 @@ and check the status of PVC using,
 ----
 $ kubectl get pvc
 NAME   STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS     AGE
-pv1    Bound    pvc-8cbe80f1-428f-11e9-b31e-525400f59aef   1Gi        RWO            kadalu.gluster   42s
+pv1    Bound    pvc-8cbe80f1-428f-11e9-b31e-525400f59aef   1Gi        RWO            kadalu.replica1  42s
 ----
 
 == Design

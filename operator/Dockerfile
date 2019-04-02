@@ -10,16 +10,16 @@ RUN yum update -y && \
     rm -rf /var/cache/yum
 
 # Install Python GRPC library and copy all CSI related files
-RUN python3 -m pip install kubernetes jinja2
+RUN python3 -m pip install kubernetes jinja2 xxhash
 RUN mkdir -p /kadalu/manifests
 
-COPY manifests/05-services.yaml.j2      /kadalu/manifests/services.yaml.j2
-COPY manifests/02-server.yaml.j2        /kadalu/manifests/server.yaml.j2
-COPY manifests/03-csi.yaml.j2           /kadalu/manifests/csi.yaml.j2
-COPY manifests/01-configmap.yaml.j2     /kadalu/manifests/configmap.yaml.j2
-COPY manifests/04-storageclass.yaml.j2  /kadalu/manifests/storageclass.yaml.j2
-
-COPY operator/main.py          /kadalu/
+COPY templates/services.yaml.j2      /kadalu/templates/services.yaml.j2
+COPY templates/server.yaml.j2        /kadalu/templates/server.yaml.j2
+COPY templates/csi.yaml.j2           /kadalu/templates/csi.yaml.j2
+COPY templates/configmap.yaml.j2     /kadalu/templates/configmap.yaml.j2
+COPY templates/storageclass.yaml.j2  /kadalu/templates/storageclass.yaml.j2
+COPY lib/kadalulib.py                /kadalu/kadalulib.py
+COPY operator/main.py                /kadalu/
 
 ARG version="(unknown)"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')

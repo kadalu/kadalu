@@ -8,19 +8,20 @@ RUN yum update -y && \
     rm -rf /var/cache/yum
 
 # Install Python GRPC library and copy all CSI related files
-RUN python3 -m pip install grpcio googleapis-common-protos jinja2
-RUN mkdir -p /kadalu-csi/volfiles /kadalu-csi/templates
+RUN python3 -m pip install grpcio googleapis-common-protos jinja2 xxhash
+RUN mkdir -p /kadalu/volfiles /kadalu/templates
 
-COPY csi/controllerserver.py   /kadalu-csi/
-COPY csi/csi_pb2_grpc.py       /kadalu-csi/
-COPY csi/csi_pb2.py            /kadalu-csi/
-COPY csi/identityserver.py     /kadalu-csi/
-COPY csi/main.py               /kadalu-csi/
-COPY csi/nodeserver.py         /kadalu-csi/
-COPY csi/utils.py              /kadalu-csi/
+COPY lib/kadalulib.py          /kadalu/
+COPY csi/controllerserver.py   /kadalu/
+COPY csi/csi_pb2_grpc.py       /kadalu/
+COPY csi/csi_pb2.py            /kadalu/
+COPY csi/identityserver.py     /kadalu/
+COPY csi/main.py               /kadalu/
+COPY csi/nodeserver.py         /kadalu/
+COPY csi/volumeutils.py        /kadalu/
 
-COPY manifests/Replica1.client.vol.j2 /kadalu-csi/templates/
-COPY manifests/Replica3.client.vol.j2 /kadalu-csi/templates/
+COPY templates/Replica1.client.vol.j2 /kadalu/templates/
+COPY templates/Replica3.client.vol.j2 /kadalu/templates/
 
 ARG version="(unknown)"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')
@@ -35,7 +36,7 @@ LABEL vcs-url="https://github.com/aravindavk/kadalu"
 LABEL vendor="kadalu.gluster"
 LABEL version="${version}"
 
-ENTRYPOINT ["/usr/bin/python3", "/kadalu-csi/main.py"]
+ENTRYPOINT ["/usr/bin/python3", "/kadalu/main.py"]
 
 # Debugging, Comment the above line and
 # uncomment below line

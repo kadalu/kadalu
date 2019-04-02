@@ -2,10 +2,13 @@
 nodeserver implementation
 """
 import os
+import logging
+import time
 
 import csi_pb2
 import csi_pb2_grpc
-from utils import mount_glusterfs, execute, PV_TYPE_VIRTBLOCK
+from volumeutils import mount_volume, unmount_volume, mount_glusterfs
+from kadalulib import logf
 
 
 HOSTVOL_MOUNTDIR = "/mnt"
@@ -21,40 +24,48 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
     Ref:https://github.com/container-storage-interface/spec/blob/master/spec.md
     """
     def NodePublishVolume(self, request, context):
-        volume = request.volume_context.get("hostvol", "")
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, volume)
-
-        # Try to mount the Host Volume, handle failure if already mounted
-        mount_glusterfs(volume, mntdir)
-
-        # Mount the PV
+        start_time = time.time()
+        hostvol = request.volume_context.get("hostvol", "")
+        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
+        pvpath = request.volume_context.get("path", "")
         pvtype = request.volume_context.get("pvtype", "")
-        pvpath = os.path.join(mntdir, pvtype, request.volume_id)
-        # TODO: Handle Volume capability mount flags
-        if pvtype == PV_TYPE_VIRTBLOCK:
-            execute(
-                MOUNT_CMD,
-                "-t",
-                request.volume_context.get("fstype", "xfs"),
-                pvpath,
-                request.target_path
-            )
-        else:  # pv type is subdir
-            execute(MOUNT_CMD, "--bind", pvpath, request.target_path)
+        pvpath_full = os.path.join(mntdir, pvpath)
 
+        logging.debug(logf(
+            "Received the mount request",
+            volume=request.volume_id,
+            hostvol=hostvol,
+            pvpath=pvpath,
+            pvtype=pvtype
+        ))
+
+        mount_glusterfs(hostvol, mntdir)
+        logging.debug(logf(
+            "Mounted Hosting Volume",
+            pv=request.volume_id,
+            hostvol=hostvol,
+            mntdir=mntdir,
+        ))
+        # Mount the PV
+        # TODO: Handle Volume capability mount flags
+        mount_volume(pvpath_full, request.target_path, pvtype, fstype=None)
+        logging.info(logf(
+            "Mounted PV",
+            volume=request.volume_id,
+            pvpath=pvpath,
+            pvtype=pvtype,
+            hostvol=hostvol,
+            duration_seconds=time.time() - start_time
+        ))
         return csi_pb2.NodePublishVolumeResponse()
 
     def NodeUnpublishVolume(self, request, context):
         # TODO: Validation and handle target_path failures
-
-        # if request.volume_id == "":
-        #     raise
-        # if request.target_path == "":
-        #     raise
-        # Check is mount
-
-        if os.path.ismount(request.target_path):
-            execute(UNMOUNT_CMD, request.target_path)
+        logging.debug(logf(
+            "Received the unmount request",
+            volume=request.volume_id,
+        ))
+        unmount_volume(request.target_path)
 
         return csi_pb2.NodeUnpublishVolumeResponse()
 

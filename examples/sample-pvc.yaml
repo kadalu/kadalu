@@ -5,7 +5,7 @@ apiVersion: v1
 metadata:
   name: pv1
 spec:
-  storageClassName: kadalu.gluster
+  storageClassName: kadalu.replica1
   accessModes:
     - ReadWriteOnce # You can also provide 'ReadWriteMany' here
   resources:

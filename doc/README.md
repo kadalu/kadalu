@@ -18,7 +18,7 @@ it can setup the Storage within operator itself.
 
 ## Give it a try with 'minikube'
 
-[`minikube`]() is a good way to get a hang of k8s for beginners. If you already have a k8s setup available to test out, skip this step, and goto [Next step](./#try-kadalu)
+[`minikube`](https://kubernetes.io/docs/setup/minikube/) is a good way to get a hang of k8s for beginners. If you already have a k8s setup available to test out, skip this step, and goto [Next step](./#try-kadalu)
 
 You can follow ['Install minikube'](https://kubernetes.io/docs/tasks/tools/install-minikube/) document to setup minikube. Please note that right now (k8s - 1.14.0) there seems to be some issues with default 'minikube', and hence please use only `--vm-driver=none` option.
 
@@ -31,10 +31,7 @@ For testing, login to minikube and create a virtual device as below.
 
 ```
 $ cd /mnt/vda1/
-$ sudo truncate -s 10G gvol1.disk.img
-$ sudo mkfs.xfs gvol1.disk.img
-$ sudo mkdir /mnt/data
-$ sudo mount gvol1.disk.img /mnt/data
+$ sudo truncate -s 10G storage-pool-1.disk.img
 ```
 
 After this follow our [Homepage](https://github.com/aravindavk/kadalu). You are good to get started.

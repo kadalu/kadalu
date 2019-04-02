@@ -3,15 +3,15 @@ import os
 
 from jinja2 import Template
 
-MANIFESTS_DIR = "manifests/"
+TEMPLATES_DIR = "templates/"
 
 
 def template(filename, template_file=None, template_args={}):
     if template_file is None:
         template_file = filename + ".j2"
 
-    filename = MANIFESTS_DIR + filename
-    template_file = MANIFESTS_DIR + template_file
+    filename = TEMPLATES_DIR + filename
+    template_file = TEMPLATES_DIR + template_file
 
     content = ""
     with open(template_file) as f:
@@ -22,11 +22,14 @@ def template(filename, template_file=None, template_args={}):
 
 
 if __name__ == "__main__":
+    docker_user = os.environ.get("DOCKER_USER", "kadalu")
+    kadalu_version = os.environ.get("KADALU_VERSION", "latest")
     template_args = {
         "namespace": "kadalu",
-        "kadalu_version": "latest",
+        "kadalu_version": kadalu_version,
+        "docker_user": docker_user
     }
 
-    template("00-namespace.yaml", template_args=template_args)
+    template("namespace.yaml", template_args=template_args)
     template("operator.yaml", template_args=template_args)
 

@@ -1,0 +1,27 @@
+# -*- mode: yaml -*-
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: kadalu
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: kadalu
+
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: kadalu.replica1
+provisioner: kadalu
+parameters:
+  hostvol_type: "Replica1"
+
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: kadalu.replica3
+provisioner: kadalu
+parameters:
+  hostvol_type: "Replica3"

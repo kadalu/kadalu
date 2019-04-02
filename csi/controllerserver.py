@@ -2,17 +2,18 @@
 controller server implementation
 """
 import os
+import logging
+import time
+
+import grpc
 
 import csi_pb2
 import csi_pb2_grpc
-from utils import mount_glusterfs, execute, get_pv_hosting_volumes, \
-    PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, is_space_available
-
-HOSTVOL_MOUNTDIR = "/mnt"
-GLUSTERFS_CMD = "/usr/sbin/glusterfs"
-MOUNT_CMD = "/usr/bin/mount"
-UNMOUNT_CMD = "/usr/bin/umount"
-MKFS_XFS_CMD = "/usr/sbin/mkfs.xfs"
+from volumeutils import mount_and_select_hosting_volume, \
+    create_virtblock_volume, create_subdir_volume, delete_volume, \
+    get_pv_hosting_volumes, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, \
+    HOSTVOL_MOUNTDIR
+from kadalulib import logf
 
 
 class ControllerServer(csi_pb2_grpc.ControllerServicer):
@@ -22,22 +23,37 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
     Ref:https://github.com/container-storage-interface/spec/blob/master/spec.md
     """
     def CreateVolume(self, request, context):
+        start_time = time.time()
+        logging.debug(logf(
+            "Create Volume request",
+            request=request
+        ))
         pvsize = request.capacity_range.required_bytes
 
         # TODO: Check the available space under lock
 
-        host_volumes = get_pv_hosting_volumes()
-        hostvol = ""
-        for hvol in host_volumes:
-            mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
-            # Try to mount the Host Volume, handle failure if already mounted
-            mount_glusterfs(hvol, mntdir)
-            if is_space_available(mntdir, pvsize):
-                hostvol = hvol
-                break
+        # Add everything from parameter as filter item
+        filters = {}
+        for pkey, pvalue in request.parameters.items():
+            filters[pkey] = pvalue
 
-        if hostvol == "":
-            raise Exception("no Hosting Volumes available, add more storage")
+        logging.debug(logf(
+            "Filters applied to choose storage",
+            **filters
+        ))
+        host_volumes = get_pv_hosting_volumes(filters)
+        logging.debug(logf(
+            "Got list of hosting Volumes",
+            volumes=",".join(host_volumes)
+        ))
+
+        hostvol = mount_and_select_hosting_volume(host_volumes, pvsize)
+        if hostvol is None:
+            errmsg = "No Hosting Volumes available, add more storage"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
+            return csi_pb2.CreateVolumeResponse()
 
         pvtype = PV_TYPE_SUBVOL
         for vol_capability in request.volume_capabilities:
@@ -48,21 +64,30 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             if vol_capability.access_mode.mode == single_node_writer:
                 pvtype = PV_TYPE_VIRTBLOCK
 
-        volpath = os.path.join(HOSTVOL_MOUNTDIR, hostvol, pvtype, request.name)
-        if pvtype == PV_TYPE_VIRTBLOCK:
-            # Create a file with required size
-            os.makedirs(os.path.dirname(volpath), exist_ok=True)
-            volpath_fd = os.open(volpath, os.O_CREAT | os.O_RDWR)
-            os.close(volpath_fd)
-            os.truncate(volpath, pvsize)
-            # TODO: Multiple FS support based on volume_capability mount option
-            execute(MKFS_XFS_CMD, volpath)
-        else:
-            # Create a subdir
-            os.makedirs(volpath)
-            # TODO: Set BackendQuota using RPC to sidecar
-            # container of each glusterfsd pod
+        logging.debug(logf(
+            "Found PV type",
+            pvtype=pvtype,
+            capabilities=request.volume_capabilities
+        ))
 
+        if pvtype == PV_TYPE_VIRTBLOCK:
+            vol = create_virtblock_volume(
+                os.path.join(HOSTVOL_MOUNTDIR, hostvol),
+                request.name, pvsize)
+        else:
+            vol = create_subdir_volume(
+                os.path.join(HOSTVOL_MOUNTDIR, hostvol),
+                request.name, pvsize)
+
+        logging.info(logf(
+            "Volume created",
+            name=request.name,
+            size=pvsize,
+            hostvol=hostvol,
+            pvtype=pvtype,
+            volpath=vol.volpath,
+            duration_seconds=time.time() - start_time
+        ))
         return csi_pb2.CreateVolumeResponse(
             volume={
                 "volume_id": request.name,
@@ -70,27 +95,20 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                 "volume_context": {
                     "hostvol": hostvol,
                     "pvtype": pvtype,
+                    "path": vol.volpath,
                     "fstype": "xfs"
                 }
             }
         )
 
     def DeleteVolume(self, request, context):
-        hostvol = request.volume_context.get("hostvol", "")
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
-
-        # Try to mount the Host Volume, handle
-        # failure if already mounted
-        mount_glusterfs(hostvol, mntdir)
-
-        # TODO: get pvtype from storage class
-        pvtype = request.volume_context.get("pvtype", "")
-        volpath = os.path.join(mntdir, pvtype, request.name)
-        if pvtype == PV_TYPE_VIRTBLOCK:
-            os.remove(volpath)
-        else:
-            os.removedirs(volpath)
-
+        start_time = time.time()
+        delete_volume(request.volume_id)
+        logging.info(logf(
+            "Volume deleted",
+            name=request.volume_id,
+            duration_seconds=time.time() - start_time
+        ))
         return csi_pb2.DeleteVolumeResponse()
 
     def ValidateVolumeCapabilities(self, request, context):

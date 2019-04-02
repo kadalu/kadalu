@@ -2,7 +2,8 @@
 
 set -e -o pipefail
 
-REPO="${REPO:-aravindavk}"
+DOCKER_USER="${DOCKER_USER:-kadalu}"
+KADALU_VERSION="${KADALU_VERSION:-latest}"
 
 RUNTIME_CMD=${RUNTIME_CMD:-docker}
 build="build"
@@ -49,7 +50,7 @@ function build_container()
     IMAGE_NAME=$1
     DOCKERFILE=$2
     $RUNTIME_CMD $build \
-                 -t "${REPO}/${IMAGE_NAME}" \
+                 -t "${DOCKER_USER}/${IMAGE_NAME}:${KADALU_VERSION}" \
                  "${build_args[@]}" \
                  --network host \
                  -f "$DOCKERFILE" \

@@ -8,22 +8,24 @@ RUN yum update -y && \
     rm -rf /var/cache/yum && \
     rpm -qa | grep gluster | tee /gluster-rpm-versions.txt
 
-RUN python3 -m pip install jinja2
+RUN python3 -m pip install jinja2 xxhash
 
-COPY server/server.py /usr/bin/kadalu-server
+COPY lib/kadalulib.py        /kadalu/kadalulib.py
+COPY server/server.py        /kadalu/server.py
+COPY server/glusterfsd.py    /kadalu/glusterfsd.py
+COPY server/quotad.py        /kadalu/quotad.py
 COPY server/mount-glustervol /usr/bin/mount-glustervol
 
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
 
 # Copy Volfile templates
-COPY manifests/Replica1.client.vol.j2 /kadalu/templates/
-COPY manifests/Replica3.client.vol.j2 /kadalu/templates/
-COPY manifests/Replica1.brick0.vol.j2 /kadalu/templates/
-COPY manifests/Replica3.brick0.vol.j2 /kadalu/templates/
-COPY manifests/Replica3.brick1.vol.j2 /kadalu/templates/
-COPY manifests/Replica3.brick2.vol.j2 /kadalu/templates/
+COPY templates/Replica1.client.vol.j2 /kadalu/templates/
+COPY templates/Replica3.client.vol.j2 /kadalu/templates/
+COPY templates/Replica1.brick0.vol.j2 /kadalu/templates/
+COPY templates/Replica3.brick0.vol.j2 /kadalu/templates/
+COPY templates/Replica3.brick1.vol.j2 /kadalu/templates/
+COPY templates/Replica3.brick2.vol.j2 /kadalu/templates/
 
-RUN chmod +x /usr/bin/kadalu-server
 RUN chmod +x /usr/bin/mount-glustervol
 
 ARG version="(unknown)"
@@ -39,8 +41,7 @@ LABEL vcs-url="https://github.com/aravindavk/kadalu"
 LABEL vendor="kadalu.gluster"
 LABEL version="${version}"
 
-# TODO: Add fsd parameters
-ENTRYPOINT ["/usr/bin/kadalu-server"]
+ENTRYPOINT ["/usr/bin/python3", "/kadalu/server.py"]
 
 # Debugging, Comment the above line and
 # uncomment below line

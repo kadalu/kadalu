@@ -90,7 +90,7 @@ spec:
               mountPath: /var/lib/csi/sockets/pluginproxy/
 
         - name: kadalu-attacher
-          image: docker.io/aravindavk/kadalu-csi:{{ kadalu_version }}
+          image: docker.io/{{ docker_user }}/kadalu-csi:{{ kadalu_version }}
           env:
             - name: NODE_ID
               valueFrom:
@@ -181,12 +181,12 @@ spec:
           lifecycle:
             preStop:
               exec:
-                command: ["/bin/sh", "-c", "rm -rf /registration/kadalu.gluster /registration/kadalu.gluster-reg.sock"]
+                command: ["/bin/sh", "-c", "rm -rf /registration/kadalu /registration/kadalu-reg.sock"]
           env:
             - name: ADDRESS
               value: /plugin/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              value: /var/lib/kubelet/plugins_registry/kadalu.gluster/csi.sock
+              value: /var/lib/kubelet/plugins_registry/kadalu/csi.sock
             - name: KUBE_NODE_NAME
               valueFrom:
                 fieldRef:
@@ -202,7 +202,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: docker.io/aravindavk/kadalu-csi:{{ kadalu_version }}
+          image: docker.io/{{ docker_user }}/kadalu-csi:{{ kadalu_version }}
           env:
             - name: NODE_ID
               valueFrom:
@@ -223,7 +223,7 @@ spec:
       volumes:
         - name: plugin-dir
           hostPath:
-            path: /var/lib/kubelet/plugins_registry/kadalu.gluster
+            path: /var/lib/kubelet/plugins_registry/kadalu
             type: DirectoryOrCreate
         - name: pods-mount-dir
           hostPath:
@@ -334,7 +334,7 @@ spec:
         - name: csi-provisioner
           image: quay.io/k8scsi/csi-provisioner:v1.0.1
           args:
-            - "--provisioner=kadalu.gluster"
+            - "--provisioner=kadalu"
             - "--csi-address=$(ADDRESS)"
             - "--connection-timeout=15s"
           env:
@@ -362,7 +362,7 @@ spec:
             capabilities:
               add: ["CAP_SYS_ADMIN", "SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: docker.io/aravindavk/kadalu-csi:{{ kadalu_version }}
+          image: docker.io/{{ docker_user }}/kadalu-csi:{{ kadalu_version }}
           env:
             - name: NODE_ID
               valueFrom:

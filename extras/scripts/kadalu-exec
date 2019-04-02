@@ -1,0 +1,23 @@
+#!/usr/bin/python3
+import subprocess
+from argparse import ArgumentParser
+
+parser = ArgumentParser()
+parser.add_argument("podprefix", help="Pod prefix")
+parser.add_argument("-c", help="Container name")
+parser.add_argument("-n", help="Node name")
+
+args = parser.parse_args()
+
+cmd = 'kubectl get pods -nkadalu -o wide | grep "%s-"' % args.podprefix
+if args.n:
+   cmd += ' | grep "%s"' % args.n
+
+out = subprocess.check_output(cmd, shell=True)
+parts = out.split()
+cmd_exec = 'kubectl -nkadalu exec -it %s' % parts[0].decode()
+if args.c:
+   cmd_exec += " -c %s" % args.c
+
+cmd_exec += " /bin/bash"
+subprocess.run(cmd_exec, shell=True)
