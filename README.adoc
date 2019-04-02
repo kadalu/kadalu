@@ -6,17 +6,11 @@
 **Note 1:** kaDalu project is still in its infancy, not yet ready for production
   use.
 
-**Note 2:** Doesn't work with minikube yet, has some issues deploying CSI pods.
+**Note 2:** If you are using 'minikube' to try out kaDalu, then please use
+`--vm-driver=none` option. In our testing, we found issues specific to CSI pods
+when we used `kvm2` driver.
 
-== KaDalu namespace
-
-image::doc/namespace.png[KaDalu namespace]
-
-
-== KaDalu Server Pod
-image::doc/server-pod.png[KaDalu Server Pod]
-
-== Usage
+== Get Started
 
 Deploy KaDalu Operator using,
 
@@ -42,7 +36,7 @@ starts the required pods. For example,
 
 [source,yaml]
 ----
-# File: storage-gvol1.yaml
+# File: storage-config.yaml
 ---
 apiVersion: kadalu-operator.gluster/v1alpha1
 kind: KadaluVolume
@@ -54,25 +48,18 @@ spec:
   storage:
     - node: kube1  # node name as shown in `kubectl get nodes`
       path: /mnt/data  # Directory path xattrs support.
+                       # This is the directory which would
+                       # export the storage to all the  PVs.
   options: {}
-----
-
-For testing, login to any one node and create a virtual device as below.
-
-----
-$ truncate -s 10G gvol1.disk.img
-$ mkfs.xfs gvol1.disk.img
-$ mkdir /mnt/data
-$ mount gvol1.disk.img /mnt/data
 ----
 
 Now request kadalu-operator to create hosting volume using,
 
 ----
-$ kubectl create -f storage-gvol1.yaml
+$ kubectl create -f storage-config.yaml
 ----
 
-Operator will start the server pods as required.
+Operator will start the storage export pods as required.
 
 ----
 $ kubectl get pods -nkadalu
@@ -103,3 +90,13 @@ $ kubectl get pvc
 NAME   STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS     AGE
 pv1    Bound    pvc-8cbe80f1-428f-11e9-b31e-525400f59aef   1Gi        RWO            kadalu.gluster   42s
 ----
+
+== Design
+
+=== KaDalu namespace
+
+image::doc/namespace.png[KaDalu namespace]
+
+
+=== KaDalu Storage Export Pod
+image::doc/server-pod.png[KaDalu Server Pod]

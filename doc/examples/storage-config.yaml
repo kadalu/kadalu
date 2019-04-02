@@ -1,0 +1,14 @@
+---
+apiVersion: kadalu-operator.gluster/v1alpha1
+kind: KadaluVolume
+metadata:
+  # This will be used as name of PV Hosting Volume
+  name: gvol1
+spec:
+  type: Replica1
+  storage:
+    - node: minikube       # node name as shown in `kubectl get nodes`
+      path: /mnt/data   # Directory path xattrs support.
+                        # This is the directory which would
+                        # export the storage to all the  PVs.
+  options: {}
