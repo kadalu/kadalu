@@ -195,10 +195,10 @@ def handle_added(core_v1_client, obj):
 def handle_modified():
     """
     Handle when Volume option is updated or Volume
-    state is changed to maintenence
+    state is changed to maintenance
     """
     # TODO: Handle Volume option change
-    # TODO: Handle Volume maintenence mode
+    # TODO: Handle Volume maintenance mode
     pass
 
 
