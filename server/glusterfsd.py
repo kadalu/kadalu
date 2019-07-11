@@ -88,6 +88,14 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
     Create brick filesystem and mount the brick. Currently
     only xfs is supported
     """
+
+    # If brick device path is not starts with /dev then use
+    # /brickdev prefix. Brick device directory passed by the user
+    # is mounted as /brickdev to avoid mixing with any other
+    # dirs inside container.
+    if not brick_device.startswith("/dev/"):
+        brick_device = "/brickdev/" + os.path.basename(brick_device)
+
     if brickfs == "xfs":
         try:
             execute("mkfs.xfs", brick_device)
@@ -114,7 +122,7 @@ def start():
     """
     brick_device = os.environ.get("BRICK_DEVICE", None)
     brick_path = os.environ["BRICK_PATH"]
-    if brick_device is not None or brick_device != "":
+    if brick_device is not None and brick_device != "":
         brickfs = os.environ.get("BRICK_FS", "xfs")
         create_and_mount_brick(brick_device, brick_path, brickfs)
 

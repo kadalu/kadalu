@@ -1,6 +1,4 @@
-FROM docker.io/fedora:29
-
-COPY extras/release6-fedora.repo /etc/yum.repos.d/glusterfs-6-rc0.repo
+FROM docker.io/fedora:30
 
 RUN yum update -y && \
     yum -y install python3-pyxattr procps-ng glusterfs-server xfsprogs && \
