@@ -1,4 +1,4 @@
-FROM nginx
+FROM bash
 
 COPY script.sh /kadalu/script.sh
 
@@ -15,8 +15,8 @@ LABEL vcs-url="https://github.com/aravindavk/kadalu"
 LABEL vendor="kadalu.gluster"
 LABEL version="${version}"
 
-ENTRYPOINT ["/bin/bash", "/kadalu/script.sh"]
+ENTRYPOINT ["bash", "/kadalu/script.sh"]
 
 # Debugging, Comment the above line and
 # uncomment below line
-# ENTRYPOINT ["/bin/bash"]
+# ENTRYPOINT ["/usr/local/bin/bash"]
