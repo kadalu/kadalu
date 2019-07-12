@@ -10,21 +10,16 @@ echo "# mount"
 mount | grep /mnt/pv
 
 echo "Write/Read test on PV mount"
-date > /mnt/pv/timestamp || echo "FAILURE"
+date > /mnt/pv/timestamp || echo "Write FAILURE"
 
-cat /mnt/pv/timestamp  || echo "FAILURE"
+cat /mnt/pv/timestamp  || echo "Read FAILURE"
 
 rm /mnt/pv/timestamp; ret=$?
 
 if [ "x$ret" = "x0" ]; then
     echo "SUCCESS"
-
-    echo "Validated PV successfully" >> /usr/share/nginx/html/index.html
+    exit 0
 else
     echo "FAILURE"
-
-    echo "Failed to validate PV" >> /usr/share/nginx/html/index.html    
+    exit 1
 fi
-
-# Want the application to always run
-/bin/bash
