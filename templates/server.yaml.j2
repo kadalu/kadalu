@@ -68,9 +68,13 @@ spec:
               readOnly: true
             - name: glusterfsd-volfilesdir
               mountPath: "/var/lib/gluster"
-            - name: glusterfsd-datadir
-              mountPath: "/bricks"
+            - name: glusterfsd-mountdir
+              mountPath: "/bricks/{{ volname }}"
               mountPropagation: Bidirectional
+{%- if brick_device_dir != "" %}
+            - name: brick-device-dir
+              mountPath: "/brickdev"
+{%- endif %}
         - name: quotad
           image: docker.io/{{ docker_user }}/kadalu-server:{{ kadalu_version }}
           env:
@@ -94,8 +98,8 @@ spec:
             capabilities: {}
             privileged: true
           volumeMounts:
-            - name: glusterfsd-datadir
-              mountPath: "/bricks"
+            - name: glusterfsd-mountdir
+              mountPath: "/bricks/{{ volname }}"
               mountPropagation: Bidirectional
       volumes:
         - name: gluster-dev
@@ -110,11 +114,17 @@ spec:
         - name: glusterfsd-volfilesdir
           configMap:
             name: "kadalu-info"
-        - name: glusterfsd-datadir
-{% if brick_device == "" %}
+        - name: glusterfsd-mountdir
+{%- if brick_device == "" %}
           hostPath:
             path: "{{ host_brick_path }}"
             type: Directory
-{% else %}
+{%- else %}
           emptyDir: {}
-{% endif %}
+{%- endif %}
+{%- if brick_device_dir != "" %}
+        - name: brick-device-dir
+          hostPath:
+            path: "{{ brick_device_dir }}"
+            type: Directory
+{%- endif %}

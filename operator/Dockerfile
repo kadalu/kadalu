@@ -1,4 +1,4 @@
-FROM docker.io/fedora:29
+FROM docker.io/fedora:30
 
 COPY extras/kubernetes.repo /etc/yum.repos.d/kubernetes.repo
 

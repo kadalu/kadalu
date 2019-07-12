@@ -84,6 +84,20 @@ def validate_volume_request(obj):
     return True
 
 
+def get_brick_device_dir(brick):
+    # If custom file is passed as brick device then the
+    # parent directory needs to be mounted as is
+    # in server container
+    brick_device_dir = ""
+    logging.info(repr(brick))
+    brickdev = brick.get("device", "")
+    logging.info(brickdev)
+    if brickdev != "" and not brickdev.startswith("/dev/"):
+        brick_device_dir = os.path.dirname(brickdev)
+
+    return brick_device_dir
+
+
 def update_config_map(core_v1_client, obj):
     """
     Volinfo of new hosting Volume is generated and updated to ConfigMap
@@ -106,11 +120,12 @@ def update_config_map(core_v1_client, obj):
     # For each brick, add brick path and node id
     for idx, brick in enumerate(obj["spec"]["storage"]):
         data["bricks"].append({
-            "brick_path": "/bricks/data/brick",
+            "brick_path": "/bricks/%s/data/brick" % volname,
             "node": brick["node"],
             "node_id": str(uuid.uuid1()),
             "host_brick_path": brick.get("path", ""),
             "brick_device": brick.get("device", ""),
+            "brick_device_dir": get_brick_device_dir(brick),
             "brick_index": idx
         })
 
@@ -143,9 +158,10 @@ def deploy_server_pods(obj):
     for idx, brick in enumerate(obj["spec"]["storage"]):
         template_args["host_brick_path"] = brick.get("path", "")
         template_args["kube_hostname"] = brick["node"]
-        template_args["brick_path"] = "/bricks/data/brick"
+        template_args["brick_path"] = "/bricks/%s/data/brick" % volname
         template_args["brick_index"] = idx
         template_args["brick_device"] = brick.get("device", "")
+        template_args["brick_device_dir"] = get_brick_device_dir(brick)
 
         filename = os.path.join(MANIFESTS_DIR, "server.yaml")
         template(filename, **template_args)
@@ -168,8 +184,7 @@ def handle_added(core_v1_client, obj):
     # Ignore if already deployed
     volname = obj["metadata"]["name"]
     pods = core_v1_client.list_namespaced_pod(
-        NAMESPACE,
-        include_uninitialized=True)
+        NAMESPACE)
     for pod in pods.items:
         if pod.metadata.name.startswith("server-" + volname + "-"):
             logging.debug(logf(
@@ -247,8 +262,7 @@ def deploy_csi_pods(core_v1_client):
     that means it is deployed
     """
     pods = core_v1_client.list_namespaced_pod(
-        NAMESPACE,
-        include_uninitialized=True)
+        NAMESPACE)
     for pod in pods.items:
         if pod.metadata.name.startswith(CSI_POD_PREFIX):
             logging.debug("Ignoring already deployed CSI pods")
@@ -267,8 +281,7 @@ def deploy_config_map(core_v1_client):
     """Deploys the template configmap if not exists"""
 
     configmaps = core_v1_client.list_namespaced_config_map(
-        NAMESPACE,
-        include_uninitialized=True)
+        NAMESPACE)
     for item in configmaps.items:
         if item.metadata.name == KADALU_CONFIG_MAP:
             logging.debug(logf(
@@ -288,7 +301,7 @@ def deploy_storage_class():
     """Deploys the default storage class for KaDalu if not exists"""
 
     api_instance = client.StorageV1Api()
-    scs = api_instance.list_storage_class(include_uninitialized=True)
+    scs = api_instance.list_storage_class()
     for item in scs.items:
         if item.metadata.name.startswith(STORAGE_CLASS_NAME_PREFIX):
             return
@@ -302,10 +315,7 @@ def deploy_storage_class():
 
 def main():
     """Main"""
-    try:
-        config.load_kube_config()
-    except FileNotFoundError:
-        config.load_incluster_config()
+    config.load_incluster_config()
 
     core_v1_client = client.CoreV1Api()
     k8s_client = client.ApiClient()
