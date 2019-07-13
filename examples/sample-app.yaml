@@ -18,3 +18,4 @@ spec:
   - name: csivol
     persistentVolumeClaim:
       claimName: pv1
+  restartPolicy: OnFailure
