@@ -1,7 +1,4 @@
-
-:!figure-caption:
-
-= KaDalu
+# KaDalu
 
 **Note 1:** kaDalu project is still in its infancy, not yet ready for production
   use.
@@ -10,17 +7,17 @@
 `--vm-driver=none` option. In our testing, we found issues specific to CSI pods
 when we used `kvm2` driver.
 
-== Get Started
+## Get Started
 
 Deploy KaDalu Operator using,
 
-----
+```
 kubectl create -f https://raw.githubusercontent.com/aravindavk/kadalu/master/manifests/kadalu-operator.yaml
-----
+```
 
 Check the status of Pods using,
 
-----
+```
 $ kubectl get pods -nkadalu
 NAME                        READY   STATUS    RESTARTS   AGE
 csi-attacher-0              2/2     Running   0          30m
@@ -29,13 +26,14 @@ csi-nodeplugin-924cc        2/2     Running   0          30m
 csi-nodeplugin-cbjl9        2/2     Running   0          30m
 csi-provisioner-0           3/3     Running   0          30m
 operator-6dfb65dcdd-r664t   1/1     Running   0          30m
-----
+```
+
+[![asciicast](https://asciinema.org/a/257765.svg)](https://asciinema.org/a/257765)
 
 KaDalu Operator listens to Storage setup configuration changes and
 starts the required pods. For example,
 
-[source,yaml]
-----
+```yaml
 # File: storage-config.yaml
 ---
 apiVersion: kadalu-operator.storage/v1alpha1
@@ -53,17 +51,17 @@ spec:
       # directory directly. Note: Directory should support xattrs
       # and project quota support(Ex: xfs). For example,
       # path: /exports/data
-----
+```
 
 Now request kadalu-operator to setup storage using,
 
-----
+```
 $ kubectl create -f storage-config.yaml
-----
+```
 
 Operator will start the storage export pods as required.
 
-----
+```
 $ kubectl get pods -nkadalu
 NAME                             READY   STATUS    RESTARTS   AGE
 server-storage-pool-1-kube1-0    1/1     Running   0          84s
@@ -73,32 +71,32 @@ csi-nodeplugin-924cc             2/2     Running   0          30m
 csi-nodeplugin-cbjl9             2/2     Running   0          30m
 csi-provisioner-0                3/3     Running   0          30m
 operator-6dfb65dcdd-r664t        1/1     Running   0          30m
-----
+```
 
 Now we are ready to create Persistent volumes and use them in
 application Pods.
 
 Create PVC using,
 
-----
+```
 $ kubectl create -f examples/sample-pvc.yaml
 persistentvolumeclaim/pv1 created
-----
+```
 
 and check the status of PVC using,
 
-----
+```
 $ kubectl get pvc
 NAME   STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS     AGE
 pv1    Bound    pvc-8cbe80f1-428f-11e9-b31e-525400f59aef   1Gi        RWO            kadalu.replica1  42s
-----
+```
 
-== Design
+## Design
 
-=== KaDalu namespace
+### KaDalu namespace
 
-image::doc/namespace.png[KaDalu namespace]
+![KaDalu namespace](doc/namespace.png)
 
 
-=== KaDalu Storage Export Pod
-image::doc/server-pod.png[KaDalu Server Pod]
+### KaDalu Storage Export Pod
+![KaDalu Server Pod](doc/server-pod.png)
