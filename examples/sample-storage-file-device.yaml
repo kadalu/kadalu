@@ -1,0 +1,11 @@
+# -*- mode: yaml -*-
+---
+apiVersion: kadalu-operator.storage/v1alpha1
+kind: KadaluStorage
+metadata:
+  name: storage-pool-1
+spec:
+  type: Replica1
+  storage:
+    - node: minikube           # node name as shown in `kubectl get nodes`
+      device: /mnt/DISK/file
