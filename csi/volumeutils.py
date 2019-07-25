@@ -427,6 +427,7 @@ def mount_glusterfs(volume, target_path):
     cmd = [
         GLUSTERFS_CMD,
         "--process-name", "fuse",
+        "-l", "/dev/stdout",
         "--volfile-id=%s" % volume,
         target_path,
         "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volume)
