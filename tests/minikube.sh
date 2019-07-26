@@ -130,6 +130,9 @@ test_kadalu)
             break;
         fi
         if [[ $cnt -eq 100 ]]; then
+            kubectl get pods -nkadalu;
+            kubectl get pods;
+            echo "exiting after 100 seconds"
             exit 1;
         fi
     done
@@ -149,6 +152,9 @@ test_kadalu)
             break;
         fi
         if [[ $cnt -eq 100 ]]; then
+            kubectl get pods -nkadalu;
+            kubectl get pods;
+            echo "exiting after 100 seconds"
             exit 1;
         fi
     done

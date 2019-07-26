@@ -7,6 +7,7 @@ import os
 import uuid
 import json
 import logging
+import requests
 
 from kubernetes import client, config, watch
 from jinja2 import Template
@@ -312,6 +313,21 @@ def deploy_storage_class():
     execute(KUBECTL_CMD, "create", "-f", filename)
     logging.info(logf("Deployed StorageClass", manifest=filename))
 
+def send_analytics_tracker(ga_id):
+    reqheader = { 'user-agent': 'Kadalu-App', 'accept': '*/*' }
+    url = "https://www.google-analytics.com/collect?v=1&t=pageview"
+    epoch = time.time()
+    track_page = "http://kadalu.org/kadalu-operator"
+    track_title = "Kadalu Operator"
+    track_url = "%s&tid=%s&cid=1363&z=%d&dl=%s&dt=%s" % (url, ga_id, epoch, track_page, track_title)
+
+    # TODO: make this optional, and let users know this operator tracks one run as 1 page hit.
+    try:
+        s = requests.get(track_url, reqheader)
+    except:
+        True
+    # ignore s
+
 
 def main():
     """Main"""
@@ -319,6 +335,12 @@ def main():
 
     core_v1_client = client.CoreV1Api()
     k8s_client = client.ApiClient()
+
+    # Send Analytics Tracker
+    # The information from this analytics is available for
+    # developers to understand and build project in a better
+    # way
+    send_analytics_tracker("GA-144588868-1")
 
     # ConfigMap
     deploy_config_map(core_v1_client)

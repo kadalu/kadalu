@@ -6,7 +6,7 @@ RUN yum update -y && \
     rm -rf /var/cache/yum && \
     rpm -qa | grep gluster | tee /gluster-rpm-versions.txt
 
-RUN python3 -m pip install jinja2 xxhash
+RUN python3 -m pip install jinja2 xxhash requests
 
 COPY lib/kadalulib.py        /kadalu/kadalulib.py
 COPY server/server.py        /kadalu/server.py

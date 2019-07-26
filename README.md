@@ -100,3 +100,7 @@ pv1    Bound    pvc-8cbe80f1-428f-11e9-b31e-525400f59aef   1Gi        RWO       
 
 ### KaDalu Storage Export Pod
 ![KaDalu Server Pod](doc/server-pod.png)
+
+## NOTE
+
+We are tracking the number of downloads based on 'docker pull' stats, and also through google analytics. [Issue #16])(issues/16) gives detail of what is added to code w.r.to tracking.
