@@ -161,7 +161,7 @@ spec:
       containers:
         - name: kadalu-operator
           image: docker.io/kadalu/kadalu-operator:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
               valueFrom:
