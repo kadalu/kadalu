@@ -1,5 +1,9 @@
 # KaDalu
 
+[![Build Status](https://travis-ci.org/aravindavk/kadalu.svg?branch=master)](https://travis-ci.org/aravindavk/kadalu)
+[![Operator Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg?label=DockerPulls%20Operator)](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg)
+[![Server Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg?label=DockerPulls%20Server)](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg)
+
 **Note 1:** kaDalu project is still in its infancy, not yet ready for production
   use.
 
@@ -31,11 +35,6 @@ spec:
   storage:
     - node: kube1      # node name as shown in `kubectl get nodes`
       device: /dev/vdc # Device to provide storage to all PVs
-
-      # Optionally, path can be specified to provide storage
-      # directory directly. Note: Directory should support xattrs
-      # and project quota support(Ex: xfs). For example,
-      # path: /exports/data
 ```
 
 Now request kadalu-operator to setup storage using,
