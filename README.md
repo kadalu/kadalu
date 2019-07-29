@@ -15,21 +15,6 @@ Deploy KaDalu Operator using,
 kubectl create -f https://raw.githubusercontent.com/aravindavk/kadalu/master/manifests/kadalu-operator.yaml
 ```
 
-Check the status of Pods using,
-
-```
-$ kubectl get pods -nkadalu
-NAME                        READY   STATUS    RESTARTS   AGE
-csi-attacher-0              2/2     Running   0          30m
-csi-nodeplugin-5hfms        2/2     Running   0          30m
-csi-nodeplugin-924cc        2/2     Running   0          30m
-csi-nodeplugin-cbjl9        2/2     Running   0          30m
-csi-provisioner-0           3/3     Running   0          30m
-operator-6dfb65dcdd-r664t   1/1     Running   0          30m
-```
-
-[![asciicast](https://asciinema.org/a/257765.svg)](https://asciinema.org/a/257765)
-
 KaDalu Operator listens to Storage setup configuration changes and
 starts the required pods. For example,
 
@@ -59,7 +44,10 @@ Now request kadalu-operator to setup storage using,
 $ kubectl create -f storage-config.yaml
 ```
 
-Operator will start the storage export pods as required.
+Operator will start the storage export pods as required. And, in 2 steps,
+your storage system is up and running.
+
+Check the status of Pods using,
 
 ```
 $ kubectl get pods -nkadalu
@@ -72,6 +60,12 @@ csi-nodeplugin-cbjl9             2/2     Running   0          30m
 csi-provisioner-0                3/3     Running   0          30m
 operator-6dfb65dcdd-r664t        1/1     Running   0          30m
 ```
+
+
+[![asciicast](https://asciinema.org/a/257765.svg)](https://asciinema.org/a/257765)
+
+
+## CSI to claim Persistent Volumes (PVC/PV)
 
 Now we are ready to create Persistent volumes and use them in
 application Pods.
@@ -91,6 +85,14 @@ NAME   STATUS   VOLUME                                     CAPACITY   ACCESS MOD
 pv1    Bound    pvc-8cbe80f1-428f-11e9-b31e-525400f59aef   1Gi        RWO            kadalu.replica1  42s
 ```
 
+Now, this PVC is ready to be consumed in your application pod. You can see the
+sample usage of PVC in an application pod by below:
+
+```
+$ kubectl create -f examples/sample-app.yaml
+pod1 created
+```
+
 ## Design
 
 ### KaDalu namespace
@@ -103,4 +105,6 @@ pv1    Bound    pvc-8cbe80f1-428f-11e9-b31e-525400f59aef   1Gi        RWO       
 
 ## NOTE
 
-We are tracking the number of downloads based on 'docker pull' stats, and also through google analytics. [Issue #16])(issues/16) gives detail of what is added to code w.r.to tracking.
+We are tracking the number of downloads based on 'docker pull' stats, and also
+through google analytics. [Issue #16](issues/16) gives detail of what is added
+to code w.r.to tracking.
