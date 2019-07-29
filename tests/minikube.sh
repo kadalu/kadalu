@@ -89,28 +89,26 @@ ssh)
     ;;
 
 kadalu_operator)
-    # TODO: need to use the locally built images, so we can test changes to Dockerfiles too
+    docker images
+
     echo "Starting the kadalu Operator"
 
-    docker images -a
-#    copy_image_to_cluster "${KADALU_IMAGE_REPO}"/kadalu-operator:latest "${KADALU_IMAGE_REPO}"/kadalu-operator:latest
-#    copy_image_to_cluster "${KADALU_IMAGE_REPO}"/kadalu-csi:latest "${KADALU_IMAGE_REPO}"/kadalu-csi:latest
-#    copy_image_to_cluster "${KADALU_IMAGE_REPO}"/kadalu-server:latest "${KADALU_IMAGE_REPO}"/kadalu-server:latest
-
     # pick the operator file from repo
+    sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator.yaml
     kubectl create -f manifests/kadalu-operator.yaml
 
     # Start storage
     cp examples/sample-storage-file-device.yaml /tmp/kadalu-storage.yaml
     sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
     kubectl create -f /tmp/kadalu-storage.yaml
+
     # give it some time
     cnt=0
     while true; do
         cnt=$((cnt+1))
         sleep 1;
         ret=`kubectl get pods -nkadalu -o name | wc -l`
-        if [[ $ret -eq 5 ]]; then
+        if [[ $ret -ge 5 ]]; then
             echo "Successful after $cnt seconds"
             break;
         fi

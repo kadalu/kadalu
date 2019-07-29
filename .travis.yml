@@ -19,6 +19,7 @@ go: 1.12.x
 
 env:
   global:
+    - KADALU_VERSION=canary
     - GOLANGCI_VERSION=v1.17.0
     - TEST_COVERAGE=stdout
     - GO_METALINTER_THREADS=1
@@ -33,4 +34,5 @@ jobs:
     - name: kadalu with kube 1.15.0
       script:
         - make build-containers || travis_terminate 1;
+        - make gen-manifest || travis_terminate 1;
         - tests/travis-test.sh v1.15.0 || travis_terminate 1;
