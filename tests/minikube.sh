@@ -15,19 +15,6 @@ function wait_for_ssh() {
     exit 1
 }
 
-function copy_image_to_cluster() {
-    local build_image=$1
-    local final_image=$2
-    if [ -z "$(docker images -q "${build_image}")" ]; then
-        docker pull "${build_image}"
-    fi
-    if [[ "${VM_DRIVER}" == "none" ]]; then
-        docker tag "${build_image}" "${final_image}"
-        return
-    fi
-    docker save "${build_image}" | (eval "$(minikube docker-env --shell bash)" && docker load && docker tag "${build_image}" "${final_image}")
-}
-
 # install minikube
 function install_minikube() {
     if type minikube >/dev/null 2>&1; then
@@ -55,7 +42,7 @@ function install_kubectl() {
 
 # configure minikube
 MINIKUBE_VERSION=${MINIKUBE_VERSION:-"latest"}
-KUBE_VERSION=${KUBE_VERSION:-"v1.14.2"}
+KUBE_VERSION=${KUBE_VERSION:-"v1.15.1"}
 MEMORY=${MEMORY:-"3000"}
 VM_DRIVER=${VM_DRIVER:-"virtualbox"}
 #configure image repo
@@ -104,6 +91,11 @@ ssh)
 kadalu_operator)
     # TODO: need to use the locally built images, so we can test changes to Dockerfiles too
     echo "Starting the kadalu Operator"
+
+    docker images -a
+#    copy_image_to_cluster "${KADALU_IMAGE_REPO}"/kadalu-operator:latest "${KADALU_IMAGE_REPO}"/kadalu-operator:latest
+#    copy_image_to_cluster "${KADALU_IMAGE_REPO}"/kadalu-csi:latest "${KADALU_IMAGE_REPO}"/kadalu-csi:latest
+#    copy_image_to_cluster "${KADALU_IMAGE_REPO}"/kadalu-server:latest "${KADALU_IMAGE_REPO}"/kadalu-server:latest
 
     # pick the operator file from repo
     kubectl create -f manifests/kadalu-operator.yaml

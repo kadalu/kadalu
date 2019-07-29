@@ -7,6 +7,7 @@ import sys
 import json
 import logging
 import requests
+import time
 
 from jinja2 import Template
 import xattr
