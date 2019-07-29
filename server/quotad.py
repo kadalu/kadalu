@@ -107,9 +107,13 @@ def start():
     """
     Start Quota Manager
     """
+    first_time = True
     while True:
         crawl()
         time.sleep(1)
+        if not first_time:
+            print("Successfully started quotad process")
+            first_time = False
 
 
 if __name__ == "__main__":
