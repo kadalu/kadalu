@@ -3,6 +3,7 @@
 import subprocess
 import logging
 import sys
+import os
 
 import xxhash
 
@@ -79,3 +80,21 @@ def logging_setup():
                                   "- %(message)s")
     handler.setFormatter(formatter)
     root.addHandler(handler)
+
+
+def send_analytics_tracker(name):
+    ga_id = "UA-144588868-1" # Static string
+    reqheader = { 'user-agent': 'Kadalu-App', 'accept': '*/*' }
+    url = "https://www.google-analytics.com/collect?v=1&t=pageview"
+    track_page = "http://kadalu.org/kadalu-%s-%s" % (name, os.environ.get("KADALU_VERSION", "latest"))
+    track_title = "Kadalu %s" % name
+
+    # TODO: cid should be 1 per installation. How to do it?
+    track_url = "%s&dl=%s&dt=%s&tid=%s&cid=1363" % (url, track_page, track_title, ga_id)
+
+    # TODO: make this optional, and let users know this operator tracks one run as 1 page hit.
+    # ignore s
+    try:
+        s = requests.get(track_url, headers = reqheader)
+    except:
+        True

@@ -7,12 +7,11 @@ import sys
 import json
 import logging
 import requests
-import time
 
 from jinja2 import Template
 import xattr
 
-from kadalulib import execute, CommandException, logf
+from kadalulib import execute, CommandException, logf, send_analytics_tracker
 
 
 VOLUME_ID_XATTR_NAME = "trusted.glusterfs.volume-id"
@@ -118,22 +117,6 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
         execute("mount", "-oprjquota", brick_device, mountdir)
 
 
-def send_analytics_tracker(ga_id):
-    reqheader = { 'user-agent': 'Kadalu-App', 'accept': '*/*' }
-    url = "https://www.google-analytics.com/collect?v=1&t=pageview"
-    epoch = time.time()
-    track_page = "http://kadalu.org/kadalu-server"
-    track_title = "Kadalu Server"
-    track_url = "%s&tid=%s&cid=1363&z=%d&dl=%s&dt=%s" % (url, ga_id, epoch, track_page, track_title)
-
-    # TODO: make this optional, and let users know this operator tracks one run as 1 page hit.
-    try:
-        s = requests.get(track_url, reqheader)
-    except:
-        True
-    # ignore s
-
-
 def start():
     """
     Start the Gluster Brick Process
@@ -160,7 +143,7 @@ def start():
     # Send Analytics Tracker
     # The information from this analytics is available for
     # developers to understand and build project in a better way
-    send_analytics_tracker("GA-144588868-1")
+    send_analytics_tracker("server")
 
     os.execv(
         "/usr/sbin/glusterfsd",
