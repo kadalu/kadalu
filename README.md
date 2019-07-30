@@ -92,16 +92,6 @@ $ kubectl create -f examples/sample-app.yaml
 pod1 created
 ```
 
-## Design
-
-### KaDalu namespace
-
-![KaDalu namespace](doc/namespace.png)
-
-
-### KaDalu Storage Export Pod
-![KaDalu Server Pod](doc/server-pod.png)
-
 ## NOTE
 
 We are tracking the number of downloads based on 'docker pull' stats, and also

@@ -54,6 +54,8 @@ spec:
               value: "{{ brick_index }}"
             - name: BRICK_DEVICE
               value: "{{ brick_device }}"
+            - name: KADALU_VERSION
+              value: "{{ kadalu_version }}"
           securityContext:
             capabilities: {}
             privileged: true
@@ -94,6 +96,8 @@ spec:
               value: "subvol"
             - name: BRICK_DEVICE
               value: "{{ brick_device }}"
+            - name: KADALU_VERSION
+              value: "{{ kadalu_version }}"
           securityContext:
             capabilities: {}
             privileged: true

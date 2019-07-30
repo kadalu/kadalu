@@ -85,6 +85,8 @@ spec:
                   fieldPath: metadata.namespace
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
+            - name: KADALU_VERSION
+              value: "{{ kadalu_version }}"
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -98,6 +100,8 @@ spec:
                   fieldPath: spec.nodeName
             - name: CSI_ENDPOINT
               value: unix://plugin/csi.sock
+            - name: KADALU_VERSION
+              value: "{{ kadalu_version }}"
           volumeMounts:
             - name: socket-dir
               mountPath: /plugin
@@ -191,6 +195,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            - name: KADALU_VERSION
+              value: "{{ kadalu_version }}"
           volumeMounts:
             - name: plugin-dir
               mountPath: /plugin
@@ -210,6 +216,8 @@ spec:
                   fieldPath: spec.nodeName
             - name: CSI_ENDPOINT
               value: unix://plugin/csi.sock
+            - name: KADALU_VERSION
+              value: "{{ kadalu_version }}"
           volumeMounts:
             - name: plugin-dir
               mountPath: /plugin
@@ -340,6 +348,8 @@ spec:
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
+            - name: KADALU_VERSION
+              value: "{{ kadalu_version }}"
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -370,6 +380,8 @@ spec:
                   fieldPath: spec.nodeName
             - name: CSI_ENDPOINT
               value: unix://plugin/csi.sock
+            - name: KADALU_VERSION
+              value: "{{ kadalu_version }}"
           volumeMounts:
             - name: socket-dir
               mountPath: /plugin
