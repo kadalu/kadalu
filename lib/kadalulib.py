@@ -4,6 +4,7 @@ import subprocess
 import logging
 import sys
 import os
+import requests
 
 import xxhash
 
