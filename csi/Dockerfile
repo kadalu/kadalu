@@ -6,7 +6,7 @@ RUN yum update -y && \
     rm -rf /var/cache/yum
 
 # Install Python GRPC library and copy all CSI related files
-RUN python3 -m pip install grpcio googleapis-common-protos jinja2 xxhash
+RUN python3 -m pip install grpcio googleapis-common-protos jinja2 xxhash requests
 RUN mkdir -p /kadalu/volfiles /kadalu/templates
 
 COPY lib/kadalulib.py          /kadalu/
