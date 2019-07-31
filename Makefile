@@ -1,4 +1,4 @@
-.PHONY: help build-grpc
+.PHONY: help build-grpc build-containers gen-manifest pylint prepare-release release
 
 DOCKER_USER?=kadalu
 KADALU_VERSION?=latest
@@ -9,6 +9,8 @@ help:
 	@echo "    make build-containers  - To create server, csi and Operator containers"
 	@echo "    make gen-manifest      - To generate manifest files to deploy"
 	@echo "    make pylint            - To validate all Python code with Pylint"
+	@echo "    make prepare-release   - Generate Manifest file and build containers for specific version and latest"
+	@echo "    make release           - Publish the built container images"
 
 build-grpc:
 	python3 -m grpc_tools.protoc -I./csi/protos --python_out=csi --grpc_python_out=csi ./csi/protos/csi.proto
@@ -45,3 +47,35 @@ pylint:
 	@rm csi/kadalulib.py
 	@rm server/kadalulib.py
 	@rm operator/kadalulib.py
+
+ifeq ($(KADALU_VERSION), latest)
+prepare-release:
+	@echo "KADALU_VERSION can't be latest for release"
+else
+prepare-release:
+	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
+		$(MAKE) gen-manifest
+	@cp manifests/kadalu-operator.yaml \
+		manifests/kadalu-operator-${KADALU_VERSION}.yaml
+	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=latest \
+		$(MAKE) gen-manifest
+	@echo "Generated manifest file. Version: ${KADALU_VERSION}"
+	@echo "Building containers(Version: ${KADALU_VERSION}).."
+	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
+		$(MAKE) build-containers
+	@echo "Building containers(Version: latest).."
+	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=latest \
+		$(MAKE) build-containers
+endif
+
+ifeq ($(KADALU_VERSION), latest)
+release: prepare-release
+else
+release: prepare-release
+	docker push ${DOCKER_USER}/kadalu-operator:${KADALU_VERSION}
+	docker push ${DOCKER_USER}/kadalu-csi:${KADALU_VERSION}
+	docker push ${DOCKER_USER}/kadalu-server:${KADALU_VERSION}
+	docker push ${DOCKER_USER}/kadalu-operator:latest
+	docker push ${DOCKER_USER}/kadalu-csi:latest
+	docker push ${DOCKER_USER}/kadalu-server:latest
+endif
