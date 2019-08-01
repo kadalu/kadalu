@@ -61,7 +61,7 @@ operator-6dfb65dcdd-r664t        1/1     Running   0          30m
 ```
 
 
-[![asciicast](https://asciinema.org/a/257765.svg)](https://asciinema.org/a/257765)
+[![asciicast](https://asciinema.org/a/259949.svg)](https://asciinema.org/a/259949)
 
 
 ## CSI to claim Persistent Volumes (PVC/PV)
@@ -91,6 +91,8 @@ sample usage of PVC in an application pod by below:
 $ kubectl create -f examples/sample-app.yaml
 pod1 created
 ```
+
+[![asciicast](https://asciinema.org/a/259951.svg)](https://asciinema.org/a/259951)
 
 ## NOTE
 
