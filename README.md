@@ -99,3 +99,11 @@ pod1 created
 We are tracking the number of downloads based on 'docker pull' stats, and also
 through google analytics. [Issue #16](issues/16) gives detail of what is added
 to code w.r.to tracking.
+
+## Talks and Blog posts
+
+1. [Blog] [Gluster’s management in k8s](https://medium.com/@tumballi/glusters-management-in-k8s-13020a561962)
+2. [Blog] [Gluster and Kubernetes - Portmap](https://aravindavk.in/blog/gluster-and-k8s-portmap/)
+3. [Talk] [DevConf India - Rethinking Gluster Management using k8s](https://devconfin19.sched.com/event/RVPw/rethinking-gluster-management-using-k8s) ([slides](doc/rethinking-gluster-management-using-k8s.pdf))
+4. [Demo] Asciinema recording - [Kadalu Setup](https://asciinema.org/a/259949)
+5. [Demo] Asciinema recording - [KaDalu CSI to claim Persistent Volumes](https://asciinema.org/a/259951)
