@@ -1,11 +1,10 @@
 # KaDalu
 
-[![Build Status](https://travis-ci.org/aravindavk/kadalu.svg?branch=master)](https://travis-ci.org/aravindavk/kadalu)
+[![Build Status](https://travis-ci.org/kadalu/kadalu.svg?branch=master)](https://travis-ci.org/kadalu/kadalu)
 [![Operator Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg?label=DockerPulls%20Operator)](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg)
 [![Server Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg?label=DockerPulls%20Server)](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg)
 
-**Note 1:** kaDalu project is still in its infancy, not yet ready for production
-  use.
+**Note 1:** kaDalu project is still in its infancy, not yet 'officially' deployed in production.
 
 **Note 2:** If you are using 'minikube' to try out kaDalu, then please use
 `--vm-driver=none` option. In our testing, we found issues specific to CSI pods
@@ -16,7 +15,7 @@ when we used `kvm2` driver.
 Deploy KaDalu Operator using,
 
 ```
-kubectl create -f https://raw.githubusercontent.com/aravindavk/kadalu/master/manifests/kadalu-operator.yaml
+kubectl create -f https://raw.githubusercontent.com/kadalu/kadalu/master/manifests/kadalu-operator.yaml
 ```
 
 KaDalu Operator listens to Storage setup configuration changes and
@@ -97,8 +96,7 @@ pod1 created
 ## NOTE
 
 We are tracking the number of downloads based on 'docker pull' stats, and also
-through google analytics. [Issue #16](issues/16) gives detail of what is added
-to code w.r.to tracking.
+through google analytics. [This Commit](https://github.com/kadalu/kadalu/commit/84fda0ec94f766250959ca425ceb9e0659a447fb) gives detail of what is added to code w.r.to tracking.
 
 ## Talks and Blog posts
 
