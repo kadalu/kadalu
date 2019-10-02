@@ -96,7 +96,7 @@ pod1 created
 ## NOTE
 
 We are tracking the number of downloads based on 'docker pull' stats, and also
-through google analytics. [This Commit](https://github.com/kadalu/kadalu/commit/84fda0ec94f766250959ca425ceb9e0659a447fb) gives detail of what is added to code w.r.to tracking.
+through google analytics. [This Commit](https://github.com/kadalu/kadalu/commit/cbc83fd751bf0221e22b61bd6ebad4af40e38275) gives detail of what is added to code w.r.to tracking.
 
 ## Talks and Blog posts
 
