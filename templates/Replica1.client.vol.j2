@@ -1,4 +1,4 @@
-volume {{ volname }}-distribute-0-client-0
+volume {{ volname }}-client
     type protocol/client
     option transport.socket.keepalive-count 9
     option transport.socket.read-fail-log off
@@ -23,45 +23,10 @@ volume {{ volname }}-distribute-0-client-0
     option frame-timeout 1800
 end-volume
 
-volume {{ volname }}-distribute
-    type cluster/distribute
-    option tier-mode test
-    option use-readdirp on
-    option tier-compact off
-    option assert-no-child-down off
-    option unhashed-sticky-bit off
-    option lookup-optimize on
-    option tier-max-files 10000
-    option tier-max-promote-file-size 0
-    option tier-cold-compact-frequency 604800
-    option read-freq-threshold 0
-    option rebal-throttle normal
-    option tier-hot-compact-frequency 604800
-    option watermark-low 75
-    option weighted-rebalance on
-    option tier-max-mb 4000
-    option tier-pause off
-    option lock-migration off
-    option randomize-hash-range-by-gfid off
-    option rebalance-stats off
-    option tier-query-limit 100
-    option watermark-hi 90
-    option xattr-name trusted.glusterfs.dht
-    option min-free-inodes 5%
-    option force-migration off
-    option tier-promote-frequency 120
-    option min-free-disk 10%
-    option readdir-optimize off
-    option lookup-unhashed on
-    option write-freq-threshold 0
-    option tier-demote-frequency 3600
-    subvolumes {{ volname }}-distribute-0-client-0
-end-volume
-
 volume {{ volname }}-utime
     type features/utime
     option noatime on
-    subvolumes {{ volname }}-distribute
+    subvolumes {{ volname }}-client
 end-volume
 
 volume {{ volname }}-read-only
@@ -102,17 +67,6 @@ volume {{ volname }}-write-behind
     subvolumes {{ volname }}-md-cache
 end-volume
 
-volume {{ volname }}-io-cache
-    type performance/io-cache
-    option cache-timeout 1
-    option io-cache on
-    option pass-through false
-    option max-file-size 0
-    option min-file-size 0
-    option cache-size 32MB
-    subvolumes {{ volname }}-write-behind
-end-volume
-
 volume {{ volname }}-open-behind
     type performance/open-behind
     option use-anonymous-fd no
@@ -120,7 +74,7 @@ volume {{ volname }}-open-behind
     option pass-through false
     option read-after-open yes
     option lazy-open yes
-    subvolumes {{ volname }}-io-cache
+    subvolumes {{ volname }}-write-behind
 end-volume
 
 volume {{ volname }}-nl-cache
