@@ -5,6 +5,7 @@ import logging
 import sys
 import os
 import requests
+from datetime import datetime
 
 import xxhash
 
@@ -91,7 +92,8 @@ def send_analytics_tracker(name):
     track_title = "Kadalu %s" % name
 
     # TODO: cid should be 1 per installation. How to do it?
-    track_url = "%s&dl=%s&dt=%s&tid=%s&cid=1363" % (url, track_page, track_title, ga_id)
+    client_id = datetime.now().timestamp()
+    track_url = "%s&dl=%s&dt=%s&tid=%s&cid=%s" % (url, track_page, track_title, ga_id, client_id)
 
     # TODO: make this optional, and let users know this operator tracks one run as 1 page hit.
     # ignore s

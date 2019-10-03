@@ -10,7 +10,7 @@ RUN yum update -y && \
     rm -rf /var/cache/yum
 
 # Install Python GRPC library and copy all CSI related files
-RUN python3 -m pip install kubernetes jinja2 xxhash requests
+RUN python3 -m pip install kubernetes jinja2 xxhash requests datetime
 RUN mkdir -p /kadalu/manifests
 
 COPY templates/services.yaml.j2      /kadalu/templates/services.yaml.j2
