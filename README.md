@@ -10,6 +10,9 @@
 `--vm-driver=none` option. In our testing, we found issues specific to CSI pods
 when we used `kvm2` driver.
 
+**Note 3:** If you like the project, give a github star :-)
+
+
 ## Get Started
 
 Deploy KaDalu Operator using,
@@ -106,3 +109,10 @@ through google analytics. [This Commit](https://github.com/kadalu/kadalu/commit/
 4. [Demo] Asciinema recording - [Kadalu Setup](https://asciinema.org/a/259949)
 5. [Demo] Asciinema recording - [KaDalu CSI to claim Persistent Volumes](https://asciinema.org/a/259951)
 6. [Blog] [kaDalu - Ocean of opportunities](https://medium.com/@tumballi/kadalu-ocean-of-potential-in-k8s-storage-a07be1b8b961?source=friends_link&sk=d2499bc1e7433fd18c93c34c796e1a11&utm_source=github)
+
+## Reach out to some of the developers
+
+You can reach to the developers using certain ways.
+
+1. Best is opening an [issue in github.](https://github.com/kadalu/kadalu/issues)
+2. Reach to us on [Slack](https://join.slack.com/t/kadalu/shared_invite/enQtNzg1ODQ0MDA5NTM2LWMzMTc5ZTJmMjk4MzI0YWVhOGFlZTJjZjY5MDNkZWI0Y2VjMDBlNzVkZmI1NWViN2U3MDNlNDJhNjE5OTBlOGU) (Note, there would be no history) - https://kadalu.slack.com
