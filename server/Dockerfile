@@ -35,7 +35,7 @@ LABEL io.k8s.description="KaDalu container(glusterfsd or glustershd)"
 LABEL name="kadalu-server"
 LABEL Summary="KaDalu Server"
 LABEL vcs-type="git"
-LABEL vcs-url="https://github.com/aravindavk/kadalu"
+LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="kadalu.gluster"
 LABEL version="${version}"
 

@@ -33,7 +33,7 @@ $ cd /mnt/vda1/
 $ sudo truncate -s 10G storage-pool-1.disk.img
 ```
 
-After this follow our [Homepage](https://github.com/aravindavk/kadalu). You are good to get started.
+After this follow our [Homepage](https://github.com/kadalu/kadalu). You are good to get started.
 
 ## Further considerations
 

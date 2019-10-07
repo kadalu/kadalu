@@ -22,7 +22,7 @@ metadata:
 spec:
   containers:
   - name: sample-app
-    image: docker.io/amarts/sample-pv-check-app:latest
+    image: docker.io/kadalu/sample-pv-check-app:latest
     imagePullPolicy: IfNotPresent
     volumeMounts:
     - mountPath: "/mnt/pv"
