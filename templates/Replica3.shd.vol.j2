@@ -99,21 +99,21 @@ end-volume
 
 volume {{ volname }}-replicate-0
     type cluster/replicate
-    option data-self-heal off
+    option data-self-heal on
     option halo-enabled False
     option halo-shd-max-latency 99999
     option background-self-heal-count 8
     option afr-dirty-xattr trusted.afr.dirty
     option granular-entry-heal no
-    option iam-self-heal-daemon off
+    option iam-self-heal-daemon true
     option pre-op-compat on
-    option metadata-self-heal off
+    option metadata-self-heal on
     option consistent-io no
     option favorite-child-policy none
     option full-lock yes
     option data-self-heal-window-size 1
     option post-op-delay-secs 1
-    option self-heal-daemon off
+    option self-heal-daemon on
     option optimistic-change-log on
     option choose-local true
     option ensure-durability on
@@ -126,7 +126,7 @@ volume {{ volname }}-replicate-0
     option self-heal-readdir-size 1KB
     option eager-lock on
     option entrylk-trace off
-    option entry-self-heal off
+    option entry-self-heal on
     option shd-wait-qlength 1024
     option consistent-metadata no
     option entry-change-log on
@@ -150,64 +150,6 @@ volume {{ volname }}-utime
     type features/utime
     option noatime on
     subvolumes {{ volname }}-replicate-0
-end-volume
-
-volume {{ volname }}-read-only
-    type features/read-only
-    option read-only off
-    subvolumes {{ volname }}-utime
-end-volume
-
-volume {{ volname }}-md-cache
-    type performance/md-cache
-    option global-cache-invalidation true
-    option cache-samba-metadata false
-    option cache-ima-xattrs true
-    option cache-selinux false
-    option cache-swift-metadata true
-    option cache-capability-xattrs true
-    option pass-through false
-    option md-cache-statfs off
-    option cache-invalidation false
-    option force-readdirp true
-    option md-cache-timeout 1
-    option md-cache on
-    option cache-glusterfs-acl false
-    option cache-posix-acl false
-    subvolumes {{ volname }}-read-only
-end-volume
-
-volume {{ volname }}-write-behind
-    type performance/write-behind
-    option flush-behind on
-    option write-behind on
-    option aggregate-size 128KB
-    option resync-failed-syncs-after-fsync off
-    option strict-write-ordering off
-    option strict-O_DIRECT off
-    option trickling-writes on
-    option cache-size 1MB
-    subvolumes {{ volname }}-md-cache
-end-volume
-
-volume {{ volname }}-open-behind
-    type performance/open-behind
-    option use-anonymous-fd no
-    option open-behind on
-    option pass-through false
-    option read-after-open yes
-    option lazy-open yes
-    subvolumes {{ volname }}-write-behind
-end-volume
-
-volume {{ volname }}-nl-cache
-    type performance/nl-cache
-    option pass-through false
-    option nl-cache-timeout 60
-    option nl-cache-limit 131072
-    option nl-cache-positive-entry false
-    option nl-cache on
-    subvolumes {{ volname }}-open-behind
 end-volume
 
 volume {{ volname }}
