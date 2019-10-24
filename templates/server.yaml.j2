@@ -23,6 +23,7 @@ spec:
         app.kubernetes.io/component: server
         app.kubernetes.io/name: server
     spec:
+      serviceAccountName: kadalu-server-sa
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

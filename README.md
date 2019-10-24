@@ -21,6 +21,15 @@ Deploy KaDalu Operator using,
 kubectl create -f https://raw.githubusercontent.com/kadalu/kadalu/master/manifests/kadalu-operator.yaml
 ```
 
+In the case of OpenShift, deploy Kadalu Operator using,
+
+```
+oc create -f https://raw.githubusercontent.com/kadalu/kadalu/master/manifests/kadalu-operator-openshift.yaml
+```
+
+**Note:** Security Context Constraints can be applied only by admins,
+Run `oc login -u system:admin` to login as admin
+
 KaDalu Operator listens to Storage setup configuration changes and
 starts the required pods. For example,
 

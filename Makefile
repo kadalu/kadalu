@@ -29,6 +29,21 @@ gen-manifest:
 	@cat templates/operator.yaml >> manifests/kadalu-operator.yaml
 	@echo >> manifests/kadalu-operator.yaml
 	@echo "kubectl create -f manifests/kadalu-operator.yaml"
+	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
+		OPENSHIFT=1                                          \
+		python3 extras/scripts/gen_manifest.py
+	@cat templates/namespace.yaml > manifests/kadalu-operator-openshift.yaml
+	@echo >> manifests/kadalu-operator-openshift.yaml
+	@cat templates/operator.yaml >> manifests/kadalu-operator-openshift.yaml
+	@echo >> manifests/kadalu-operator-openshift.yaml
+	@echo
+	@echo "In the case of OpenShift, deploy Kadalu Operator by running "
+	@echo "the following command"
+	@echo
+	@echo "Note: Security Context Constraints can be applied only by admins, "
+	@echo 'Run `oc login -u system:admin` to login as admin'
+	@echo
+	@echo "oc create -f manifests/kadalu-operator-openshift.yaml"
 
 pylint:
 	@cp lib/kadalulib.py csi/
@@ -58,6 +73,14 @@ prepare-release:
 	@cp manifests/kadalu-operator.yaml \
 		manifests/kadalu-operator-${KADALU_VERSION}.yaml
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=latest \
+		$(MAKE) gen-manifest
+	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
+		OPENSHIFT=1                                          \
+		$(MAKE) gen-manifest
+	@cp manifests/kadalu-operator-openshift.yaml \
+		manifests/kadalu-operator-openshift-${KADALU_VERSION}.yaml
+	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=latest \
+		OPENSHIFT=1                               \
 		$(MAKE) gen-manifest
 	@echo "Generated manifest file. Version: ${KADALU_VERSION}"
 	@echo "Building containers(Version: ${KADALU_VERSION}).."
