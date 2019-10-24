@@ -24,10 +24,12 @@ def template(filename, template_file=None, template_args={}):
 if __name__ == "__main__":
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
     kadalu_version = os.environ.get("KADALU_VERSION", "latest")
+    openshift = bool(int(os.environ.get("OPENSHIFT", 0)))
     template_args = {
         "namespace": "kadalu",
         "kadalu_version": kadalu_version,
-        "docker_user": docker_user
+        "docker_user": docker_user,
+        "openshift": openshift
     }
 
     template("namespace.yaml", template_args=template_args)

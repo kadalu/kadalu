@@ -1,11 +1,5 @@
 # -*- mode: yaml -*-
 ## Deploy CSI attacher
----
-kind: ServiceAccount
-apiVersion: v1
-metadata:
-  name: csi-attacher
-  namespace: {{ namespace }}
 
 ---
 kind: ClusterRole
@@ -35,7 +29,7 @@ metadata:
   namespace: {{ namespace }}
 subjects:
   - kind: ServiceAccount
-    name: csi-attacher
+    name: kadalu-csi-attacher-sa
     namespace: {{ namespace }}
 roleRef:
   kind: ClusterRole
@@ -67,7 +61,7 @@ spec:
         app.kubernetes.io/component: csi-driver
         app.kubernetes.io/name: csi-attacher
     spec:
-      serviceAccountName: csi-attacher
+      serviceAccountName: kadalu-csi-attacher-sa
       containers:
         - name: csi-attacher
           image: quay.io/k8scsi/csi-attacher:v1.0.1
@@ -121,12 +115,6 @@ spec:
 
 ## Deploy CSI NodePlugin
 ---
-kind: ServiceAccount
-apiVersion: v1
-metadata:
-  name: csi-nodeplugin
-  namespace: {{ namespace }}
----
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -144,7 +132,7 @@ metadata:
   namespace: {{ namespace }}
 subjects:
   - kind: ServiceAccount
-    name: csi-nodeplugin
+    name: kadalu-csi-nodeplugin-sa
     namespace: {{ namespace }}
 roleRef:
   kind: ClusterRole
@@ -174,7 +162,7 @@ spec:
         app.kubernetes.io/name: csi-nodeplugin
       namespace: {{ namespace }}
     spec:
-      serviceAccount: csi-nodeplugin
+      serviceAccountName: kadalu-csi-nodeplugin-sa
       containers:
         - name: csi-node-driver-registrar
           image: quay.io/k8scsi/csi-node-driver-registrar:v1.0.1
@@ -250,12 +238,6 @@ spec:
 
 ## Deploy CSI Provisioner
 ---
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: csi-provisioner
-  namespace: {{ namespace }}
----
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -304,7 +286,7 @@ metadata:
   namespace: {{ namespace }}
 subjects:
   - kind: ServiceAccount
-    name: csi-provisioner
+    name: kadalu-csi-provisioner-sa
     namespace: {{ namespace }}
 roleRef:
   kind: ClusterRole
@@ -337,7 +319,7 @@ spec:
         app.kubernetes.io/component: csi-driver
         app.kubernetes.io/name: csi-provisioner
     spec:
-      serviceAccountName: csi-provisioner
+      serviceAccountName: kadalu-csi-provisioner-sa
       containers:
         - name: csi-provisioner
           image: quay.io/k8scsi/csi-provisioner:v1.0.1
