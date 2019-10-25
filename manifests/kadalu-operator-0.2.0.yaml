@@ -191,7 +191,7 @@ spec:
           securityContext:
             capabilities: {}
             privileged: true
-          image: docker.io/kadalu/kadalu-operator:latest
+          image: docker.io/kadalu/kadalu-operator:0.2.0
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
@@ -207,4 +207,4 @@ spec:
             - name: DOCKER_USER
               value: "kadalu"
             - name: KADALU_VERSION
-              value: "latest"
+              value: "0.2.0"
