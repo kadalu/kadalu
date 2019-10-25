@@ -4,7 +4,6 @@ kind: Namespace
 apiVersion: v1
 metadata:
   name: kadalu
-# -*- mode: yaml -*-
 ---
 apiVersion: v1
 kind: ServiceAccount

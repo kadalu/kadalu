@@ -41,6 +41,39 @@ metadata:
 
 
 ---
+kind: SecurityContextConstraints
+apiVersion: security.openshift.io/v1
+metadata:
+  name: kadalu-scc
+allowPrivilegedContainer: true
+allowHostNetwork: true
+allowHostDirVolumePlugin: true
+priority:
+allowedCapabilities: ['*']
+allowHostPorts: true
+allowHostPID: true
+allowHostIPC: true
+readOnlyRootFilesystem: false
+requiredDropCapabilities: []
+defaultAddCapabilities: []
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+fsGroup:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+volumes: ['*']
+users:
+  - system:serviceaccount:kadalu:kadalu-server-sa
+  - system:serviceaccount:kadalu:kadalu-operator-sa
+  - system:serviceaccount:kadalu:kadalu-csi-attacher-sa
+  - system:serviceaccount:kadalu:kadalu-csi-provisioner-sa
+  - system:serviceaccount:kadalu:kadalu-csi-nodeplugin-sa
+
+
+---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -191,7 +224,7 @@ spec:
           securityContext:
             capabilities: {}
             privileged: true
-          image: docker.io/kadalu/kadalu-operator:latest
+          image: docker.io/kadalu/kadalu-operator:0.2.0
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
@@ -207,4 +240,4 @@ spec:
             - name: DOCKER_USER
               value: "kadalu"
             - name: KADALU_VERSION
-              value: "latest"
+              value: "0.2.0"

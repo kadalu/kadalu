@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2019-10-25
+### Added
+- Improvements to Volfile templates by removing distribute graph in
+  case of no distribute Volume.
+- Added Security Context Constraints to support Openshift deployment.
+- Improved Tracking to understand the workload better.
+- New `make` command for release management.
+
 ## [0.1.0] - 2019-07-30
 ### Added
 - Kadalu Operator to install and manage CSI and Server pods.
@@ -20,5 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/aravindavk/kadalu/compare/0.1.0...HEAD
-[0.1.0]: https://github.com/aravindavk/kadalu/compare/e434f25...0.1.0
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.2.0...HEAD
+[0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
+[0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
