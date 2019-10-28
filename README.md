@@ -14,7 +14,7 @@ when we used `kvm2` driver.
 
 ## Introduction
 
-The fundamental idea of the project is described [here](.doc/rethinking-gluster-management-using-k8s.pdf)
+The fundamental idea of the project is described [here](doc/rethinking-gluster-management-using-k8s.pdf)
 
 Compared to `GlusterD` there are various points which we consider worth changing:
 
