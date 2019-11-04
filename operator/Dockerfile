@@ -30,7 +30,7 @@ LABEL io.k8s.description="KaDalu Operator"
 LABEL name="kadalu-operator"
 LABEL Summary="KaDalu Operator"
 LABEL vcs-type="git"
-LABEL vcs-url="https://github.com/aravindavk/kadalu"
+LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="kadalu.gluster"
 LABEL version="${version}"
 

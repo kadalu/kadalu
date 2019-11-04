@@ -11,7 +11,7 @@ LABEL io.k8s.description="KaDalu sample App container"
 LABEL name="kadalu-sample-app"
 LABEL Summary="KaDalu Sample App"
 LABEL vcs-type="git"
-LABEL vcs-url="https://github.com/aravindavk/kadalu"
+LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="kadalu.gluster"
 LABEL version="${version}"
 

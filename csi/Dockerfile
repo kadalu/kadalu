@@ -30,7 +30,7 @@ LABEL io.k8s.description="KaDalu CSI driver"
 LABEL name="kadalu-csi"
 LABEL Summary="KaDalu CSI driver"
 LABEL vcs-type="git"
-LABEL vcs-url="https://github.com/aravindavk/kadalu"
+LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="kadalu.gluster"
 LABEL version="${version}"
 
