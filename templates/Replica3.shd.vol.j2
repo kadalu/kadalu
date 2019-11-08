@@ -6,7 +6,7 @@ volume {{ volname }}-replicate-0-client-0
     option volfile-key /{{ volname }}
     option client-version 7dev
     option process-name fuse
-    option process-uuid CTX_ID:9adfef22-2e0c-411f-a979-de075cb3b0db-GRAPH_ID:0-PID:5043-HOST:server-{{ volname }}-{{ bricks[0]["node"] }}-0.{{ volname }}-PC_NAME:{{ volname }}-replicate-0-client-0-RECON_NO:-0
+    option process-uuid CTX_ID:9adfef22-2e0c-411f-a979-de075cb3b0db-GRAPH_ID:0-PID:5043-HOST:{{ bricks[0]["node"] }}-PC_NAME:{{ volname }}-replicate-0-client-0-RECON_NO:-0
     option fops-version 1298437
     option transport.socket.ssl-enabled off
     option transport.socket.keepalive-time 20
@@ -18,7 +18,7 @@ volume {{ volname }}-replicate-0-client-0
     option remote-subvolume {{ bricks[0]["brick_path"] }}
     option transport.socket.keepalive-count 9
     option filter-O_DIRECT disable
-    option remote-host server-{{ volname }}-{{ bricks[0]["node"] }}-0.{{ volname }}
+    option remote-host {{ bricks[0]["node"] }}
     option transport.socket.nodelay 1
     option send-gids on
     option ping-timeout 42
@@ -39,11 +39,11 @@ volume {{ volname }}-replicate-0-client-1
     option volfile-key /{{ volname }}
     option client-version 7dev
     option process-name fuse
-    option process-uuid CTX_ID:9adfef22-2e0c-411f-a979-de075cb3b0db-GRAPH_ID:0-PID:5043-HOST:server-{{ volname }}-{{ bricks[1]["node"] }}-0.{{ volname }}-PC_NAME:{{ volname }}-replicate-0-client-1-RECON_NO:-0
+    option process-uuid CTX_ID:9adfef22-2e0c-411f-a979-de075cb3b0db-GRAPH_ID:0-PID:5043-HOST:{{ bricks[1]["node"] }}-PC_NAME:{{ volname }}-replicate-0-client-1-RECON_NO:-0
     option fops-version 1298437
     option transport.socket.ssl-enabled off
     option frame-timeout 1800
-    option remote-host server-{{ volname }}-{{ bricks[1]["node"] }}-0.{{ volname }}
+    option remote-host {{ bricks[1]["node"] }}
     option non-blocking-io off
     option remote-subvolume {{ bricks[1]["brick_path"] }}
     option transport.socket.lowlat off
@@ -72,11 +72,11 @@ volume {{ volname }}-replicate-0-client-2
     option volfile-key /{{ volname }}
     option client-version 7dev
     option process-name fuse
-    option process-uuid CTX_ID:9adfef22-2e0c-411f-a979-de075cb3b0db-GRAPH_ID:0-PID:5043-HOST:server-{{ volname }}-{{ bricks[2]["node"] }}-0.{{ volname }}-PC_NAME:{{ volname }}-replicate-0-client-2-RECON_NO:-0
+    option process-uuid CTX_ID:9adfef22-2e0c-411f-a979-de075cb3b0db-GRAPH_ID:0-PID:5043-HOST:{{ bricks[2]["node"] }}-PC_NAME:{{ volname }}-replicate-0-client-2-RECON_NO:-0
     option fops-version 1298437
     option transport-type socket
     option transport.listen-backlog 1024
-    option remote-host server-{{ volname }}-{{ bricks[2]["node"] }}-0.{{ volname }}
+    option remote-host {{ bricks[2]["node"] }}
     option remote-subvolume {{ bricks[2]["brick_path"] }}
     option transport.socket.keepalive-count 9
     option transport.socket.own-thread off

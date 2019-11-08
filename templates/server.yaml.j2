@@ -3,7 +3,7 @@
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
-  name: server-{{ volname }}-{{ kube_hostname }}
+  name: {{ serverpod_name }}
   namespace: {{ namespace }}
   labels:
     app.kubernetes.io/part-of: kadalu

@@ -13,7 +13,7 @@ volume {{ volname }}-client
     option transport.tcp-user-timeout 42
     option ping-timeout 42
     option filter-O_DIRECT disable
-    option remote-host server-{{ volname }}-{{ bricks[0]["node"] }}-0.{{ volname }}
+    option remote-host {{ bricks[0]["node"] }}
     option transport.socket.keepalive-interval 2
     option send-gids on
     option transport.socket.nodelay 1
