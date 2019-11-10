@@ -99,6 +99,24 @@ def get_brick_device_dir(brick):
     return brick_device_dir
 
 
+def get_brick_hostname(volname, node, suffix=True):
+    # Brick hostname is <statefulset-name>-<ordinal>.<service-name>
+    # statefulset name is the one which is visible when the
+    # `get pods` command is run, so the format used for that name
+    # is "server-<volname>-<hostname>". Escape dots from the hostname
+    # from the input otherwise will become invalid name
+    # Service is created with name as Volume name. For example,
+    # brick_hostname will be "server-spool1-minikube.spool1" and
+    # server pod name will be "server-spool1-minikube"
+    hostname = "server-%s-%s" % (volname, node.replace(".", "-"))
+    if suffix:
+        # TODO: ordinal is used as zero. If more than one brick used from the
+        # same node and for the same volume then consider changing this
+        return hostname + "-0." + volname
+
+    return hostname
+
+
 def update_config_map(core_v1_client, obj):
     """
     Volinfo of new hosting Volume is generated and updated to ConfigMap
@@ -119,14 +137,14 @@ def update_config_map(core_v1_client, obj):
         KADALU_CONFIG_MAP, NAMESPACE)
 
     # For each brick, add brick path and node id
-    for idx, brick in enumerate(obj["spec"]["storage"]):
+    for idx, storage in enumerate(obj["spec"]["storage"]):
         data["bricks"].append({
             "brick_path": "/bricks/%s/data/brick" % volname,
-            "node": brick["node"],
+            "node": get_brick_hostname(volname, storage["node"]),
             "node_id": str(uuid.uuid1()),
-            "host_brick_path": brick.get("path", ""),
-            "brick_device": brick.get("device", ""),
-            "brick_device_dir": get_brick_device_dir(brick),
+            "host_brick_path": storage.get("path", ""),
+            "brick_device": storage.get("device", ""),
+            "brick_device_dir": get_brick_device_dir(storage),
             "brick_index": idx
         })
 
@@ -156,13 +174,18 @@ def deploy_server_pods(obj):
     }
 
     # One StatefulSet per Brick
-    for idx, brick in enumerate(obj["spec"]["storage"]):
-        template_args["host_brick_path"] = brick.get("path", "")
-        template_args["kube_hostname"] = brick["node"]
+    for idx, storage in enumerate(obj["spec"]["storage"]):
+        template_args["host_brick_path"] = storage.get("path", "")
+        template_args["kube_hostname"] = storage["node"]
+        template_args["serverpod_name"] = get_brick_hostname(
+            volname,
+            storage["node"],
+            suffix=False
+        )
         template_args["brick_path"] = "/bricks/%s/data/brick" % volname
         template_args["brick_index"] = idx
-        template_args["brick_device"] = brick.get("device", "")
-        template_args["brick_device_dir"] = get_brick_device_dir(brick)
+        template_args["brick_device"] = storage.get("device", "")
+        template_args["brick_device_dir"] = get_brick_device_dir(storage)
 
         filename = os.path.join(MANIFESTS_DIR, "server.yaml")
         template(filename, **template_args)
@@ -170,7 +193,7 @@ def deploy_server_pods(obj):
         logging.info(logf("Deployed Server pod",
                           volname=volname,
                           manifest=filename,
-                          node=brick["node"]))
+                          node=storage["node"]))
 
 
 def handle_added(core_v1_client, obj):
