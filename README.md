@@ -26,15 +26,15 @@ Compared to `GlusterD` there are various points which we consider worth changing
 
 Therefore kadalu does some things different:
 
-|GlusterD|kaDalu|
-|--------|------|
-|Clustering / Peer Management|k8s|
-|Volume Management|ConfigMap, `kubectl apply`|
-|Brick process management|K8s’s pod management|
-|Portmap for Bricks|Not required in new model|
-|Service Management (brick, self-heal, etc)|Runs as another container in same pod.<br>So, managed by k8s as any other pod|
-|Volfile for Bricks, self-heal etc|ConfigMap|
-|Quota, Snapshot, Geo-Replication|CSI / SideCar containers|
+| GlusterD                                   | kaDalu                                                                        |
+| ------------------------------------------ | ----------------------------------------------------------------------------- |
+| Clustering / Peer Management               | k8s                                                                           |
+| Volume Management                          | ConfigMap, `kubectl apply`                                                    |
+| Brick process management                   | K8s’s pod management                                                          |
+| Portmap for Bricks                         | Not required in new model                                                     |
+| Service Management (brick, self-heal, etc) | Runs as another container in same pod.<br>So, managed by k8s as any other pod |
+| Volfile for Bricks, self-heal etc          | ConfigMap                                                                     |
+| Quota, Snapshot, Geo-Replication           | CSI / SideCar containers                                                      |
 
 ## Get Started
 
@@ -98,7 +98,6 @@ Check the status of Pods using,
 $ kubectl get pods -nkadalu
 NAME                             READY   STATUS    RESTARTS   AGE
 server-storage-pool-1-kube1-0    1/1     Running   0          84s
-csi-attacher-0                   2/2     Running   0          30m
 csi-nodeplugin-5hfms             2/2     Running   0          30m
 csi-nodeplugin-924cc             2/2     Running   0          30m
 csi-nodeplugin-cbjl9             2/2     Running   0          30m

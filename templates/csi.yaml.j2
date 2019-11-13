@@ -1,118 +1,4 @@
 # -*- mode: yaml -*-
-## Deploy CSI attacher
-
----
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: external-attacher-runner
-  namespace: {{ namespace }}
-rules:
-  - apiGroups: [""]
-    resources: ["persistentvolumes"]
-    verbs: ["get", "list", "watch", "update"]
-  - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["csi.storage.k8s.io"]
-    resources: ["csinodeinfos"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["volumeattachments"]
-    verbs: ["get", "list", "watch", "update"]
-
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: csi-attacher-role
-  namespace: {{ namespace }}
-subjects:
-  - kind: ServiceAccount
-    name: kadalu-csi-attacher-sa
-    namespace: {{ namespace }}
-roleRef:
-  kind: ClusterRole
-  name: external-attacher-runner
-  apiGroup: rbac.authorization.k8s.io
-
----
-kind: StatefulSet
-apiVersion: apps/v1
-metadata:
-  name: csi-attacher
-  namespace: {{ namespace }}
-  labels:
-    app.kubernetes.io/part-of: kadalu
-    app.kubernetes.io/component: csi-driver
-    app.kubernetes.io/name: csi-attacher
-spec:
-  serviceName: csi-attacher
-  replicas: 1
-  selector:
-    matchLabels:
-      app.kubernetes.io/part-of: kadalu
-      app.kubernetes.io/component: csi-driver
-      app.kubernetes.io/name: csi-attacher
-  template:
-    metadata:
-      labels:
-        app.kubernetes.io/part-of: kadalu
-        app.kubernetes.io/component: csi-driver
-        app.kubernetes.io/name: csi-attacher
-    spec:
-      serviceAccountName: kadalu-csi-attacher-sa
-      containers:
-        - name: csi-attacher
-          image: quay.io/k8scsi/csi-attacher:v1.0.1
-          args:
-            - "--v=5"
-            - "--csi-address=$(ADDRESS)"
-          env:
-            - name: MY_NAME
-              valueFrom:
-               fieldRef:
-                 fieldPath: metadata.name
-            - name: MY_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: ADDRESS
-              value: /var/lib/csi/sockets/pluginproxy/csi.sock
-            - name: KADALU_VERSION
-              value: "{{ kadalu_version }}"
-          volumeMounts:
-            - name: socket-dir
-              mountPath: /var/lib/csi/sockets/pluginproxy/
-
-        - name: kadalu-attacher
-          image: docker.io/{{ docker_user }}/kadalu-csi:{{ kadalu_version }}
-          env:
-            - name: NODE_ID
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            - name: CSI_ENDPOINT
-              value: unix://plugin/csi.sock
-            - name: KADALU_VERSION
-              value: "{{ kadalu_version }}"
-          volumeMounts:
-            - name: socket-dir
-              mountPath: /plugin
-            - name: glusterfsd-volfilesdir
-              mountPath: "/var/lib/gluster"
-            - name: gluster-dev
-              mountPath: "/dev"
-      volumes:
-        - name: socket-dir
-          emptyDir:
-        - name: glusterfsd-volfilesdir
-          configMap:
-            name: "kadalu-info"
-        - name: gluster-dev
-          hostPath:
-            path: "/dev"
-
 ## Deploy CSI NodePlugin
 ---
 kind: ClusterRole
@@ -247,6 +133,9 @@ rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
     verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["volumeattachments"]
+    verbs: ["get", "list", "watch", "update"]
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
     verbs: ["get", "list", "watch", "update"]
@@ -254,8 +143,14 @@ rules:
     resources: ["storageclasses"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["csi.storage.k8s.io"]
+    resources: ["csinodeinfos"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
     resources: ["events"]
-    verbs: ["list", "watch", "create", "update", "patch","delete","get"]
+    verbs: ["list", "watch", "create", "update", "patch", "delete", "get"]
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "list"]
@@ -277,7 +172,7 @@ rules:
   - apiGroups: ["csi.storage.k8s.io"]
     resources: ["csidrivers"]
     verbs: ["create", "delete"]
-  
+
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -335,11 +230,10 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
-        - name: csi-cluster-driver-registrar
-          image: quay.io/k8scsi/csi-cluster-driver-registrar:v1.0.1
+        - name: csi-attacher
+          image: quay.io/k8scsi/csi-attacher:v1.0.1
           args:
             - "--v=5"
-            - "--pod-info-mount-version=\"v1\""
             - "--csi-address=$(ADDRESS)"
           env:
             - name: ADDRESS
@@ -347,7 +241,6 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
-
         - name: kadalu-provisioner
           securityContext:
             privileged: true

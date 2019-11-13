@@ -50,7 +50,7 @@ KADALU_IMAGE_REPO=${KADALU_IMAGE_REPO:-"docker.io/kadalu"}
 K8S_IMAGE_REPO=${K8S_IMAGE_REPO:-"quay.io/k8scsi"}
 
 #feature-gates for kube
-K8S_FEATURE_GATES=${K8S_FEATURE_GATES:-"BlockVolume=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true"}
+K8S_FEATURE_GATES=${K8S_FEATURE_GATES:-"BlockVolume=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true,CSIDriverRegistry=true"}
 
 DISK="sda1"
 if [[ "${VM_DRIVER}" == "kvm2" ]]; then
@@ -76,7 +76,8 @@ up)
         # shellcheck disable=SC2086
         minikube ssh "sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file"
     else
-        sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file
+        sudo mkdir -p /mnt/${DISK}
+        sudo truncate -s 4g /mnt/${DISK}/file
     fi
     kubectl cluster-info
     ;;
@@ -105,20 +106,20 @@ kadalu_operator)
     # give it some time
     cnt=0
     while true; do
-        cnt=$((cnt+1))
-        sleep 1;
-        ret=`kubectl get pods -nkadalu -o name | wc -l`
-        if [[ $ret -ge 5 ]]; then
+        cnt=$((cnt + 1))
+        sleep 1
+        ret=$(kubectl get pods -nkadalu -o name | wc -l)
+        if [[ $ret -ge 4 ]]; then
             echo "Successful after $cnt seconds"
-            break;
+            break
         fi
         if [[ $cnt -eq 100 ]]; then
-            kubectl get pods -nkadalu;
-            kubectl get pods;
+            kubectl get pods -nkadalu
+            kubectl get pods
             echo "giving up after 100 seconds"
-            break;
+            break
         fi
-        if [[ $((cnt%10)) -eq 0 ]]; then
+        if [[ $((cnt % 10)) -eq 0 ]]; then
             echo "$cnt: Waiting for pods to come up..."
         fi
     done
@@ -135,21 +136,21 @@ test_kadalu)
     # give it some time
     cnt=0
     while true; do
-        cnt=$((cnt+1))
-        sleep 1;
-        ret=`kubectl get pods pod1 | grep Completed | wc -l`
+        cnt=$((cnt + 1))
+        sleep 1
+        ret=$(kubectl get pods pod1 | grep Completed | wc -l)
         if [[ $ret -eq 1 ]]; then
             echo "Successful after $cnt seconds"
-            break;
+            break
         fi
         if [[ $cnt -eq 100 ]]; then
-            kubectl get pods -nkadalu;
-            kubectl get pods;
+            kubectl get pods -nkadalu
+            kubectl get pods
             echo "exiting after 100 seconds"
             fail=1
-            break;
+            break
         fi
-        if [[ $((cnt%10)) -eq 0 ]]; then
+        if [[ $((cnt % 10)) -eq 0 ]]; then
             echo "$cnt: Waiting for pods to come up..."
         fi
     done
@@ -162,21 +163,21 @@ test_kadalu)
     # give it some time
     cnt=0
     while true; do
-        cnt=$((cnt+1))
-        sleep 1;
-        ret=`kubectl get pods pod2 | grep Completed | wc -l`
+        cnt=$((cnt + 1))
+        sleep 1
+        ret=$(kubectl get pods pod2 | grep Completed | wc -l)
         if [[ $ret -eq 1 ]]; then
             echo "Successful after $cnt seconds"
-            break;
+            break
         fi
         if [[ $cnt -eq 100 ]]; then
-            kubectl get pods -nkadalu;
-            kubectl get pods;
+            kubectl get pods -nkadalu
+            kubectl get pods
             echo "exiting after 100 seconds"
             fail=1
-            break;
+            break
         fi
-        if [[ $((cnt%10)) -eq 0 ]]; then
+        if [[ $((cnt % 10)) -eq 0 ]]; then
             echo "$cnt: Waiting for pods to come up..."
         fi
     done
@@ -184,15 +185,15 @@ test_kadalu)
 
     # Log everything so we are sure if things are as expected
     for p in $(kubectl -n kadalu get pods -o name); do
-        echo "====================== Start $p ======================";
-        kubectl -nkadalu logs $p --all-containers=true;
-        echo "======================= End $p =======================";
+        echo "====================== Start $p ======================"
+        kubectl -nkadalu logs $p --all-containers=true
+        echo "======================= End $p ======================="
     done
     #kubectl -n kadalu logs -lapp=kadalu --all-containers=true
 
     # Return failure if fail variable is set to 1
-    if [ $fail -eq 1 ] ; then
-        exit 1;
+    if [ $fail -eq 1 ]; then
+        exit 1
     fi
     ;;
 clean)

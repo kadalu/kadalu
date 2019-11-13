@@ -15,13 +15,6 @@ metadata:
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: kadalu-csi-attacher-sa
-  namespace: kadalu
-
----
-kind: ServiceAccount
-apiVersion: v1
-metadata:
   name: kadalu-csi-nodeplugin-sa
   namespace: kadalu
 
@@ -128,7 +121,7 @@ rules:
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["events"]
-    verbs: ["list", "watch", "create", "update", "patch","delete","get"]
+    verbs: ["list", "watch", "create", "update", "patch", "delete", "get"]
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "list"]
@@ -149,7 +142,10 @@ rules:
     verbs: ["create", "list", "watch", "delete"]
   - apiGroups: ["csi.storage.k8s.io"]
     resources: ["csidrivers"]
-    verbs: ["create", "delete"]
+    verbs: ["get", "create", "delete"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["csidrivers"]
+    verbs: ["get", "create", "delete"]
 
 ---
 kind: ClusterRoleBinding
