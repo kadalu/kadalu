@@ -27,7 +27,7 @@ The focus of the project is simplicity and stability. We believe simple things c
 
 ### Pre-Requisites
 
-- Kubernetes 1.14.0 + version
+- Kubernetes 1.13.0 + version
 - The host should support xfs (`mkfs.xfs`)
 - The `mount -t xfs` with `-oprjquota` should work
 
@@ -35,13 +35,13 @@ The focus of the project is simplicity and stability. We believe simple things c
 
 1. Deploy KaDalu Operator using,
 
-   ```bash
+   ```console
    kubectl create -f https://raw.githubusercontent.com/kadalu/kadalu/master/manifests/kadalu-operator.yaml
    ```
 
    In the case of OpenShift, deploy Kadalu Operator using,
 
-   ```bash
+   ```console
    oc create -f https://raw.githubusercontent.com/kadalu/kadalu/master/manifests/kadalu-operator-openshift.yaml
    ```
 
@@ -72,8 +72,8 @@ You have more options for config file. Check them [here]()
 
 2.2 Now request kadalu-operator to setup storage using,
 
-   ```bash
-   $ kubectl create -f storage-config.yaml
+   ```console
+   kubectl create -f storage-config.yaml
    ```
 
 Operator will start the storage export pods as required. And, in 2 steps,
@@ -85,7 +85,6 @@ Check the status of Pods using,
 $ kubectl get pods -nkadalu
 NAME                             READY   STATUS    RESTARTS   AGE
 server-storage-pool-1-kube1-0    1/1     Running   0          84s
-csi-attacher-0                   2/2     Running   0          30m
 csi-nodeplugin-5hfms             2/2     Running   0          30m
 csi-nodeplugin-924cc             2/2     Running   0          30m
 csi-nodeplugin-cbjl9             2/2     Running   0          30m

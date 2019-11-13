@@ -387,6 +387,16 @@ def deploy_csi_pods(core_v1_client):
             return
 
     # Deploy CSI Pods
+    api_instance=client.VersionApi().get_code()
+    if api_instance.major>"1" or api_instance.major=="1" and api_instance.minor>="14":
+        filename = os.path.join(MANIFESTS_DIR, "csi-driver-object.yaml")
+        template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
+        execute(KUBECTL_CMD, "create", "-f", filename)
+    else:
+        filename = os.path.join(MANIFESTS_DIR, "csi-driver-crd.yaml")
+        template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
+        execute(KUBECTL_CMD, "create", "-f", filename)
+
     filename = os.path.join(MANIFESTS_DIR, "csi.yaml")
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
     template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
