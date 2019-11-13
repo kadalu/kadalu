@@ -124,7 +124,7 @@ KADALU_IMAGE_REPO=${KADALU_IMAGE_REPO:-"docker.io/kadalu"}
 K8S_IMAGE_REPO=${K8S_IMAGE_REPO:-"quay.io/k8scsi"}
 
 #feature-gates for kube
-K8S_FEATURE_GATES=${K8S_FEATURE_GATES:-"BlockVolume=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true"}
+K8S_FEATURE_GATES=${K8S_FEATURE_GATES:-"BlockVolume=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true,CSIDriverRegistry=true"}
 
 DISK="sda1"
 if [[ "${VM_DRIVER}" == "kvm2" ]]; then
@@ -192,7 +192,7 @@ kadalu_operator)
 	cnt=$((cnt + 1))
 	sleep 1
 	ret=$(kubectl get pods -nkadalu | grep 'Running' | wc -l)
-	if [[ $ret -ge 8 ]]; then
+	if [[ $ret -ge 7 ]]; then
 	    echo "Successful after $cnt seconds"
 	    break
 	fi

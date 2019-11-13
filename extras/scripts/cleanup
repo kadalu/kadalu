@@ -8,10 +8,6 @@ kubectl -nkadalu delete DaemonSet csi-nodeplugin
 kubectl -nkadalu delete ClusterRoleBinding csi-nodeplugin
 kubectl -nkadalu delete ClusterRole csi-nodeplugin
 kubectl -nkadalu delete ServiceAccount csi-nodeplugin
-kubectl -nkadalu delete StatefulSet csi-attacher
-kubectl -nkadalu delete ClusterRoleBinding csi-attacher-role
-kubectl -nkadalu delete ClusterRole external-attacher-runner
-kubectl -nkadalu delete ServiceAccount csi-attacher
 kubectl get Service -nkadalu | awk '{print $1}' | xargs kubectl -nkadalu delete Service
 kubectl get StatefulSet -nkadalu | awk '{print $1}' | xargs kubectl -nkadalu delete StatefulSet
 kubectl get storageclass | grep kadalu | awk '{print $1}' | xargs kubectl delete storageclass
