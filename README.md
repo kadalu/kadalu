@@ -1,5 +1,15 @@
 # KaDalu
 
+- [KaDalu](#kadalu)
+  - [Introduction](#introduction)
+  - [Get Started](#get-started)
+    - [Pre-Requisites](#pre-requisites)
+    - [Setup](#setup)
+  - [CSI to claim Persistent Volumes (PVC/PV)](#csi-to-claim-persistent-volumes-pvcpv)
+  - [NOTE](#note)
+  - [Talks and Blog posts](#talks-and-blog-posts)
+  - [Reach out to some of the developers](#reach-out-to-some-of-the-developers)
+
 [![Build Status](https://travis-ci.org/kadalu/kadalu.svg?branch=master)](https://travis-ci.org/kadalu/kadalu)
 [![Operator Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg?label=DockerPulls%20Operator)](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg)
 [![Server Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg?label=DockerPulls%20Server)](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg)
@@ -42,7 +52,7 @@ Therefore kadalu does some things different:
 
 There is no need to have a `glusterd` running on the host, however there are few pre-requirements
 
-- Kubernetes 1.14.0 + version
+- Kubernetes 1.13.0 + version
 - The host should support xfs (`mkfs.xfs`)
 - The `mount -t xfs` with `-oprjquota` should work (on minikube VM this doesn't work).
 
@@ -50,13 +60,13 @@ There is no need to have a `glusterd` running on the host, however there are few
 
 1. Deploy KaDalu Operator using,
 
-   ```bash
+   ```console
    kubectl create -f https://raw.githubusercontent.com/kadalu/kadalu/master/manifests/kadalu-operator.yaml
    ```
 
    In the case of OpenShift, deploy Kadalu Operator using,
 
-   ```bash
+   ```console
    oc create -f https://raw.githubusercontent.com/kadalu/kadalu/master/manifests/kadalu-operator-openshift.yaml
    ```
 
@@ -85,8 +95,8 @@ starts the required pods. For example,
 
 3. Now request kadalu-operator to setup storage using,
 
-   ```bash
-   $ kubectl create -f storage-config.yaml
+   ```console
+   kubectl create -f storage-config.yaml
    ```
 
 Operator will start the storage export pods as required. And, in 2 steps,
