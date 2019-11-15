@@ -15,6 +15,19 @@ function wait_for_ssh() {
     exit 1
 }
 
+function copy_image_to_cluster() {
+    local build_image=$1
+    local final_image=$2
+    if [ -z "$(docker images -q "${build_image}")" ]; then
+        docker pull "${build_image}"
+    fi
+    if [[ "${VM_DRIVER}" == "none" ]]; then
+        docker tag "${build_image}" "${final_image}"
+        return
+    fi
+    docker save "${build_image}" | (eval "$(minikube docker-env --shell bash)" && docker load && docker tag "${build_image}" "${final_image}")
+}
+
 # install minikube
 function install_minikube() {
     if type minikube >/dev/null 2>&1; then
@@ -83,6 +96,10 @@ up)
     ;;
 down)
     minikube stop
+    ;;
+copy-image)
+    echo "copying the kadalu-operator image"
+    copy_image_to_cluster kadalu/kadalu-operator:latest "${KADALU_IMAGE_REPO}"/kadalu-operator:latest
     ;;
 ssh)
     echo "connecting to minikube"
@@ -207,6 +224,7 @@ Available Commands:
   clean            Deletes a local kubernetes cluster
   ssh              Log into or run a command on a minikube machine with SSH
   kadalu_operator  start kadalu operator
+  copy-image       copy kadalu-operator docker image
   test_kadalu      test kadalu storage
 " >&2
     ;;
