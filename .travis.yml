@@ -25,7 +25,7 @@ env:
     - GO_METALINTER_THREADS=1
     - GO_COVER_DIR=_output
     - VM_DRIVER=none
-    - MINIKUBE_VERSION=v1.2.0
+    - MINIKUBE_VERSION=v1.5.2
     - CHANGE_MINIKUBE_NONE_USER=true
     - KUBECONFIG=$HOME/.kube/config
 
@@ -36,3 +36,8 @@ jobs:
         - make build-containers || travis_terminate 1;
         - make gen-manifest || travis_terminate 1;
         - tests/travis-test.sh v1.15.0 || travis_terminate 1;
+    - name: kadalu with kube 1.16.0
+      script:
+        - make build-containers || travis_terminate 1;
+        - make gen-manifest || travis_terminate 1;
+        - tests/travis-test.sh v1.16.0 || travis_terminate 1;
