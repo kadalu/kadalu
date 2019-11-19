@@ -41,3 +41,8 @@ jobs:
         - make build-containers || travis_terminate 1;
         - make gen-manifest || travis_terminate 1;
         - tests/travis-test.sh v1.16.0 || travis_terminate 1;
+    - name: kadalu with kube 1.13.7
+      script:
+        - make build-containers || travis_terminate 1;
+        - make gen-manifest || travis_terminate 1;
+        - tests/travis-test.sh v1.13.7 || travis_terminate 1;
