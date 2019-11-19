@@ -15,6 +15,21 @@ function wait_for_ssh() {
     exit 1
 }
 
+function copy_image_to_cluster() {
+    local build_image=$1
+    local final_image=$2
+    if [ -z "$(docker images -q "${build_image}")" ]; then
+        docker pull "${build_image}"
+    fi
+    if [[ "${VM_DRIVER}" == "none" ]]; then
+        docker tag "${build_image}" "${final_image}"
+        return
+    fi
+    docker save "${build_image}" | \
+        (eval "$(minikube docker-env --shell bash)" && \
+             docker load && docker tag "${build_image}" "${final_image}")
+}
+
 # install minikube
 function install_minikube() {
     if type minikube >/dev/null 2>&1; then
@@ -35,6 +50,16 @@ function install_minikube() {
 }
 
 function install_kubectl() {
+    if type kubectl >/dev/null 2>&1; then
+        local version
+        version=$(kubectl version --client | grep "${KUBE_VERSION}")
+        if [[ "x${version}" != "x" ]]; then
+            echo "kubectl already installed with ${KUBE_VERSION}"
+            return
+        fi
+        echo "installed kubectl version ${version} is not matching requested version ${KUBE_VERSION}"
+        exit 1
+    fi
     # Download kubectl, which is a requirement for using minikube.
     echo "Installing kubectl. Version: ${KUBE_VERSION}"
     curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/"${KUBE_VERSION}"/bin/linux/amd64/kubectl && chmod +x kubectl && mv kubectl /usr/local/bin/
@@ -42,7 +67,7 @@ function install_kubectl() {
 
 # configure minikube
 MINIKUBE_VERSION=${MINIKUBE_VERSION:-"latest"}
-KUBE_VERSION=${KUBE_VERSION:-"v1.15.1"}
+KUBE_VERSION=${KUBE_VERSION:-"v1.16.0"}
 MEMORY=${MEMORY:-"3000"}
 VM_DRIVER=${VM_DRIVER:-"virtualbox"}
 #configure image repo
@@ -76,12 +101,17 @@ up)
         # shellcheck disable=SC2086
         minikube ssh "sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file"
     else
-        sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file
+        sudo mkdir -p /mnt/${DISK};
+        sudo truncate -s 4g /mnt/${DISK}/file
     fi
     kubectl cluster-info
     ;;
 down)
     minikube stop
+    ;;
+copy-image)
+    echo "copying the kadalu-operator image"
+    copy_image_to_cluster kadalu/kadalu-operator:${KADALU_VERSION} "${KADALU_IMAGE_REPO}"/kadalu-operator:${KADALU_VERSION}
     ;;
 ssh)
     echo "connecting to minikube"
@@ -105,20 +135,20 @@ kadalu_operator)
     # give it some time
     cnt=0
     while true; do
-        cnt=$((cnt+1))
-        sleep 1;
-        ret=`kubectl get pods -nkadalu -o name | wc -l`
+        cnt=$((cnt + 1))
+        sleep 1
+        ret=$(kubectl get pods -nkadalu | grep 'Running' | wc -l)
         if [[ $ret -ge 5 ]]; then
             echo "Successful after $cnt seconds"
-            break;
+            break
         fi
         if [[ $cnt -eq 100 ]]; then
-            kubectl get pods -nkadalu;
-            kubectl get pods;
+            kubectl get pods -nkadalu
+            kubectl get pods
             echo "giving up after 100 seconds"
-            break;
+            break
         fi
-        if [[ $((cnt%10)) -eq 0 ]]; then
+        if [[ $((cnt % 10)) -eq 0 ]]; then
             echo "$cnt: Waiting for pods to come up..."
         fi
     done
@@ -127,7 +157,9 @@ kadalu_operator)
 
 test_kadalu)
     fail=0
+    date
     echo "Requesting PVC and Sample apps"
+    echo "Running default sample test app yml from repo"
     cp examples/sample-test-app.yaml /tmp/kadalu-test-app.yaml
     # Run ReadWriteOnce test
     kubectl create -f /tmp/kadalu-test-app.yaml
@@ -135,64 +167,74 @@ test_kadalu)
     # give it some time
     cnt=0
     while true; do
-        cnt=$((cnt+1))
-        sleep 1;
-        ret=`kubectl get pods pod1 | grep Completed | wc -l`
+        cnt=$((cnt + 1))
+        sleep 1
+        ret=$(kubectl get pods pod1 | grep 'Completed' | wc -l)
         if [[ $ret -eq 1 ]]; then
             echo "Successful after $cnt seconds"
-            break;
+            break
         fi
-        if [[ $cnt -eq 100 ]]; then
-            kubectl get pods -nkadalu;
-            kubectl get pods;
+        if [[ $cnt -eq 500 ]]; then
+	    kubectl get pvc
+            kubectl get pods -nkadalu
+            kubectl get pods
             echo "exiting after 100 seconds"
             fail=1
-            break;
+            break
         fi
-        if [[ $((cnt%10)) -eq 0 ]]; then
+        if [[ $((cnt % 25)) -eq 0 ]]; then
             echo "$cnt: Waiting for pods to come up..."
         fi
     done
-    kubectl logs pod1
 
     sed -i -e "s/pv1/pv2/g" /tmp/kadalu-test-app.yaml
     sed -i -e "s/pod1/pod2/g" /tmp/kadalu-test-app.yaml
     sed -i -e "s/ReadWriteOnce/ReadWriteMany/g" /tmp/kadalu-test-app.yaml
     kubectl create -f /tmp/kadalu-test-app.yaml
+    echo "Running sample test app yml from repo (with Type changed to RWX from RWO)"
     # give it some time
     cnt=0
     while true; do
-        cnt=$((cnt+1))
-        sleep 1;
-        ret=`kubectl get pods pod2 | grep Completed | wc -l`
+        cnt=$((cnt + 1))
+        sleep 1
+        ret=$(kubectl get pods pod2 | grep 'Completed' | wc -l)
         if [[ $ret -eq 1 ]]; then
             echo "Successful after $cnt seconds"
-            break;
+            break
         fi
         if [[ $cnt -eq 100 ]]; then
             kubectl get pods -nkadalu;
             kubectl get pods;
             echo "exiting after 100 seconds"
             fail=1
-            break;
+            break
         fi
-        if [[ $((cnt%10)) -eq 0 ]]; then
+        if [[ $((cnt % 10)) -eq 0 ]]; then
             echo "$cnt: Waiting for pods to come up..."
         fi
     done
-    kubectl logs pod2
 
     # Log everything so we are sure if things are as expected
     for p in $(kubectl -n kadalu get pods -o name); do
-        echo "====================== Start $p ======================";
-        kubectl -nkadalu logs $p --all-containers=true;
-        echo "======================= End $p =======================";
+        echo "====================== Start $p ======================"
+        kubectl -nkadalu logs $p --all-containers=true
+        echo "======================= End $p ======================="
     done
+
+    echo "---- Logs from pod2 ----"
+    kubectl describe pod pod2
+    kubectl logs pod2
+    echo "---- Logs from pod1 ----"
+    kubectl describe pod pod1
+    kubectl logs pod1
     #kubectl -n kadalu logs -lapp=kadalu --all-containers=true
 
+    date
+
     # Return failure if fail variable is set to 1
-    if [ $fail -eq 1 ] ; then
-        exit 1;
+    if [ $fail -eq 1 ]; then
+        echo "Marking the test as 'FAIL'"
+        exit 1
     fi
     ;;
 clean)
@@ -205,6 +247,7 @@ Available Commands:
   down             Stops a running local kubernetes cluster
   clean            Deletes a local kubernetes cluster
   ssh              Log into or run a command on a minikube machine with SSH
+  copy-image       copy kadalu-operator docker image
   kadalu_operator  start kadalu operator
   test_kadalu      test kadalu storage
 " >&2
