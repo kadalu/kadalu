@@ -99,20 +99,18 @@ def get_brick_device_dir(brick):
     return brick_device_dir
 
 
-def get_brick_hostname(volname, node, suffix=True):
+def get_brick_hostname(volname, node, idx, suffix=True):
     # Brick hostname is <statefulset-name>-<ordinal>.<service-name>
     # statefulset name is the one which is visible when the
     # `get pods` command is run, so the format used for that name
-    # is "server-<volname>-<hostname>". Escape dots from the hostname
-    # from the input otherwise will become invalid name
+    # is "server-<volname>-<idx>-<hostname>". Escape dots from the
+    # hostname from the input otherwise will become invalid name.
     # Service is created with name as Volume name. For example,
-    # brick_hostname will be "server-spool1-minikube.spool1" and
-    # server pod name will be "server-spool1-minikube"
-    hostname = "server-%s-%s" % (volname, node.replace(".", "-"))
+    # brick_hostname will be "server-spool1-0-minikube-0.spool1" and
+    # server pod name will be "server-spool1-0-minikube"
+    hostname = "server-%s-%d-%s" % (volname, idx, node.replace(".", "-"))
     if suffix:
-        # TODO: ordinal is used as zero. If more than one brick used from the
-        # same node and for the same volume then consider changing this
-        return hostname + "-0." + volname
+        return "%s-0.%s" % (hostname, volname)
 
     return hostname
 
@@ -140,7 +138,7 @@ def update_config_map(core_v1_client, obj):
     for idx, storage in enumerate(obj["spec"]["storage"]):
         data["bricks"].append({
             "brick_path": "/bricks/%s/data/brick" % volname,
-            "node": get_brick_hostname(volname, storage["node"]),
+            "node": get_brick_hostname(volname, storage["node"], idx),
             "node_id": str(uuid.uuid1()),
             "host_brick_path": storage.get("path", ""),
             "brick_device": storage.get("device", ""),
@@ -177,9 +175,11 @@ def deploy_server_pods(obj):
     for idx, storage in enumerate(obj["spec"]["storage"]):
         template_args["host_brick_path"] = storage.get("path", "")
         template_args["kube_hostname"] = storage["node"]
+        # TODO: Understand the need, and usage of suffix
         template_args["serverpod_name"] = get_brick_hostname(
             volname,
             storage["node"],
+            idx,
             suffix=False
         )
         template_args["brick_path"] = "/bricks/%s/data/brick" % volname
