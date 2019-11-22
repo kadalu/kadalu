@@ -139,7 +139,7 @@ def update_config_map(core_v1_client, obj):
         data["bricks"].append({
             "brick_path": "/bricks/%s/data/brick" % volname,
             "node": get_brick_hostname(volname, storage["node"], idx),
-            "node_id": str(uuid.uuid1()),
+            "node_id": storage["node_id"],
             "host_brick_path": storage.get("path", ""),
             "brick_device": storage.get("device", ""),
             "brick_device_dir": get_brick_device_dir(storage),
@@ -168,7 +168,8 @@ def deploy_server_pods(obj):
         "kadalu_version": VERSION,
         "docker_user": docker_user,
         "volname": volname,
-        "volume_id": obj["spec"]["volume_id"]
+        "volume_id": obj["spec"]["volume_id"],
+        "shd_required": obj["spec"]["type"] == VOLUME_TYPE_REPLICA_3
     }
 
     # One StatefulSet per Brick
@@ -186,6 +187,7 @@ def deploy_server_pods(obj):
         template_args["brick_index"] = idx
         template_args["brick_device"] = storage.get("device", "")
         template_args["brick_device_dir"] = get_brick_device_dir(storage)
+        template_args["brick_node_id"] = storage["node_id"]
 
         filename = os.path.join(MANIFESTS_DIR, "server.yaml")
         template(filename, **template_args)
@@ -219,6 +221,10 @@ def handle_added(core_v1_client, obj):
 
     # Generate new Volume ID
     obj["spec"]["volume_id"] = str(uuid.uuid1())
+
+    # Generate Node ID for each storage device.
+    for idx, storage in enumerate(obj["spec"]["storage"]):
+        obj["spec"]["storage"][idx]["node_id"] = str(uuid.uuid1())
 
     update_config_map(core_v1_client, obj)
     deploy_server_pods(obj)

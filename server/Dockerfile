@@ -12,6 +12,7 @@ COPY lib/kadalulib.py        /kadalu/kadalulib.py
 COPY server/server.py        /kadalu/server.py
 COPY server/glusterfsd.py    /kadalu/glusterfsd.py
 COPY server/quotad.py        /kadalu/quotad.py
+COPY server/shd.py           /kadalu/shd.py
 COPY server/mount-glustervol /usr/bin/mount-glustervol
 
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
@@ -23,6 +24,7 @@ COPY templates/Replica1.brick0.vol.j2 /kadalu/templates/
 COPY templates/Replica3.brick0.vol.j2 /kadalu/templates/
 COPY templates/Replica3.brick1.vol.j2 /kadalu/templates/
 COPY templates/Replica3.brick2.vol.j2 /kadalu/templates/
+COPY templates/Replica3.shd.vol.j2    /kadalu/templates/
 
 RUN chmod +x /usr/bin/mount-glustervol
 

@@ -152,13 +152,11 @@ def start():
             "-N",
             "--volfile-id", volfile_id,
             "-p", "/var/run/gluster/glusterfsd-%s.pid" % brick_path_name,
-            # TODO: Change socket file name
-            "-S", "/var/run/gluster/b99981c29a4c396c.socket",
+            "-S", "/var/run/gluster/brick.socket",
             "--brick-name", brick_path,
             "-l", "-",  # Log to stderr
-            # TODO: Change Node ID
             "--xlator-option",
-            "*-posix.glusterd-uuid=6958dddc-1842-4ee0-92df-b6a060dfba5e",
+            "*-posix.glusterd-uuid=%s" % os.environ["NODEID"],
             "--process-name", "brick",
             "--brick-port", "24007",
             "--xlator-option",

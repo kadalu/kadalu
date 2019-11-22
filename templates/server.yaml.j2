@@ -49,6 +49,8 @@ spec:
               value: {{ volname }}
             - name: BRICK_PATH
               value: {{ brick_path }}
+            - name: NODEID
+              value: {{ brick_node_id }}
             - name: VOLUME_ID
               value: {{ volume_id }}
             - name: BRICK_INDEX
@@ -87,6 +89,8 @@ spec:
               value: {{ volname }}
             - name: BRICK_PATH
               value: {{ brick_path }}
+            - name: NODEID
+              value: {{ brick_node_id }}
             - name: VOLUME_ID
               value: {{ volume_id }}
             - name: BRICK_INDEX
@@ -106,6 +110,37 @@ spec:
             - name: glusterfsd-mountdir
               mountPath: "/bricks/{{ volname }}"
               mountPropagation: Bidirectional
+{%- if shd_required %}
+        - name: shd
+          image: docker.io/{{ docker_user }}/kadalu-server:{{ kadalu_version }}
+          env:
+            - name: HOSTNAME
+              value: {{ kube_hostname }}
+            - name: VOLUME
+              value: {{ volname }}
+            - name: BRICK_PATH
+              value: {{ brick_path }}
+            - name: NODEID
+              value: {{ brick_node_id }}
+            - name: VOLUME_ID
+              value: {{ volume_id }}
+            - name: BRICK_INDEX
+              value: "{{ brick_index }}"
+            - name: KADALU_SERVER_ROLE
+              value: "shd"
+            - name: SUBVOL_ROOT
+              value: "subvol"
+            - name: BRICK_DEVICE
+              value: "{{ brick_device }}"
+            - name: KADALU_VERSION
+              value: "{{ kadalu_version }}"
+          securityContext:
+            capabilities: {}
+            privileged: true
+          volumeMounts:
+            - name: glusterfsd-volfilesdir
+              mountPath: "/var/lib/gluster"
+{%- endif %}
       volumes:
         - name: gluster-dev
           hostPath:
