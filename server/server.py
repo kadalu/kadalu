@@ -18,9 +18,10 @@ def start_server_process():
         import glusterfsd
 
         glusterfsd.start()
-    elif server_role == "glustershd":
-        # TODO: Start glustershd process
-        pass
+    elif server_role == "shd":
+        import shd
+
+        shd.start()
     elif server_role == "quotad":
         import quotad
 
