@@ -10,7 +10,7 @@ import logging
 from jinja2 import Template
 
 from kadalulib import execute, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, \
-    get_volname_hash, get_volume_path, logf
+    get_volname_hash, get_volume_path, logf, makedirs
 
 
 GLUSTERFS_CMD = "/usr/sbin/glusterfs"
@@ -155,7 +155,7 @@ def create_virtblock_volume(hostvol_mnt, volname, size):
     ))
 
     # Create a file with required size
-    os.makedirs(os.path.dirname(volpath_full), exist_ok=True)
+    makedirs(os.path.dirname(volpath_full))
     logging.debug(logf(
         "Created virtblock directory",
         path=os.path.dirname(volpath)
@@ -193,7 +193,7 @@ def save_pv_metadata(hostvol_mnt, pvpath, pvsize):
     info_file_path = os.path.join(hostvol_mnt, "info", pvpath)
     info_file_dir = os.path.dirname(info_file_path)
 
-    os.makedirs(info_file_dir, exist_ok=True)
+    makedirs(info_file_dir)
     logging.debug(logf(
         "Created metadata directory",
         metadata_dir=info_file_dir
@@ -220,7 +220,7 @@ def create_subdir_volume(hostvol_mnt, volname, size):
     ))
 
     # Create a subdir
-    os.makedirs(os.path.join(hostvol_mnt, volpath), exist_ok=True)
+    makedirs(os.path.join(hostvol_mnt, volpath))
     logging.debug(logf(
         "Created PV directory",
         pvdir=volpath
@@ -419,7 +419,7 @@ def generate_client_volfile(volname):
 def mount_glusterfs(volume, target_path):
     """Mount Glusterfs Volume"""
     if not os.path.exists(target_path):
-        os.makedirs(target_path, exist_ok=True)
+        makedirs(target_path)
 
     # Ignore if already mounted
     if os.path.ismount(target_path):

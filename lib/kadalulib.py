@@ -14,6 +14,15 @@ PV_TYPE_VIRTBLOCK = "virtblock"
 PV_TYPE_SUBVOL = "subvol"
 
 
+def makedirs(dirpath):
+    """exist_ok=True parameter will raise exception even if directory
+    exists with different attributes. Handle EEXIST gracefully."""
+    try:
+        os.makedirs(dirpath)
+    except FileExistsError:
+        pass
+
+
 class CommandException(Exception):
     """Custom exception for command execution"""
     def __init__(self, ret, out, err):
