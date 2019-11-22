@@ -1,0 +1,66 @@
+# -*- mode: yaml -*-
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv3-1
+spec:
+  storageClassName: kadalu.replica3
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod3-1
+  labels:
+    app: sample-app
+spec:
+  containers:
+  - name: sample-app
+    image: docker.io/kadalu/sample-pv-check-app:latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - mountPath: "/mnt/pv"
+      name: csivol
+  volumes:
+  - name: csivol
+    persistentVolumeClaim:
+      claimName: pv3-1
+  restartPolicy: OnFailure
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv3-2
+spec:
+  storageClassName: kadalu.replica3
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod3-2
+  labels:
+    app: sample-app
+spec:
+  containers:
+  - name: sample-app
+    image: docker.io/kadalu/sample-pv-check-app:latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - mountPath: "/mnt/pv"
+      name: csivol
+  volumes:
+  - name: csivol
+    persistentVolumeClaim:
+      claimName: pv3-2
+  restartPolicy: OnFailure

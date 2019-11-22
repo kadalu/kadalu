@@ -99,10 +99,10 @@ up)
     if [[ "${VM_DRIVER}" != "none" ]]; then
         wait_for_ssh
         # shellcheck disable=SC2086
-        minikube ssh "sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file"
+        minikube ssh "sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file{1,3.1,3.2,3.3}"
     else
         sudo mkdir -p /mnt/${DISK};
-        sudo truncate -s 4g /mnt/${DISK}/file
+        sudo truncate -s 4g /mnt/${DISK}/file{1,3.1,3.2,3.3}
     fi
     kubectl cluster-info
     ;;
@@ -138,12 +138,11 @@ kadalu_operator)
         cnt=$((cnt + 1))
         sleep 1
         ret=$(kubectl get pods -nkadalu | grep 'Running' | wc -l)
-        if [[ $ret -ge 5 ]]; then
+        if [[ $ret -ge 8 ]]; then
             echo "Successful after $cnt seconds"
             break
         fi
         if [[ $cnt -eq 100 ]]; then
-            kubectl get pods -nkadalu
             kubectl get pods
             echo "giving up after 100 seconds"
             break
@@ -152,6 +151,7 @@ kadalu_operator)
             echo "$cnt: Waiting for pods to come up..."
         fi
     done
+    kubectl get pods -nkadalu
 
     ;;
 
@@ -159,22 +159,22 @@ test_kadalu)
     fail=0
     date
     echo "Requesting PVC and Sample apps"
-    echo "Running default sample test app yml from repo"
-    cp examples/sample-test-app.yaml /tmp/kadalu-test-app.yaml
+    echo "Running default sample test app (Replica1) yml from repo"
+    cp examples/sample-test-app1.yaml /tmp/kadalu-test-app1.yaml
     # Run ReadWriteOnce test
-    kubectl create -f /tmp/kadalu-test-app.yaml
+    kubectl create -f /tmp/kadalu-test-app1.yaml
 
     # give it some time
     cnt=0
     while true; do
         cnt=$((cnt + 1))
         sleep 1
-        ret=$(kubectl get pods pod1 | grep 'Completed' | wc -l)
-        if [[ $ret -eq 1 ]]; then
+        ret=$(kubectl get pods pod1-1 pod1-2 | grep 'Completed' | wc -l)
+        if [[ $ret -eq 2 ]]; then
             echo "Successful after $cnt seconds"
             break
         fi
-        if [[ $cnt -eq 500 ]]; then
+        if [[ $cnt -eq 200 ]]; then
 	    kubectl get pvc
             kubectl get pods -nkadalu
             kubectl get pods
@@ -187,29 +187,29 @@ test_kadalu)
         fi
     done
 
-    sed -i -e "s/pv1/pv2/g" /tmp/kadalu-test-app.yaml
-    sed -i -e "s/pod1/pod2/g" /tmp/kadalu-test-app.yaml
-    sed -i -e "s/ReadWriteOnce/ReadWriteMany/g" /tmp/kadalu-test-app.yaml
-    kubectl create -f /tmp/kadalu-test-app.yaml
-    echo "Running sample test app yml from repo (with Type changed to RWX from RWO)"
+    echo "Running sample test app (Replica3) yml from repo "
+    cp examples/sample-test-app3.yaml /tmp/kadalu-test-app3.yaml
+    # Run ReadWriteOnce test
+    kubectl create -f /tmp/kadalu-test-app3.yaml
     # give it some time
     cnt=0
     while true; do
         cnt=$((cnt + 1))
         sleep 1
-        ret=$(kubectl get pods pod2 | grep 'Completed' | wc -l)
-        if [[ $ret -eq 1 ]]; then
+        ret=$(kubectl get pods pod3-1 pod3-2 | grep 'Completed' | wc -l)
+        if [[ $ret -eq 2 ]]; then
             echo "Successful after $cnt seconds"
             break
         fi
-        if [[ $cnt -eq 100 ]]; then
+        if [[ $cnt -eq 200 ]]; then
+	    kubectl get pvc
             kubectl get pods -nkadalu;
             kubectl get pods;
             echo "exiting after 100 seconds"
             fail=1
             break
         fi
-        if [[ $((cnt % 10)) -eq 0 ]]; then
+        if [[ $((cnt % 25)) -eq 0 ]]; then
             echo "$cnt: Waiting for pods to come up..."
         fi
     done
@@ -221,12 +221,16 @@ test_kadalu)
         echo "======================= End $p ======================="
     done
 
-    echo "---- Logs from pod2 ----"
-    kubectl describe pod pod2
-    kubectl logs pod2
+    echo "---- Logs from pod3 ----"
+    kubectl describe pod pod3-1
+    kubectl describe pod pod3-2
+    kubectl logs pod3-1
+    kubectl logs pod3-2
     echo "---- Logs from pod1 ----"
-    kubectl describe pod pod1
-    kubectl logs pod1
+    kubectl describe pod pod1-1
+    kubectl describe pod pod1-2
+    kubectl logs pod1-1
+    kubectl logs pod1-2
     #kubectl -n kadalu logs -lapp=kadalu --all-containers=true
 
     date

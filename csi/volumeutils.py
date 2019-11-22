@@ -76,6 +76,8 @@ def get_pv_hosting_volumes(filters=None):
             # volumes which belongs to requested types
             if filters is not None:
                 filter_hvoltype = filters.get("storage_type", None)
+                if not filter_hvoltype:
+                    filter_hvoltype = filters.get("hostvol_type", None)
                 if filter_hvoltype is not None and \
                    filter_hvoltype != data["type"]:
                     continue
