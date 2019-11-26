@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2019-11-26
+### Added
+- Improved documentation. (Thanks to @papanito)
+- Enhanced to handle invalid Pod names when k8s node name is used as part of pod name.
+- Added more test cases to cover Replica 3 Volume use cases.
+- Fixed a crash during Gluster volume mount in CSI pods.
+- Operator is enhanced to start self heal daemon when Replica 3 volume is created.
+
 ## [0.2.0] - 2019-10-25
 ### Added
 - Improvements to Volfile templates by removing distribute graph in
@@ -28,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.2.0...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.3.0...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
+[0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
