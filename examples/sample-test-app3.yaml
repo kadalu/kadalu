@@ -10,7 +10,8 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 1Gi
+      storage: 600Mi
+
 ---
 apiVersion: v1
 kind: Pod
@@ -43,7 +44,8 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
+      storage: 800Mi
+
 ---
 apiVersion: v1
 kind: Pod

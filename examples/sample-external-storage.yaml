@@ -1,0 +1,45 @@
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: kadalu.external.pv-ext # Keep changing the name for different volumes
+provisioner: kadalu
+parameters:
+  hostvol_type: "External"
+  gluster_host: gluster1.kadalu.io   # Change to your gluster host
+  gluster_volname: test              # Change to existing gluster volume
+  gluster_options: log-level=DEBUG   # Comma separated options
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv-ext
+spec:
+  storageClassName: kadalu.external.pv-ext
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 200Mi # This gets ignored in this case.
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-ext
+  labels:
+    app: sample-app
+spec:
+  containers:
+  - name: sample-app
+    image: docker.io/kadalu/sample-pv-check-app:latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - mountPath: "/mnt/pv"
+      name: csivol
+  volumes:
+  - name: csivol
+    persistentVolumeClaim:
+      claimName: pv-ext
+  restartPolicy: OnFailure
