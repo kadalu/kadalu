@@ -24,6 +24,7 @@ spec:
         app.kubernetes.io/name: server
     spec:
       serviceAccountName: kadalu-server-sa
+{%- if kube_hostname != "" %}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -33,6 +34,8 @@ spec:
                   operator: In
                   values:
                     - {{ kube_hostname }}
+{%- endif %}
+
       containers:
         - name: glusterfsd
           image: docker.io/{{ docker_user }}/kadalu-server:{{ kadalu_version }}
@@ -80,6 +83,7 @@ spec:
             - name: brick-device-dir
               mountPath: "/brickdev"
 {%- endif %}
+
         - name: quotad
           image: docker.io/{{ docker_user }}/kadalu-server:{{ kadalu_version }}
           env:
@@ -155,7 +159,10 @@ spec:
           configMap:
             name: "kadalu-info"
         - name: glusterfsd-mountdir
-{%- if brick_device == "" %}
+{%- if pvc_name != "" %}
+          persistentVolumeClaim:
+            claimName: {{ pvc_name }}
+{%- elif host_brick_path != "" %}
           hostPath:
             path: "{{ host_brick_path }}"
             type: Directory

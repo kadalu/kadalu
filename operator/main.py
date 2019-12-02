@@ -44,6 +44,10 @@ def bricks_validation(bricks):
     """Validate Brick path and node options"""
     ret = True
     for idx, brick in enumerate(bricks):
+        if brick.get("pvc", None) is not None:
+            ret = True
+            continue
+
         if brick.get("path", None) is None and \
            brick.get("device", None) is None:
             logging.error(logf("Storage path/device not specified", number=idx+1))
@@ -138,10 +142,13 @@ def update_config_map(core_v1_client, obj):
     for idx, storage in enumerate(obj["spec"]["storage"]):
         data["bricks"].append({
             "brick_path": "/bricks/%s/data/brick" % volname,
-            "node": get_brick_hostname(volname, storage["node"], idx),
+            "node": get_brick_hostname(volname,
+                                       storage.get("node", ""),
+                                       idx),
             "node_id": storage["node_id"],
             "host_brick_path": storage.get("path", ""),
             "brick_device": storage.get("device", ""),
+            "pvc_name": storage.get("pvc", ""),
             "brick_device_dir": get_brick_device_dir(storage),
             "brick_index": idx
         })
@@ -175,17 +182,18 @@ def deploy_server_pods(obj):
     # One StatefulSet per Brick
     for idx, storage in enumerate(obj["spec"]["storage"]):
         template_args["host_brick_path"] = storage.get("path", "")
-        template_args["kube_hostname"] = storage["node"]
+        template_args["kube_hostname"] = storage.get("node", "")
         # TODO: Understand the need, and usage of suffix
         template_args["serverpod_name"] = get_brick_hostname(
             volname,
-            storage["node"],
+            storage.get("node", ""),
             idx,
             suffix=False
         )
         template_args["brick_path"] = "/bricks/%s/data/brick" % volname
         template_args["brick_index"] = idx
         template_args["brick_device"] = storage.get("device", "")
+        template_args["pvc_name"] = storage.get("pvc", "")
         template_args["brick_device_dir"] = get_brick_device_dir(storage)
         template_args["brick_node_id"] = storage["node_id"]
 
@@ -195,7 +203,7 @@ def deploy_server_pods(obj):
         logging.info(logf("Deployed Server pod",
                           volname=volname,
                           manifest=filename,
-                          node=storage["node"]))
+                          node=storage.get("node", "")))
 
 
 def handle_added(core_v1_client, obj):
@@ -244,6 +252,9 @@ def handle_modified():
     """
     # TODO: Handle Volume option change
     # TODO: Handle Volume maintenance mode
+    logging.warn(logf(
+        "MODIFIED handle called, but not implemented"
+    ))
     pass
 
 
@@ -255,6 +266,9 @@ def handle_deleted():
     check for num_pvs. Delete Server pods only when pvs becomes zero.
     """
     # TODO
+    logging.warn(logf(
+        "DELETED handle called, but not implemented"
+    ))
     pass
 
 
