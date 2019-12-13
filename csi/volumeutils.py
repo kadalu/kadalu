@@ -266,7 +266,7 @@ def create_subdir_volume(hostvol_mnt, volname, size):
 
 
 def delete_volume(volname):
-    """Delete virtual block or sub directory volume"""
+    """Delete virtual block, sub directory volume, or External"""
     vol = search_volume(volname)
     if vol is not None:
         logging.debug(logf(
@@ -473,3 +473,88 @@ def mount_glusterfs(volume, target_path):
 
     os.unlink(target_path_lock)
     return
+
+def mount_glusterfs_with_host(volume, target_path, host, options=None):
+    """Mount Glusterfs Volume"""
+    if not os.path.exists(target_path):
+        makedirs(target_path)
+
+    # Ignore if already mounted
+    if os.path.ismount(target_path):
+        logging.debug(logf(
+            "Already mounted",
+            mount=target_path
+        ))
+        return
+
+    # FIXME: make this better later (an issue for external contribution)
+    opt_array = None
+    #if options:
+    #    opt_array = []
+    #    for opt in options.split(","):
+    #        if not opt or opt == "":
+    #            break
+    #        for k,v in opt.split("="):
+    #            if k == "log-level":
+    #                opt_array.append("--log-level")
+    #                opt_array.append(v)
+    #                # TODO: handle more options, and document them
+
+    # Fix the log, so we can check it out later
+    # log_file = "/var/log/glusterfs/%s" % target_path.replace("/", "-")
+    log_file = "/tmp/gluster.log"
+    cmd = [
+        GLUSTERFS_CMD,
+        "--process-name", "fuse",
+        "-l", "%s" % log_file,
+        "--volfile-id=%s" % volume,
+        "-s", host,
+        target_path
+    ]
+    #if opt_array:
+    #    cmd.extend(opt_array)
+    #
+    ## add mount point after all options
+    #cmd.append(target_path)
+    logging.debug(logf(
+        "glusterfs command",
+        cmd=cmd
+    ))
+
+    execute(*cmd)
+    return
+
+def check_external_volume(pv_request):
+    """Mount hosting volume"""
+    # Assumption is, this has to have 'hostvol_type' as External.
+    params = {}
+    for pkey, pvalue in pv_request.parameters.items():
+        params[pkey] = pvalue
+
+    hvol = {
+        "host": params['gluster_host'],
+        "name": params['gluster_volname'],
+        "options": params['gluster_options'],
+    }
+    hpath = "%s.%s" % (hvol['name'], hvol['host'])
+    mntdir = os.path.join(HOSTVOL_MOUNTDIR, hpath)
+
+    mount_glusterfs_with_host(hvol['name'], mntdir, hvol['host'], hvol['options'])
+
+    time.sleep (0.37)
+
+    if not os.path.ismount(mntdir):
+        logging.debug(logf(
+            "Mount failed",
+            hvol=hvol,
+            mntdir=mntdir
+        ))
+        return None
+
+    logging.debug(logf(
+        "Mount successful",
+        hvol=hvol
+    ))
+
+    unmount_volume(mntdir)
+    return hvol
