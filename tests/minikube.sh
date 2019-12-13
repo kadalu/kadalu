@@ -159,18 +159,20 @@ test_kadalu)
     fail=0
     date
     echo "Requesting PVC and Sample apps"
-    echo "Running default sample test app (Replica1) yml from repo"
+    echo "Running sample test app (Replica1) yml from repo"
     cp examples/sample-test-app1.yaml /tmp/kadalu-test-app1.yaml
-    # Run ReadWriteOnce test
     kubectl create -f /tmp/kadalu-test-app1.yaml
 
-    # give it some time
+    echo "Running sample test app (Replica3) yml from repo "
+    cp examples/sample-test-app3.yaml /tmp/kadalu-test-app3.yaml
+    kubectl create -f /tmp/kadalu-test-app3.yaml
+
     cnt=0
     while true; do
         cnt=$((cnt + 1))
         sleep 1
-        ret=$(kubectl get pods pod1-1 pod1-2 | grep 'Completed' | wc -l)
-        if [[ $ret -eq 2 ]]; then
+        ret=$(kubectl get pods | grep 'Completed' | wc -l)
+        if [[ $ret -eq 4 ]]; then
             echo "Successful after $cnt seconds"
             break
         fi
@@ -178,7 +180,7 @@ test_kadalu)
 	    kubectl get pvc
             kubectl get pods -nkadalu
             kubectl get pods
-            echo "exiting after 100 seconds"
+            echo "exiting after 200 seconds"
             fail=1
             break
         fi
@@ -186,52 +188,34 @@ test_kadalu)
             echo "$cnt: Waiting for pods to come up..."
         fi
     done
-
-    echo "Running sample test app (Replica3) yml from repo "
-    cp examples/sample-test-app3.yaml /tmp/kadalu-test-app3.yaml
-    # Run ReadWriteOnce test
-    kubectl create -f /tmp/kadalu-test-app3.yaml
-    # give it some time
-    cnt=0
-    while true; do
-        cnt=$((cnt + 1))
-        sleep 1
-        ret=$(kubectl get pods pod3-1 pod3-2 | grep 'Completed' | wc -l)
-        if [[ $ret -eq 2 ]]; then
-            echo "Successful after $cnt seconds"
-            break
-        fi
-        if [[ $cnt -eq 200 ]]; then
-	    kubectl get pvc
-            kubectl get pods -nkadalu;
-            kubectl get pods;
-            echo "exiting after 100 seconds"
-            fail=1
-            break
-        fi
-        if [[ $((cnt % 25)) -eq 0 ]]; then
-            echo "$cnt: Waiting for pods to come up..."
-        fi
-    done
+    kubectl get pvc
+    kubectl get pods
 
     # Log everything so we are sure if things are as expected
     for p in $(kubectl -n kadalu get pods -o name); do
         echo "====================== Start $p ======================"
-        kubectl -nkadalu logs $p --all-containers=true
+        kubectl -nkadalu --all-containers=true --tail 100 logs $p
         echo "======================= End $p ======================="
     done
 
-    echo "---- Logs from pod3 ----"
+    echo "---- Logs from pod3 & pod1 ----"
     kubectl describe pod pod3-1
+    echo "------------------"
     kubectl describe pod pod3-2
-    kubectl logs pod3-1
-    kubectl logs pod3-2
-    echo "---- Logs from pod1 ----"
+    echo "------------------"
     kubectl describe pod pod1-1
+    echo "------------------"
     kubectl describe pod pod1-2
+    echo "------------------"
+
+    kubectl logs pod3-1
+    echo "------------------"
+    kubectl logs pod3-2
+    echo "------------------"
     kubectl logs pod1-1
+    echo "------------------"
     kubectl logs pod1-2
-    #kubectl -n kadalu logs -lapp=kadalu --all-containers=true
+    echo "------------------"
 
     date
 

@@ -10,7 +10,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
+      storage: 300Mi
 # -*- mode: yaml -*-
 ---
 kind: PersistentVolumeClaim
@@ -23,7 +23,7 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 1Gi
+      storage: 500Mi
 # -*- mode: yaml -*-
 ---
 apiVersion: v1
@@ -59,9 +59,9 @@ spec:
     imagePullPolicy: IfNotPresent
     volumeMounts:
     - mountPath: "/mnt/pv"
-      name: csivol
+      name: csivol1
   volumes:
-  - name: csivol
+  - name: csivol1
     persistentVolumeClaim:
       claimName: pv1-2
   restartPolicy: OnFailure

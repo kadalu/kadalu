@@ -29,11 +29,14 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
         pvpath = request.volume_context.get("path", "")
         pvtype = request.volume_context.get("pvtype", "")
+        voltype = request.volume_context.get("type", "")
+
         pvpath_full = os.path.join(mntdir, pvpath)
 
         logging.debug(logf(
             "Received the mount request",
             volume=request.volume_id,
+            voltype=voltype,
             hostvol=hostvol,
             pvpath=pvpath,
             pvtype=pvtype

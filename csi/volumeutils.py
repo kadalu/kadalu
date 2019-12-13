@@ -423,6 +423,32 @@ def mount_glusterfs(volume, target_path):
 
     # Ignore if already mounted
     if os.path.ismount(target_path):
+        logging.debug(logf(
+            "Already mounted",
+            mount=target_path
+        ))
+        return
+
+    # This is just to prevent multiple requests getting here in parallel
+    need_wait = True
+    target_path_lock = "%s.lock" % target_path
+
+    while True:
+        if not os.path.exists(target_path_lock):
+            # Need to create a dummy file, no need to do IO
+            # Hence no open and close business
+            os.mknod(target_path_lock)
+            need_wait = False
+            break
+        time.sleep(0.2)
+
+    # Ignore if already mounted
+    if os.path.ismount(target_path):
+        logging.debug(logf(
+            "Already mounted (2nd try)",
+            mount=target_path
+        ))
+        os.unlink(target_path_lock)
         return
 
     generate_client_volfile(volume)
@@ -431,7 +457,19 @@ def mount_glusterfs(volume, target_path):
         "--process-name", "fuse",
         "-l", "/dev/stdout",
         "--volfile-id=%s" % volume,
-        target_path,
-        "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volume)
+        "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volume),
+        target_path
     ]
-    execute(*cmd)
+    try:
+        execute(*cmd)
+    except Exception as e:
+        logging.error(logf(
+            "error to execute command",
+            cmd=cmd,
+            error=format(e)
+        ))
+        os.unlink(target_path_lock)
+        raise e
+
+    os.unlink(target_path_lock)
+    return

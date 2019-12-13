@@ -30,31 +30,6 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         ))
         pvsize = request.capacity_range.required_bytes
 
-        # TODO: Check the available space under lock
-
-        # Add everything from parameter as filter item
-        filters = {}
-        for pkey, pvalue in request.parameters.items():
-            filters[pkey] = pvalue
-
-        logging.debug(logf(
-            "Filters applied to choose storage",
-            **filters
-        ))
-        host_volumes = get_pv_hosting_volumes(filters)
-        logging.debug(logf(
-            "Got list of hosting Volumes",
-            volumes=",".join(host_volumes)
-        ))
-
-        hostvol = mount_and_select_hosting_volume(host_volumes, pvsize)
-        if hostvol is None:
-            errmsg = "No Hosting Volumes available, add more storage"
-            logging.error(errmsg)
-            context.set_details(errmsg)
-            context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
-            return csi_pb2.CreateVolumeResponse()
-
         pvtype = PV_TYPE_SUBVOL
         for vol_capability in request.volume_capabilities:
             # using getattr to avoid Pylint error
@@ -69,6 +44,32 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             pvtype=pvtype,
             capabilities=request.volume_capabilities
         ))
+
+        # TODO: Check the available space under lock
+
+        # Add everything from parameter as filter item
+        filters = {}
+        for pkey, pvalue in request.parameters.items():
+            filters[pkey] = pvalue
+
+        logging.debug(logf(
+            "Filters applied to choose storage",
+            **filters
+        ))
+
+        host_volumes = get_pv_hosting_volumes(filters)
+        logging.debug(logf(
+            "Got list of hosting Volumes",
+            volumes=",".join(host_volumes)
+        ))
+
+        hostvol = mount_and_select_hosting_volume(host_volumes, pvsize)
+        if hostvol is None:
+            errmsg = "No Hosting Volumes available, add more storage"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
+            return csi_pb2.CreateVolumeResponse()
 
         if pvtype == PV_TYPE_VIRTBLOCK:
             vol = create_virtblock_volume(
@@ -93,6 +94,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                 "volume_id": request.name,
                 "capacity_bytes": pvsize,
                 "volume_context": {
+                    "type": filters['hostvol_type'],
                     "hostvol": hostvol,
                     "pvtype": pvtype,
                     "path": vol.volpath,
