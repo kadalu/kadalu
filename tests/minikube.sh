@@ -214,7 +214,9 @@ test_kadalu)
 
     get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 200
 
-    get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 40
+    get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 50
+
+    get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 1 50
 
 
     # Log everything so we are sure if things are as expected

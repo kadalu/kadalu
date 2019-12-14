@@ -12,9 +12,8 @@ import csi_pb2_grpc
 from volumeutils import mount_and_select_hosting_volume, \
     create_virtblock_volume, create_subdir_volume, delete_volume, \
     get_pv_hosting_volumes, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, \
-    HOSTVOL_MOUNTDIR, check_external_volume
+    HOSTVOL_MOUNTDIR, check_external_volume, unmount_volume
 from kadalulib import logf
-
 
 class ControllerServer(csi_pb2_grpc.ControllerServicer):
     """
@@ -58,7 +57,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         ))
 
         ext_volume = None
-        if filters['hostvol_type'] == 'External':
+        if filters['hostvol_type'] == 'External' or \
+           filters['hostvol_type'] == 'External-Kadalu':
             ext_volume = check_external_volume(request)
             if ext_volume:
                 logging.info(logf(
@@ -70,21 +70,64 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                     volpath=ext_volume['host'],
                     duration_seconds=time.time() - start_time
                 ))
+                hpath = "%s.%s" % (ext_volume['name'], ext_volume['host'])
+                mntdir = os.path.join(HOSTVOL_MOUNTDIR, hpath)
+
+                if filters['hostvol_type'] == 'External':
+                    # No need to keep the mount on controller
+                    unmount_volume(mntdir)
+
+                    return csi_pb2.CreateVolumeResponse(
+                        volume={
+                            "volume_id": request.name,
+                            "capacity_bytes": pvsize,
+                            "volume_context": {
+                                "type": filters['hostvol_type'],
+                                "hostvol": ext_volume['name'],
+                                "pvtype": pvtype,
+                                "gserver": ext_volume['host'],
+                                "fstype": "xfs",
+                                "options": ext_volume['options'],
+                            }
+                        }
+                    )
+
+                # The external volume should be used as kadalu host vol
+
+                # TODO: handle the case where host-volume is full
+                # can-be-fixed-by-an-intern
+                if pvtype == PV_TYPE_VIRTBLOCK:
+                    vol = create_virtblock_volume(
+                        mntdir, request.name, pvsize)
+                else:
+                    vol = create_subdir_volume(
+                        mntdir, request.name, pvsize)
+
+                logging.info(logf(
+                    "Volume created",
+                    name=request.name,
+                    size=pvsize,
+                    hostvol=ext_volume['name'],
+                    pvtype=pvtype,
+                    volpath=vol.volpath,
+                    duration_seconds=time.time() - start_time
+                ))
                 return csi_pb2.CreateVolumeResponse(
                     volume={
                         "volume_id": request.name,
                         "capacity_bytes": pvsize,
                         "volume_context": {
-                            "type": "External",
+                            "type": filters['hostvol_type'],
                             "hostvol": ext_volume['name'],
                             "pvtype": pvtype,
+                            "path": vol.volpath,
                             "gserver": ext_volume['host'],
-                            "fstype": "xfs",
-                            "options": ext_volume['options'],
+                            "fstype": "xfs"
                         }
                     }
                 )
 
+            # If external volume not found
             logging.debug(logf(
                 "Here as checking external volume failed",
                 external_volume=ext_volume
@@ -92,7 +135,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             errmsg = "External Storage provided not valid"
             logging.error(errmsg)
             context.set_details(errmsg)
-            context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             return csi_pb2.CreateVolumeResponse()
 
 
@@ -110,14 +153,13 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
             return csi_pb2.CreateVolumeResponse()
 
+        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
         if pvtype == PV_TYPE_VIRTBLOCK:
             vol = create_virtblock_volume(
-                os.path.join(HOSTVOL_MOUNTDIR, hostvol),
-                request.name, pvsize)
+                mntdir, request.name, pvsize)
         else:
             vol = create_subdir_volume(
-                os.path.join(HOSTVOL_MOUNTDIR, hostvol),
-                request.name, pvsize)
+                mntdir, request.name, pvsize)
 
         logging.info(logf(
             "Volume created",
@@ -137,6 +179,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                     "hostvol": hostvol,
                     "pvtype": pvtype,
                     "path": vol.volpath,
+                    "gserver": "",
                     "fstype": "xfs"
                 }
             }

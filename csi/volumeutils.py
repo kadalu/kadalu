@@ -254,6 +254,14 @@ def create_subdir_volume(hostvol_mnt, volname, size):
             ))
             break
 
+        if count >= 10:
+            logging.warn(logf(
+                "Waited for some time, Quota set failed, continuing.",
+                volsize=volsize,
+                num_tries=count
+            ))
+            break
+
         time.sleep(1)
 
     return Volume(
@@ -554,5 +562,4 @@ def check_external_volume(pv_request):
         hvol=hvol
     ))
 
-    unmount_volume(mntdir)
     return hvol

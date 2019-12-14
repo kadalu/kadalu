@@ -31,6 +31,8 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         pvpath = request.volume_context.get("path", "")
         pvtype = request.volume_context.get("pvtype", "")
         voltype = request.volume_context.get("type", "")
+        gserver = request.volume_context.get("gserver", None);
+        options = request.volume_context.get("options", None);
 
         pvpath_full = os.path.join(mntdir, pvpath)
 
@@ -43,11 +45,7 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             pvtype=pvtype
         ))
 
-        voltype = request.volume_context.get("type", "")
         if voltype == "External":
-            options = request.volume_context.get("options", None)
-            gserver = request.volume_context.get("gserver", None)
-
             mount_glusterfs_with_host(hostvol, request.target_path, gserver, options)
 
             logging.debug(logf(
@@ -59,7 +57,11 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             ))
             return csi_pb2.NodePublishVolumeResponse()
 
-        mount_glusterfs(hostvol, mntdir)
+        if voltype == 'External-Kadalu':
+            mount_glusterfs_with_host(hostvol, mntdir, gserver, options)
+        else:
+            mount_glusterfs(hostvol, mntdir)
+
         logging.debug(logf(
             "Mounted Hosting Volume",
             pv=request.volume_id,
