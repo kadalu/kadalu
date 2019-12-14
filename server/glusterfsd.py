@@ -114,13 +114,30 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
                     mode=0o755,
                     exist_ok=True)
 
-        execute("mount", "-oprjquota", brick_device, mountdir)
-
+        try:
+            execute("mount", "-oprjquota", brick_device, mountdir)
+        except CommandException as err:
+            if b'already mounted' not in err.err:
+                logging.error(logf(
+                    "Failed to mount export brick",
+                    fstype=brickfs,
+                    device=brick_device,
+                    mountdir=mountdir,
+                    error=err,
+                ))
+                sys.exit(1)
+            else:
+                pass
 
 def start():
     """
     Start the Gluster Brick Process
     """
+    # Send Analytics Tracker
+    # The information from this analytics is available for
+    # developers to understand and build project in a better way
+    send_analytics_tracker("server-start")
+
     brick_device = os.environ.get("BRICK_DEVICE", None)
     brick_path = os.environ["BRICK_PATH"]
     if brick_device is not None and brick_device != "":
@@ -143,7 +160,7 @@ def start():
     # Send Analytics Tracker
     # The information from this analytics is available for
     # developers to understand and build project in a better way
-    send_analytics_tracker("server")
+    send_analytics_tracker("server-ready")
 
     os.execv(
         "/usr/sbin/glusterfsd",
