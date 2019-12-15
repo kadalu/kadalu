@@ -12,7 +12,7 @@ import csi_pb2_grpc
 from volumeutils import mount_and_select_hosting_volume, \
     create_virtblock_volume, create_subdir_volume, delete_volume, \
     get_pv_hosting_volumes, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, \
-    HOSTVOL_MOUNTDIR
+    HOSTVOL_MOUNTDIR, check_external_volume
 from kadalulib import logf
 
 
@@ -56,6 +56,46 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             "Filters applied to choose storage",
             **filters
         ))
+
+        ext_volume = None
+        if filters['hostvol_type'] == 'External':
+            ext_volume = check_external_volume(request)
+            if ext_volume:
+                logging.info(logf(
+                    "Volume (External) created",
+                    name=request.name,
+                    size=pvsize,
+                    hostvol=ext_volume['name'],
+                    pvtype=pvtype,
+                    volpath=ext_volume['host'],
+                    duration_seconds=time.time() - start_time
+                ))
+                return csi_pb2.CreateVolumeResponse(
+                    volume={
+                        "volume_id": request.name,
+                        "capacity_bytes": pvsize,
+                        "volume_context": {
+                            "type": "External",
+                            "hostvol": ext_volume['name'],
+                            "pvtype": pvtype,
+                            "gserver": ext_volume['host'],
+                            "fstype": "xfs",
+                            "options": ext_volume['options'],
+                        }
+                    }
+                )
+                return 0
+
+            logging.debug(logf(
+                "Here as checking external volume failed",
+                external_volume=ext_volume
+            ))
+            errmsg = "External Storage provided not valid"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
+            return csi_pb2.CreateVolumeResponse()
+
 
         host_volumes = get_pv_hosting_volumes(filters)
         logging.debug(logf(

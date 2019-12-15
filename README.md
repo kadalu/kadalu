@@ -140,6 +140,8 @@ pod1 created
 
 For more information checkout the [Try it out](./doc/README.md)
 
+If you want 'External' Gluster Storage to be used as PV, checkout [this doc](./doc/external-gluster-storage.md)
+
 ## NOTE
 
 We are tracking the number of downloads based on 'docker pull' stats, and also

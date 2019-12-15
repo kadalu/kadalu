@@ -7,7 +7,8 @@ import time
 
 import csi_pb2
 import csi_pb2_grpc
-from volumeutils import mount_volume, unmount_volume, mount_glusterfs
+from volumeutils import mount_volume, unmount_volume, mount_glusterfs, \
+    mount_glusterfs_with_host
 from kadalulib import logf
 
 
@@ -41,6 +42,22 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             pvpath=pvpath,
             pvtype=pvtype
         ))
+
+        voltype = request.volume_context.get("type", "")
+        if voltype == "External":
+            options = request.volume_context.get("options", None);
+            gserver = request.volume_context.get("gserver", None);
+
+            mount_glusterfs_with_host(hostvol, request.target_path, gserver, options)
+
+            logging.debug(logf(
+                "Mounted Volume for PV",
+                volume=request.volume_id,
+                mntdir=targetdir,
+                pvpath=gserver,
+                options=options
+            ))
+            return csi_pb2.NodePublishVolumeResponse()
 
         mount_glusterfs(hostvol, mntdir)
         logging.debug(logf(
