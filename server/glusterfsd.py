@@ -6,7 +6,6 @@ import uuid
 import sys
 import json
 import logging
-import requests
 
 from jinja2 import Template
 import xattr

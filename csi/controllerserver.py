@@ -84,7 +84,6 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                         }
                     }
                 )
-                return 0
 
             logging.debug(logf(
                 "Here as checking external volume failed",

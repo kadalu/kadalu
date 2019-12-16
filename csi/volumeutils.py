@@ -430,7 +430,6 @@ def mount_glusterfs(volume, target_path):
         return
 
     # This is just to prevent multiple requests getting here in parallel
-    need_wait = True
     target_path_lock = "%s.lock" % target_path
 
     while True:
@@ -438,7 +437,6 @@ def mount_glusterfs(volume, target_path):
             # Need to create a dummy file, no need to do IO
             # Hence no open and close business
             os.mknod(target_path_lock)
-            need_wait = False
             break
         time.sleep(0.2)
 
@@ -462,14 +460,14 @@ def mount_glusterfs(volume, target_path):
     ]
     try:
         execute(*cmd)
-    except Exception as e:
+    except Exception as err:
         logging.error(logf(
             "error to execute command",
             cmd=cmd,
-            error=format(e)
+            error=format(err)
         ))
         os.unlink(target_path_lock)
-        raise e
+        raise err
 
     os.unlink(target_path_lock)
     return
@@ -488,17 +486,17 @@ def mount_glusterfs_with_host(volume, target_path, host, options=None):
         return
 
     # FIXME: make this better later (an issue for external contribution)
-    opt_array = None
-    #if options:
-    #    opt_array = []
-    #    for opt in options.split(","):
-    #        if not opt or opt == "":
-    #            break
-    #        for k,v in opt.split("="):
-    #            if k == "log-level":
-    #                opt_array.append("--log-level")
-    #                opt_array.append(v)
-    #                # TODO: handle more options, and document them
+    # opt_array = None
+    # if options:
+    #     opt_array = []
+    #     for opt in options.split(","):
+    #         if not opt or opt == "":
+    #             break
+    #         for k,v in opt.split("="):
+    #             if k == "log-level":
+    #                 opt_array.append("--log-level")
+    #                 opt_array.append(v)
+    #                 # TODO: handle more options, and document them
 
     # Fix the log, so we can check it out later
     # log_file = "/var/log/glusterfs/%s" % target_path.replace("/", "-")
@@ -541,7 +539,7 @@ def check_external_volume(pv_request):
 
     mount_glusterfs_with_host(hvol['name'], mntdir, hvol['host'], hvol['options'])
 
-    time.sleep (0.37)
+    time.sleep(0.37)
 
     if not os.path.ismount(mntdir):
         logging.debug(logf(

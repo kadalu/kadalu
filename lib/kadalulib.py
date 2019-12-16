@@ -4,9 +4,9 @@ import subprocess
 import logging
 import sys
 import os
-import requests
 from datetime import datetime
 
+import requests
 import xxhash
 
 
@@ -94,10 +94,12 @@ def logging_setup():
 
 
 def send_analytics_tracker(name):
+    """Send setup events to Google analytics"""
     ga_id = "UA-144588868-1" # Static string
-    reqheader = { 'user-agent': 'Kadalu-App', 'accept': '*/*' }
+    reqheader = {'user-agent': 'Kadalu-App', 'accept': '*/*'}
     url = "https://www.google-analytics.com/collect?v=1&t=pageview"
-    track_page = "http://kadalu.org/kadalu-%s-%s" % (name, os.environ.get("KADALU_VERSION", "latest"))
+    track_page = "http://kadalu.org/kadalu-%s-%s" % (
+        name, os.environ.get("KADALU_VERSION", "latest"))
     track_title = "Kadalu %s" % name
 
     # TODO: cid should be 1 per installation. How to do it?
@@ -105,8 +107,7 @@ def send_analytics_tracker(name):
     track_url = "%s&dl=%s&dt=%s&tid=%s&cid=%s" % (url, track_page, track_title, ga_id, client_id)
 
     # TODO: make this optional, and let users know this operator tracks one run as 1 page hit.
-    # ignore s
     try:
-        s = requests.get(track_url, headers = reqheader)
+        requests.get(track_url, headers=reqheader)
     except:
-        True
+        pass
