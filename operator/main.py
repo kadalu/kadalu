@@ -7,7 +7,6 @@ import os
 import uuid
 import json
 import logging
-import requests
 
 from kubernetes import client, config, watch
 from jinja2 import Template
@@ -90,9 +89,9 @@ def validate_volume_request(obj):
 
 
 def get_brick_device_dir(brick):
-    # If custom file is passed as brick device then the
-    # parent directory needs to be mounted as is
-    # in server container
+    """If custom file is passed as brick device then the
+    parent directory needs to be mounted as is
+    in server container"""
     brick_device_dir = ""
     logging.info(repr(brick))
     brickdev = brick.get("device", "")
@@ -104,14 +103,15 @@ def get_brick_device_dir(brick):
 
 
 def get_brick_hostname(volname, node, idx, suffix=True):
-    # Brick hostname is <statefulset-name>-<ordinal>.<service-name>
-    # statefulset name is the one which is visible when the
-    # `get pods` command is run, so the format used for that name
-    # is "server-<volname>-<idx>-<hostname>". Escape dots from the
-    # hostname from the input otherwise will become invalid name.
-    # Service is created with name as Volume name. For example,
-    # brick_hostname will be "server-spool1-0-minikube-0.spool1" and
-    # server pod name will be "server-spool1-0-minikube"
+    """Brick hostname is <statefulset-name>-<ordinal>.<service-name>
+    statefulset name is the one which is visible when the
+    `get pods` command is run, so the format used for that name
+    is "server-<volname>-<idx>-<hostname>". Escape dots from the
+    hostname from the input otherwise will become invalid name.
+    Service is created with name as Volume name. For example,
+    brick_hostname will be "server-spool1-0-minikube-0.spool1" and
+    server pod name will be "server-spool1-0-minikube"
+    """
     hostname = "server-%s-%d-%s" % (volname, idx, node.replace(".", "-"))
     if suffix:
         return "%s-0.%s" % (hostname, volname)
@@ -231,7 +231,7 @@ def handle_added(core_v1_client, obj):
     obj["spec"]["volume_id"] = str(uuid.uuid1())
 
     # Generate Node ID for each storage device.
-    for idx, storage in enumerate(obj["spec"]["storage"]):
+    for idx, _ in enumerate(obj["spec"]["storage"]):
         obj["spec"]["storage"][idx]["node_id"] = str(uuid.uuid1())
 
     update_config_map(core_v1_client, obj)
@@ -252,10 +252,9 @@ def handle_modified():
     """
     # TODO: Handle Volume option change
     # TODO: Handle Volume maintenance mode
-    logging.warn(logf(
+    logging.warning(logf(
         "MODIFIED handle called, but not implemented"
     ))
-    pass
 
 
 def handle_deleted():
@@ -266,10 +265,9 @@ def handle_deleted():
     check for num_pvs. Delete Server pods only when pvs becomes zero.
     """
     # TODO
-    logging.warn(logf(
+    logging.warning(logf(
         "DELETED handle called, but not implemented"
     ))
-    pass
 
 
 def crd_watch(core_v1_client, k8s_client):

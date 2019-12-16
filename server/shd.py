@@ -2,14 +2,9 @@
 Starts Gluster Brick(fsd) process
 """
 import os
-import uuid
-import sys
 import json
-import logging
 
 from jinja2 import Template
-
-from kadalulib import logf
 
 
 VOLFILES_DIR = "/kadalu/volfiles"
@@ -17,7 +12,7 @@ TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
 
 
-def generate_shd_volfile(volfile_path, volname):
+def generate_shd_volfile(client_volfile, volname):
     """Generate Client Volfile for Glusterfs Volume"""
     info_file_path = os.path.join(VOLINFO_DIR, "%s.info" % volname)
     data = {}
@@ -25,7 +20,6 @@ def generate_shd_volfile(volfile_path, volname):
         data = json.load(info_file)
 
     template_file_path = os.path.join(TEMPLATES_DIR, "Replica3.shd.vol.j2")
-    client_volfile = os.path.join(VOLFILES_DIR, "glustershd.vol")
     content = ""
     with open(template_file_path) as template_file:
         content = template_file.read()

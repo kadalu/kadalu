@@ -45,15 +45,15 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
 
         voltype = request.volume_context.get("type", "")
         if voltype == "External":
-            options = request.volume_context.get("options", None);
-            gserver = request.volume_context.get("gserver", None);
+            options = request.volume_context.get("options", None)
+            gserver = request.volume_context.get("gserver", None)
 
             mount_glusterfs_with_host(hostvol, request.target_path, gserver, options)
 
             logging.debug(logf(
                 "Mounted Volume for PV",
                 volume=request.volume_id,
-                mntdir=targetdir,
+                mntdir=request.target_path,
                 pvpath=gserver,
                 options=options
             ))
