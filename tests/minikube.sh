@@ -210,9 +210,9 @@ kadalu_operator)
 test_kadalu)
     date
 
-    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 160
+    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 200
 
-    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 160
+    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 200
 
     get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 40
 
