@@ -22,7 +22,7 @@ KADALU_CONFIG_MAP = "kadalu-info"
 CSI_POD_PREFIX = "csi-"
 STORAGE_CLASS_NAME_PREFIX = "kadalu."
 # TODO: Add ThinArbiter and Disperse
-VALID_HOSTING_VOLUME_TYPES = ["Replica1", "Replica3"]
+VALID_HOSTING_VOLUME_TYPES = ["Replica1", "Replica3", "External"]
 VOLUME_TYPE_REPLICA_1 = "Replica1"
 VOLUME_TYPE_REPLICA_3 = "Replica3"
 
@@ -61,6 +61,28 @@ def bricks_validation(bricks):
 
     return ret
 
+def validate_ext_details(obj):
+    cluster = obj["spec"].get("details", None)
+    if not cluster:
+        logging.error(logf("External Cluster details not given."))
+        return False
+
+    valid = 0
+    if len(cluster) > 1:
+        return False
+
+    for c in cluster:
+        if c.get('gluster_host', None):
+            valid += 1
+        if c.get('gluster_volname', None):
+            valid += 1
+
+    if valid != 2:
+        logging.error(logf("No 'host' and 'volname' details provided."))
+
+        return False
+
+    return True
 
 def validate_volume_request(obj):
     """Validate the Volume request for Replica options, number of bricks etc"""
@@ -74,6 +96,9 @@ def validate_volume_request(obj):
                            valid_types=",".join(VALID_HOSTING_VOLUME_TYPES),
                            provided_type=voltype))
         return False
+
+    if voltype == "External":
+        return validate_ext_details(obj)
 
     bricks = obj["spec"].get("storage", [])
     if not bricks_validation(bricks):
@@ -206,6 +231,38 @@ def deploy_server_pods(obj):
                           node=storage.get("node", "")))
 
 
+def handle_external_storage_addition(core_v1_client, obj):
+    # Deploy service(One service per Volume)
+    volname = obj["metadata"]["name"]
+    details = obj["spec"]["details"][0]
+
+    data = {
+        "volname": volname,
+        "volume_id": obj["spec"]["volume_id"],
+        "type": "External",
+        "kadalu-format": True,
+        "gluster_host": details["gluster_host"],
+        "gluster_volname": details["gluster_volname"],
+        "gluster_options": details.get("gluster_options", ""),
+    }
+
+    # Add new entry in the existing config map
+    configmap_data = core_v1_client.read_namespaced_config_map(
+        KADALU_CONFIG_MAP, NAMESPACE)
+    volinfo_file = "%s.info" % volname
+    configmap_data.data[volinfo_file] = json.dumps(data)
+
+    core_v1_client.patch_namespaced_config_map(
+        KADALU_CONFIG_MAP, NAMESPACE, configmap_data)
+    logging.info(logf("Updated configmap", name=KADALU_CONFIG_MAP,
+                      volname=volname))
+
+    filename = os.path.join(MANIFESTS_DIR, "external-storageclass.yaml")
+    template(filename, **data)
+    execute(KUBECTL_CMD, "create", "-f", filename)
+    logging.info(logf("Deployed External StorageClass", volname=volname, manifest=filename))
+
+
 def handle_added(core_v1_client, obj):
     """
     New Volume is requested. Update the configMap and deploy
@@ -213,12 +270,16 @@ def handle_added(core_v1_client, obj):
 
     if not validate_volume_request(obj):
         # TODO: Delete Custom resource
+        logging.debug(logf(
+            "validation of volume request failed",
+            yaml=obj
+        ))
+
         return
 
     # Ignore if already deployed
     volname = obj["metadata"]["name"]
-    pods = core_v1_client.list_namespaced_pod(
-        NAMESPACE)
+    pods = core_v1_client.list_namespaced_pod(NAMESPACE)
     for pod in pods.items:
         if pod.metadata.name.startswith("server-" + volname + "-"):
             logging.debug(logf(
@@ -227,8 +288,25 @@ def handle_added(core_v1_client, obj):
             ))
             return
 
+    # Add new entry in the existing config map
+    configmap_data = core_v1_client.read_namespaced_config_map(
+        KADALU_CONFIG_MAP, NAMESPACE)
+
+    if configmap_data.data.get("%s.info" % volname, None):
+        # Volume already exists
+        logging.debug(logf(
+            "Ignoring already updated volume config",
+            storagename=volname
+        ))
+        return
+
     # Generate new Volume ID
     obj["spec"]["volume_id"] = str(uuid.uuid1())
+
+    voltype = obj["spec"]["type"]
+    if voltype == "External":
+        handle_external_storage_addition(core_v1_client, obj)
+        return
 
     # Generate Node ID for each storage device.
     for idx, _ in enumerate(obj["spec"]["storage"]):
@@ -237,8 +315,6 @@ def handle_added(core_v1_client, obj):
     update_config_map(core_v1_client, obj)
     deploy_server_pods(obj)
 
-    # Deploy service(One service per Volume)
-    volname = obj["metadata"]["name"]
     filename = os.path.join(MANIFESTS_DIR, "services.yaml")
     template(filename, namespace=NAMESPACE, volname=volname)
     execute(KUBECTL_CMD, "create", "-f", filename)
