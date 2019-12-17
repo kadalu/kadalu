@@ -18,9 +18,9 @@ metadata:
 spec:
   type: Replica3
   storage:
-    - node: minikube           # node name as shown in `kubectl get nodes`
-      device: /mnt/DISK/file3.1
-    - node: minikube           # node name as shown in `kubectl get nodes`
-      device: /mnt/DISK/file3.2
-    - node: minikube           # node name as shown in `kubectl get nodes`
-      device: /mnt/DISK/file3.3
+    - node: minikube            # node name as shown in `kubectl get nodes`
+      device: /mnt/DISK/file3.1 # file as a device
+    - node: minikube            # node name as shown in `kubectl get nodes`
+      path: /mnt/DISK/dir3.2    # Using a path from host
+    - node: minikube            # node name as shown in `kubectl get nodes`
+      pvc: local-pvc            # PVC belonging to this namespace

@@ -1,6 +1,53 @@
 #!/bin/bash -e
 
 #Based on ideas from https://github.com/rook/rook/blob/master/tests/scripts/minikube.sh
+fail=0
+
+function get_pvc_and_check() {
+    yaml_file=$1
+    log_text=$2
+    pod_count=$3
+    time_limit=$4
+
+    echo "Running sample test app ${log_text} yaml from repo "
+    kubectl create -f ${yaml_file}
+
+    cnt=0
+    while true; do
+	cnt=$((cnt + 1))
+	sleep 1
+	ret=$(kubectl get pods | grep 'Completed' | wc -l)
+	if [[ $ret -eq ${pod_count} ]]; then
+	    echo "Successful after $cnt seconds"
+	    break
+	fi
+	if [[ $cnt -eq ${time_limit} ]]; then
+	    kubectl get pvc
+	    kubectl get pods -nkadalu
+	    kubectl get pods
+	    echo "exiting after ${time_limit} seconds"
+	    fail=1
+	    break
+	fi
+	if [[ $((cnt % 25)) -eq 0 ]]; then
+	    echo "$cnt: Waiting for pods to come up..."
+	fi
+    done
+    kubectl get pvc
+    kubectl get pods
+
+    #Delete the pods/pvc
+    for p in $(kubectl get pods -o name); do
+	kubectl describe $p
+	kubectl logs $p
+	kubectl delete $p
+    done
+
+    for p in $(kubectl get pvc -o name); do
+	kubectl describe $p
+	kubectl delete $p
+    done
+}
 
 function wait_for_ssh() {
     local tries=100
@@ -99,10 +146,12 @@ up)
     if [[ "${VM_DRIVER}" != "none" ]]; then
 	wait_for_ssh
 	# shellcheck disable=SC2086
-	minikube ssh "sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file{1,3.1,3.2,3.3}"
+	minikube ssh "sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file{1,3.1}; sudo mkdir -p /mnt/${DISK}/{dir3.2,pvc}"
     else
-	sudo mkdir -p /mnt/${DISK};
-	sudo truncate -s 4g /mnt/${DISK}/file{1,3.1,3.2,3.3}
+	sudo mkdir -p /mnt/${DISK}
+	sudo truncate -s 4g /mnt/${DISK}/file{1,3.1}
+	sudo mkdir -p /mnt/${DISK}/dir3.2
+	sudo mkdir -p /mnt/${DISK}/pvc
     fi
     kubectl cluster-info
     ;;
@@ -130,6 +179,9 @@ kadalu_operator)
     # Start storage
     cp examples/sample-storage-file-device.yaml /tmp/kadalu-storage.yaml
     sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
+    sed -i -e "s/DISK/${DISK}/g" tests/get-minikube-pvc.yaml
+    kubectl create -f tests/get-minikube-pvc.yaml
+    sleep 1
     kubectl create -f /tmp/kadalu-storage.yaml
 
     # give it some time
@@ -156,71 +208,21 @@ kadalu_operator)
     ;;
 
 test_kadalu)
-    fail=0
     date
-    echo "Requesting PVC and Sample apps"
-    echo "Running sample test app (Replica1) yml from repo"
-    kubectl create -f  examples/sample-test-app1.yaml
 
-    echo "Running sample test app (Replica3) yml from repo "
-    kubectl create -f  examples/sample-test-app3.yaml
+    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 160
 
-    echo "Running sample test app (Replica3) yml from repo "
-    kubectl create -f examples/sample-external-storage.yaml
+    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 160
 
-    cnt=0
-    while true; do
-	cnt=$((cnt + 1))
-	sleep 1
-	ret=$(kubectl get pods | grep 'Completed' | wc -l)
-	if [[ $ret -eq 5 ]]; then
-	    echo "Successful after $cnt seconds"
-	    break
-	fi
-	if [[ $cnt -eq 200 ]]; then
-	    kubectl get pvc
-	    kubectl get pods -nkadalu
-	    kubectl get pods
-	    echo "exiting after 200 seconds"
-	    fail=1
-	    break
-	fi
-	if [[ $((cnt % 25)) -eq 0 ]]; then
-	    echo "$cnt: Waiting for pods to come up..."
-	fi
-    done
-    kubectl get pvc
-    kubectl get pods
+    get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 40
+
 
     # Log everything so we are sure if things are as expected
     for p in $(kubectl -n kadalu get pods -o name); do
 	echo "====================== Start $p ======================"
-	kubectl -nkadalu --all-containers=true --tail 100 logs $p
+	kubectl -nkadalu --all-containers=true --tail 300 logs $p
 	echo "======================= End $p ======================="
     done
-
-    echo "---- Logs from pod3 & pod1 ----"
-    kubectl describe pod pod3-1
-    echo "------------------"
-    kubectl describe pod pod3-2
-    echo "------------------"
-    kubectl describe pod pod1-1
-    echo "------------------"
-    kubectl describe pod pod1-2
-    echo "------------------"
-    kubectl describe pod pod-ext
-    echo "------------------"
-
-    kubectl logs pod3-1
-    echo "------------------"
-    kubectl logs pod3-2
-    echo "------------------"
-    kubectl logs pod1-1
-    echo "------------------"
-    kubectl logs pod1-2
-    echo "------------------"
-    kubectl logs pod-ext
-    echo "------------------"
 
     date
 
@@ -228,7 +230,10 @@ test_kadalu)
     if [ $fail -eq 1 ]; then
 	echo "Marking the test as 'FAIL'"
 	exit 1
+    else
+	echo "Tests SUCCESSFUL"
     fi
+
     ;;
 clean)
     minikube delete
