@@ -71,9 +71,6 @@ def handle_quota(quota_report, brick_path, volname, pvtype):
 
             try:
                 set_quota(os.path.dirname(brick_path), subdir_path, data["size"])
-                logging.info(logf("Quota Set",
-                                  path=subdir_path.replace(brick_path, ""),
-                                  size=data["size"]))
             except CommandException as err:
                 logging.error(logf("Failed to set Quota",
                                    err=err.err,
