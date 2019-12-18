@@ -58,7 +58,6 @@ def get_pv_hosting_volumes(filters=None):
     for filename in os.listdir(VOLINFO_DIR):
         if filename.endswith(".info"):
             total_volumes += 1
-
             volname = filename.replace(".info", "")
 
             if filters is not None:
@@ -94,7 +93,17 @@ def get_pv_hosting_volumes(filters=None):
                    filter_supported_pvtype != supported_pvtype:
                     continue
 
-            volumes.append(volname)
+            volume = {
+                "name": volname,
+                "type": data["type"],
+                "g_volname": data.get("gluster_volname", None),
+                "g_host": data.get("gluster_host", None),
+                "g_options": data.get("gluster_options", None),
+            }
+
+            volumes.append(volume)
+
+    # Need a different way to get external-kadalu volumes
 
     # If volume file is not yet available, ConfigMap may not be ready
     # or synced. Wait for some time and try again
@@ -119,9 +128,10 @@ def update_free_size(hostvol, sizechange):
 
 def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
     """Mount each hosting volume to find available space"""
-    for hvol in pv_hosting_volumes:
+    for volume in pv_hosting_volumes:
+        hvol = volume['name']
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
-        mount_glusterfs(hvol, mntdir)
+        mount_glusterfs(volume, mntdir)
 
         stat_file_path = os.path.join(mntdir, ".stat")
         data = {}
@@ -183,7 +193,8 @@ def create_virtblock_volume(hostvol_mnt, volname, size):
         voltype=PV_TYPE_VIRTBLOCK,
         volhash=volhash,
         hostvol=os.path.basename(hostvol_mnt),
-        size=size
+        size=size,
+        volpath=volpath,
     )
 
 
@@ -254,6 +265,14 @@ def create_subdir_volume(hostvol_mnt, volname, size):
             ))
             break
 
+        if count >= 6:
+            logging.warn(logf(
+                "Waited for some time, Quota set failed, continuing.",
+                volsize=volsize,
+                num_tries=count
+            ))
+            break
+
         time.sleep(1)
 
     return Volume(
@@ -261,7 +280,8 @@ def create_subdir_volume(hostvol_mnt, volname, size):
         voltype=PV_TYPE_SUBVOL,
         volhash=volhash,
         hostvol=os.path.basename(hostvol_mnt),
-        size=size
+        size=size,
+        volpath=volpath,
     )
 
 
@@ -277,10 +297,18 @@ def delete_volume(volname):
             hostvol=vol.hostvol
         ))
         volpath = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath)
-        if vol.voltype == PV_TYPE_SUBVOL:
-            os.removedirs(volpath)
-        else:
-            os.remove(volpath)
+        try:
+            if vol.voltype == PV_TYPE_SUBVOL:
+                os.removedirs(volpath)
+            else:
+                os.remove(volpath)
+        except Exception as err:
+            logging.info(logf(
+                "Error while deleting volume",
+                volpath=volpath,
+                voltype=vol.voltype,
+                error=err,
+            ))
 
         logging.debug(logf(
             "Volume deleted",
@@ -292,32 +320,45 @@ def delete_volume(volname):
         info_file_path = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol,
                                       "info", vol.volpath+".json")
         stat_file_path = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, ".stat")
-        with open(info_file_path) as info_file:
-            data = json.load(info_file)
-            # TODO: Hold lock on ".stat" file below
-            with open(stat_file_path) as stat_file:
-                stat_data = json.load(stat_file)
-                stat_data["free_size"] += data["size"]
-                with open(stat_file_path+".tmp", "w") as stat_file_tmp:
-                    stat_file_tmp.write(json.dumps(stat_data))
+        try:
+            with open(info_file_path) as info_file:
+                data = json.load(info_file)
+                # TODO: Hold lock on ".stat" file below
+                # We assume there would be a create before delete, but while
+                # developing thats not true. There can be a delete request for
+                # previously created pvc, which would be assigned to you once
+                # you come up. We can't fail then.
+                with open(stat_file_path) as stat_file:
+                    stat_data = json.load(stat_file)
+                    stat_data["free_size"] += data["size"]
+                    with open(stat_file_path+".tmp", "w") as stat_file_tmp:
+                        stat_file_tmp.write(json.dumps(stat_data))
 
-                logging.debug(logf(
-                    "Updated .stat.tmp file",
-                    hostvol=vol.hostvol,
-                    before=stat_data["free_size"]-data["size"],
-                    after=stat_data["free_size"]
-                ))
-        os.rename(stat_file_path+".tmp", stat_file_path)
-        logging.debug(logf(
-            "Renamed .stat.tmp to .stat file",
-            hostvol=vol.hostvol
-        ))
-        os.remove(info_file_path)
-        logging.debug(logf(
-            "Removed volume metadata file",
-            path="info/" + vol.volpath + ".json",
-            hostvol=vol.hostvol
-        ))
+                    logging.debug(logf(
+                        "Updated .stat.tmp file",
+                        hostvol=vol.hostvol,
+                        before=stat_data["free_size"]-data["size"],
+                        after=stat_data["free_size"]
+                    ))
+            os.rename(stat_file_path+".tmp", stat_file_path)
+            logging.debug(logf(
+                "Renamed .stat.tmp to .stat file",
+                hostvol=vol.hostvol
+            ))
+            os.remove(info_file_path)
+            logging.debug(logf(
+                "Removed volume metadata file",
+                path="info/" + vol.volpath + ".json",
+                hostvol=vol.hostvol
+            ))
+        except Exception as err:
+            logging.info(logf(
+                "Error while removing the file",
+                path="info/" + vol.volpath + ".json",
+                hostvol=vol.hostvol,
+                error=err,
+            ))
+
 
 
 def search_volume(volname):
@@ -327,10 +368,10 @@ def search_volume(volname):
     virtblock_path = get_volume_path(PV_TYPE_VIRTBLOCK, volhash, volname)
 
     host_volumes = get_pv_hosting_volumes()
-    for hvol in host_volumes:
+    for volume in host_volumes:
+        hvol = volume['name']
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
-        # Try to mount the Host Volume, handle failure if already mounted
-        mount_glusterfs(hvol, mntdir)
+        mount_glusterfs(volume, mntdir)
         for info_path in [subdir_path, virtblock_path]:
             info_path_full = os.path.join(mntdir, "info", info_path + ".json")
             voltype = PV_TYPE_SUBVOL if "/%s/" % PV_TYPE_SUBVOL \
@@ -368,9 +409,10 @@ def volume_list(voltype=None):
     """List of Volumes"""
     host_volumes = get_pv_hosting_volumes()
     volumes = []
-    for hvol in host_volumes:
+    for volume in host_volumes:
+        hvol = volume['name']
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
-        mount_glusterfs(hvol, mntdir)
+        mount_glusterfs(volume, mntdir)
         if voltype is None or voltype == PV_TYPE_SUBVOL:
             get_subdir_virtblock_vols(mntdir, volumes, PV_TYPE_SUBVOL)
         if voltype is None or voltype == PV_TYPE_VIRTBLOCK:
@@ -449,13 +491,23 @@ def mount_glusterfs(volume, target_path):
         os.unlink(target_path_lock)
         return
 
-    generate_client_volfile(volume)
+    if volume['type'] == 'External':
+        # Try to mount the Host Volume, handle failure if
+        # already mounted
+        mount_glusterfs_with_host(volume['g_volname'],
+                                  target_path,
+                                  volume['g_host'],
+                                  volume['g_options'])
+        os.unlink(target_path_lock)
+        return
+
+    generate_client_volfile(volume['name'])
     cmd = [
         GLUSTERFS_CMD,
         "--process-name", "fuse",
         "-l", "/dev/stdout",
-        "--volfile-id=%s" % volume,
-        "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volume),
+        "--volfile-id=%s" % volume['name'],
+        "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volume['name']),
         target_path
     ]
     try:
@@ -463,6 +515,7 @@ def mount_glusterfs(volume, target_path):
     except Exception as err:
         logging.error(logf(
             "error to execute command",
+            volume=volume,
             cmd=cmd,
             error=format(err)
         ))
@@ -472,7 +525,7 @@ def mount_glusterfs(volume, target_path):
     os.unlink(target_path_lock)
     return
 
-def mount_glusterfs_with_host(volume, target_path, host, options=None):
+def mount_glusterfs_with_host(volname, target_path, host, options=None):
     """Mount Glusterfs Volume"""
     if not os.path.exists(target_path):
         makedirs(target_path)
@@ -505,7 +558,7 @@ def mount_glusterfs_with_host(volume, target_path, host, options=None):
         GLUSTERFS_CMD,
         "--process-name", "fuse",
         "-l", "%s" % log_file,
-        "--volfile-id=%s" % volume,
+        "--volfile-id=%s" % volname,
         "-s", host,
         target_path
     ]
@@ -519,7 +572,15 @@ def mount_glusterfs_with_host(volume, target_path, host, options=None):
         cmd=cmd
     ))
 
-    execute(*cmd)
+    try:
+        execute(*cmd)
+    except Exception as err:
+        logging.info(logf(
+            "mount command failed",
+            cmd=cmd,
+            error=err,
+        ))
+
     return
 
 def check_external_volume(pv_request):
@@ -534,8 +595,7 @@ def check_external_volume(pv_request):
         "name": params['gluster_volname'],
         "options": params['gluster_options'],
     }
-    hpath = "%s.%s" % (hvol['name'], hvol['host'])
-    mntdir = os.path.join(HOSTVOL_MOUNTDIR, hpath)
+    mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol['name'])
 
     mount_glusterfs_with_host(hvol['name'], mntdir, hvol['host'], hvol['options'])
 
@@ -554,5 +614,4 @@ def check_external_volume(pv_request):
         hvol=hvol
     ))
 
-    unmount_volume(mntdir)
     return hvol

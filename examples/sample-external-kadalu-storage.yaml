@@ -1,0 +1,45 @@
+---
+apiVersion: kadalu-operator.storage/v1alpha1
+kind: KadaluStorage
+metadata:
+  name: ext-config
+spec:
+  type: External
+  details:
+    - gluster_host: gluster1.kadalu.io
+      gluster_volname: kadalu
+      gluster_options: log-level=DEBUG
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv-ext-kadalu
+spec:
+  storageClassName: kadalu.external.ext-config # Add 'kadalu.external.' to name from KadaluStorage kind
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 500Mi # This needs to be set using 'kadalu-quotad'
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-ext-kadalu
+  labels:
+    app: sample-app
+spec:
+  containers:
+  - name: sample-app
+    image: docker.io/kadalu/sample-pv-check-app:latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - mountPath: "/mnt/pv"
+      name: csivol
+  volumes:
+  - name: csivol
+    persistentVolumeClaim:
+      claimName: pv-ext-kadalu
+  restartPolicy: OnFailure

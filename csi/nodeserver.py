@@ -27,10 +27,13 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
     def NodePublishVolume(self, request, context):
         start_time = time.time()
         hostvol = request.volume_context.get("hostvol", "")
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
         pvpath = request.volume_context.get("path", "")
         pvtype = request.volume_context.get("pvtype", "")
         voltype = request.volume_context.get("type", "")
+        gserver = request.volume_context.get("gserver", None);
+        options = request.volume_context.get("options", None);
+
+        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
 
         pvpath_full = os.path.join(mntdir, pvpath)
 
@@ -43,23 +46,30 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             pvtype=pvtype
         ))
 
-        voltype = request.volume_context.get("type", "")
         if voltype == "External":
-            options = request.volume_context.get("options", None)
-            gserver = request.volume_context.get("gserver", None)
+            # If no separate PV Path, use the whole volume as PV
+            if pvpath == "":
+                mount_glusterfs_with_host(hostvol, request.target_path, gserver, options)
 
-            mount_glusterfs_with_host(hostvol, request.target_path, gserver, options)
+                logging.debug(logf(
+                    "Mounted Volume for PV",
+                    volume=request.volume_id,
+                    mntdir=request.target_path,
+                    pvpath=gserver,
+                    options=options
+                ))
+                return csi_pb2.NodePublishVolumeResponse()
 
-            logging.debug(logf(
-                "Mounted Volume for PV",
-                volume=request.volume_id,
-                mntdir=request.target_path,
-                pvpath=gserver,
-                options=options
-            ))
-            return csi_pb2.NodePublishVolumeResponse()
+        volume = {
+            'name': hostvol,
+            'g_volname': hostvol,
+            'g_host': gserver,
+            'g_options': options,
+            'type': voltype,
+        }
 
-        mount_glusterfs(hostvol, mntdir)
+        mount_glusterfs(volume, mntdir)
+
         logging.debug(logf(
             "Mounted Hosting Volume",
             pv=request.volume_id,

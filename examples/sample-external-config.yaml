@@ -1,0 +1,12 @@
+# -*- mode: yaml -*-
+---
+apiVersion: kadalu-operator.storage/v1alpha1
+kind: KadaluStorage
+metadata:
+  name: kadalu-external-storage
+spec:
+  type: External
+  details:
+    - gluster_host: gluster1.kadalu.io
+      gluster_volname: kadalu
+      gluster_options: log-level=DEBUG

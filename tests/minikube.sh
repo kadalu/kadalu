@@ -13,6 +13,7 @@ function get_pvc_and_check() {
     kubectl create -f ${yaml_file}
 
     cnt=0
+    result=0
     while true; do
 	cnt=$((cnt + 1))
 	sleep 1
@@ -26,6 +27,7 @@ function get_pvc_and_check() {
 	    kubectl get pods -nkadalu
 	    kubectl get pods
 	    echo "exiting after ${time_limit} seconds"
+	    result=1
 	    fail=1
 	    break
 	fi
@@ -38,13 +40,13 @@ function get_pvc_and_check() {
 
     #Delete the pods/pvc
     for p in $(kubectl get pods -o name); do
-	kubectl describe $p
-	kubectl logs $p
+	[[ $result -eq 1 ]] && kubectl describe $p
+	[[ $result -eq 0 ]] && kubectl logs $p
 	kubectl delete $p
     done
 
     for p in $(kubectl get pvc -o name); do
-	kubectl describe $p
+	[[ $result -eq 1 ]] && kubectl describe $p
 	kubectl delete $p
     done
 }
@@ -210,17 +212,18 @@ kadalu_operator)
 test_kadalu)
     date
 
-    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 200
+    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 191
 
-    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 200
+    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 191
 
-    get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 40
+    get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 97
 
+    get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 1 97
 
     # Log everything so we are sure if things are as expected
     for p in $(kubectl -n kadalu get pods -o name); do
 	echo "====================== Start $p ======================"
-	kubectl -nkadalu --all-containers=true --tail 300 logs $p
+	kubectl -nkadalu --all-containers=true --tail 500 logs $p
 	echo "======================= End $p ======================="
     done
 
