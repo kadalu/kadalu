@@ -168,7 +168,7 @@ def update_config_map(core_v1_client, obj):
         data["bricks"].append({
             "brick_path": "/bricks/%s/data/brick" % volname,
             "node": get_brick_hostname(volname,
-                                       storage.get("node", ""),
+                                       storage.get("node", "pvc"),
                                        idx),
             "node_id": storage["node_id"],
             "host_brick_path": storage.get("path", ""),
@@ -211,7 +211,7 @@ def deploy_server_pods(obj):
         # TODO: Understand the need, and usage of suffix
         template_args["serverpod_name"] = get_brick_hostname(
             volname,
-            storage.get("node", ""),
+            storage.get("node", "pvc"),
             idx,
             suffix=False
         )

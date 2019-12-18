@@ -46,8 +46,10 @@ spec:
           #   initialDelaySeconds: 120
           #   periodSeconds: 30
           env:
+{%- if kube_hostname != "" %}
             - name: HOSTNAME
               value: {{ kube_hostname }}
+{%- endif %}
             - name: VOLUME
               value: {{ volname }}
             - name: BRICK_PATH
@@ -87,8 +89,10 @@ spec:
         - name: quotad
           image: docker.io/{{ docker_user }}/kadalu-server:{{ kadalu_version }}
           env:
+{%- if kube_hostname != "" %}
             - name: HOSTNAME
               value: {{ kube_hostname }}
+{%- endif %}
             - name: VOLUME
               value: {{ volname }}
             - name: BRICK_PATH
@@ -118,8 +122,10 @@ spec:
         - name: shd
           image: docker.io/{{ docker_user }}/kadalu-server:{{ kadalu_version }}
           env:
+{%- if kube_hostname != "" %}
             - name: HOSTNAME
               value: {{ kube_hostname }}
+{%- endif %}
             - name: VOLUME
               value: {{ volname }}
             - name: BRICK_PATH
