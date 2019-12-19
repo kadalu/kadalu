@@ -132,10 +132,6 @@ def start():
     """
     Start the Gluster Brick Process
     """
-    # Send Analytics Tracker
-    # The information from this analytics is available for
-    # developers to understand and build project in a better way
-    send_analytics_tracker("server-start")
 
     brick_device = os.environ.get("BRICK_DEVICE", None)
     brick_path = os.environ["BRICK_PATH"]
@@ -156,10 +152,15 @@ def start():
     volfile_path = os.path.join(VOLFILES_DIR, "%s.vol" % volfile_id)
     generate_brick_volfile(volfile_path, volname)
 
+    # UID is stored at the time of installation in configmap.
+    uid = None
+    with open(os.path.join(VOLINFO_DIR, "uid")) as f:
+        uid = f.read()
+
     # Send Analytics Tracker
     # The information from this analytics is available for
     # developers to understand and build project in a better way
-    send_analytics_tracker("server-ready")
+    send_analytics_tracker("server", uid)
 
     os.execv(
         "/usr/sbin/glusterfsd",
