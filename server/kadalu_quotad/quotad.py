@@ -9,6 +9,19 @@ import logging
 from kadalulib import execute, logf, CommandException, \
     get_volname_hash, get_volume_path, PV_TYPE_SUBVOL
 
+# Config file for kadalu info
+# Config file format:
+# {
+#    "version": 1,
+#    "bricks": [
+#      "/data/brick1",
+#      "/data/brick2"
+#    ],
+# }
+# We are using a json file, so the same file may get more parameters
+# for other tools
+#
+CONFIG_FILE="/var/lib/glusterd/kadalu.info"
 
 def set_quota(rootdir, subdir_path, quota_value):
     """
@@ -42,8 +55,8 @@ def get_quota_report(rootdir):
                            rootdir=rootdir,
                            err=err.err,
                            ret=err.ret))
-        return []
 
+    return []
 
 def handle_quota(quota_report, brick_path, volname, pvtype):
     """Sets Quota if info file is available"""
@@ -77,14 +90,17 @@ def handle_quota(quota_report, brick_path, volname, pvtype):
                                    path=subdir_path.replace(
                                        brick_path, ""),
                                    size=data["size"]))
+    return
 
 
-def crawl():
+def crawl(brick_path):
     """
     Crawl to find if Quota set is pending for any directory.
     Get Quota size information from info file
     """
-    brick_path = os.environ["BRICK_PATH"]
+    if not brick_path:
+        return
+
     subvol_root = os.path.join(brick_path, PV_TYPE_SUBVOL)
 
     quota_report = get_quota_report(os.path.dirname(brick_path))
@@ -99,6 +115,8 @@ def crawl():
             for pvdir in os.listdir(os.path.join(subvol_root, dir1, dir2)):
                 handle_quota(quota_report, brick_path, pvdir, PV_TYPE_SUBVOL)
 
+    return
+
 
 def start():
     """
@@ -106,12 +124,25 @@ def start():
     """
     first_time = True
     while True:
-        crawl()
-        time.sleep(1)
-        if not first_time:
+        brick_path = os.environ["BRICK_PATH"]
+        if brick_path:
+            crawl(brick_path)
+        try:
+            with open(CONFIG_FILE) as f:
+                config_data = json.loads(f.read().strip())
+                for brick in config_data.get('bricks', None):
+                    crawl(brick)
+        except:
+            # Ignore all errors
+            pass
+
+        time.sleep(2)
+
+        if first_time:
             print("Successfully started quotad process")
             first_time = False
 
+    return 0
 
 if __name__ == "__main__":
     start()
