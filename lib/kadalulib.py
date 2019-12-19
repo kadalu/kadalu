@@ -93,7 +93,8 @@ def logging_setup():
     root.addHandler(handler)
 
 
-def send_analytics_tracker(name):
+
+def send_analytics_tracker(name, uid=None):
     """Send setup events to Google analytics"""
     ga_id = "UA-144588868-1" # Static string
     reqheader = {'user-agent': 'Kadalu-App', 'accept': '*/*'}
@@ -102,11 +103,10 @@ def send_analytics_tracker(name):
         name, os.environ.get("KADALU_VERSION", "latest"))
     track_title = "Kadalu %s" % name
 
-    # TODO: cid should be 1 per installation. How to do it?
-    client_id = datetime.now().timestamp()
-    track_url = "%s&dl=%s&dt=%s&tid=%s&cid=%s" % (url, track_page, track_title, ga_id, client_id)
+    if not uid:
+        uid = datetime.now().timestamp()
+    track_url = "%s&dl=%s&dt=%s&tid=%s&cid=%s" % (url, track_page, track_title, ga_id, uid)
 
-    # TODO: make this optional, and let users know this operator tracks one run as 1 page hit.
     try:
         requests.get(track_url, headers=reqheader)
     except:

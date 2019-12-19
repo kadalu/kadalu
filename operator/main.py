@@ -410,10 +410,14 @@ def deploy_config_map(core_v1_client):
 
     # Deploy Config map
     filename = os.path.join(MANIFESTS_DIR, "configmap.yaml")
-    template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
+    uid=uuid.uuid4()
+    template(filename,
+             namespace=NAMESPACE,
+             kadalu_version=VERSION,
+             uid=uid)
     execute(KUBECTL_CMD, "create", "-f", filename)
     logging.info(logf("Deployed ConfigMap", manifest=filename))
-
+    return uid
 
 def deploy_storage_class():
     """Deploys the default storage class for KaDalu if not exists"""
@@ -438,7 +442,7 @@ def main():
     k8s_client = client.ApiClient()
 
     # ConfigMap
-    deploy_config_map(core_v1_client)
+    uid=deploy_config_map(core_v1_client)
 
     # CSI Pods
     deploy_csi_pods(core_v1_client)
@@ -450,7 +454,7 @@ def main():
     # The information from this analytics is available for
     # developers to understand and build project in a better
     # way
-    send_analytics_tracker("operator")
+    send_analytics_tracker("operator", uid)
 
     # Watch CRD
     crd_watch(core_v1_client, k8s_client)
