@@ -126,3 +126,7 @@ As we use glusterfs in backend, without any sharding/striping/disperse mode, the
 ### On upgrade
 
 As long as glusterfs promises to keep the backend layout same, and continue to provide storage after upgrade, we don't see any issue with upgrade. Currently our operator is not checking for newer versions and upgrading itself, but just killing the brick pod when new version is available should fetch new pod and start it back all fine.
+
+### Gluster and Kadalu
+
+We have compiled a list of things [here](./gluster-and-kadalu.md)

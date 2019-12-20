@@ -4,47 +4,32 @@
 [![Operator Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg?label=DockerPulls%20Operator)](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg)
 [![Server Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg?label=DockerPulls%20Server)](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg)
 
-> **Note 1:** kaDalu project is still in its infancy, not yet 'officially' deployed in production.
 >
->**Note 2:** If you are using 'minikube' to try out kaDalu, then please use
-`--vm-driver=none` option. In our testing, we found issues specific to CSI pods
-when we used `kvm2` driver.
+>**Note 1:** If you like the project, give a github star :-)
 >
->**Note 3:** If you like the project, give a github star :-)
+
+- [KaDalu](#kadalu)
+  - [Introduction](#introduction)
+  - [Get Started](#get-started)
+    - [Pre-Requisites](#pre-requisites)
+    - [Setup](#setup)
+  - [CSI to claim Persistent Volumes (PVC/PV)](#csi-to-claim-persistent-volumes-pvcpv)
+  - [Talks and Blog posts](#talks-and-blog-posts)
+  - [Reach out to some of the developers](#reach-out-to-some-of-the-developers)
 
 ## Introduction
 
-The fundamental idea of the project is described [here](doc/rethinking-gluster-management-using-k8s.pdf)
+Kadalu project started with a goal of keeping minimum layers to provide Persistent Volumes in k8s eco system. kadalu uses 'GlusterFS' as soul to provide storage, but strips off 'gluster' project's management layer.
 
-Compared to `GlusterD` there are various points which we consider worth changing:
-
-- Too many layers, hard to debug
-- Duplication of task is bad, and can cause in-consistency
-- K8s can provide added infrastructure like process management, cluster authentication, monitoring and centralized logging
-- Running more than one process in a container defeats the purpose of microservices
-- Currently, no ideal solution with Gluster for storage in k8s
-
-Therefore kadalu does some things different:
-
-|GlusterD|kaDalu|
-|--------|------|
-|Clustering / Peer Management|k8s|
-|Volume Management|ConfigMap, `kubectl apply`|
-|Brick process management|K8s’s pod management|
-|Portmap for Bricks|Not required in new model|
-|Service Management (brick, self-heal, etc)|Runs as another container in same pod.<br>So, managed by k8s as any other pod|
-|Volfile for Bricks, self-heal etc|ConfigMap|
-|Quota, Snapshot, Geo-Replication|CSI / SideCar containers|
+The focus of the project is simplicity and stability. We believe simple things can solve things better, instead of complicating already complicated eco-system.
 
 ## Get Started
 
 ### Pre-Requisites
 
-There is no need to have a `glusterd` running on the host, however there are few pre-requirements
-
 - Kubernetes 1.14.0 + version
 - The host should support xfs (`mkfs.xfs`)
-- The `mount -t xfs` with `-oprjquota` should work (on minikube VM this doesn't work).
+- The `mount -t xfs` with `-oprjquota` should work
 
 ### Setup
 
@@ -63,7 +48,7 @@ There is no need to have a `glusterd` running on the host, however there are few
    **Note:** Security Context Constraints can be applied only by admins,
 Run `oc login -u system:admin` to login as admin
 
-2. Prepare your configuration file.
+2.1 Prepare your configuration file.
 
    KaDalu Operator listens to Storage setup configuration changes and
 starts the required pods. For example,
@@ -83,7 +68,9 @@ starts the required pods. For example,
          device: /dev/vdc # Device to provide storage to all PVs
    ```
 
-3. Now request kadalu-operator to setup storage using,
+You have more options for config file. Check them [here]()
+
+2.2 Now request kadalu-operator to setup storage using,
 
    ```bash
    $ kubectl create -f storage-config.yaml
