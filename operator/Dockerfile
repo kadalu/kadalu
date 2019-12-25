@@ -21,6 +21,9 @@ COPY templates/storageclass.yaml.j2  /kadalu/templates/storageclass.yaml.j2
 COPY templates/external-storageclass.yaml.j2  /kadalu/templates/external-storageclass.yaml.j2
 COPY lib/kadalulib.py                /kadalu/kadalulib.py
 COPY operator/main.py                /kadalu/
+COPY lib/startup.sh                  /kadalu/startup.sh
+
+RUN chmod +x /kadalu/startup.sh
 
 ARG version="(unknown)"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')
@@ -35,7 +38,7 @@ LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="org.kadalu.gluster"
 LABEL version="${version}"
 
-ENTRYPOINT ["/usr/bin/python3", "/kadalu/main.py"]
+ENTRYPOINT ["/kadalu/startup.sh", "/usr/bin/python3", "/kadalu/main.py"]
 
 # Debugging, Comment the above line and
 # uncomment below line

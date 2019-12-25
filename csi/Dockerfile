@@ -17,9 +17,12 @@ COPY csi/identityserver.py     /kadalu/
 COPY csi/main.py               /kadalu/
 COPY csi/nodeserver.py         /kadalu/
 COPY csi/volumeutils.py        /kadalu/
+COPY lib/startup.sh            /kadalu/startup.sh
 
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/
 COPY templates/Replica3.client.vol.j2 /kadalu/templates/
+
+RUN chmod +x /kadalu/startup.sh
 
 ARG version="(unknown)"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')
@@ -34,7 +37,7 @@ LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="org.kadalu.gluster"
 LABEL version="${version}"
 
-ENTRYPOINT ["/usr/bin/python3", "/kadalu/main.py"]
+ENTRYPOINT ["/kadalu/startup.sh", "/usr/bin/python3", "/kadalu/main.py"]
 
 # Debugging, Comment the above line and
 # uncomment below line
