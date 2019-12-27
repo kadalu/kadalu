@@ -14,6 +14,8 @@ COPY server/glusterfsd.py    /kadalu/glusterfsd.py
 COPY server/quotad.py        /kadalu/quotad.py
 COPY server/shd.py           /kadalu/shd.py
 COPY server/mount-glustervol /usr/bin/mount-glustervol
+COPY lib/startup.sh          /kadalu/startup.sh
+COPY server/stop-server.sh   /kadalu/stop-server.sh
 
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
 
@@ -27,6 +29,8 @@ COPY templates/Replica3.brick2.vol.j2 /kadalu/templates/
 COPY templates/Replica3.shd.vol.j2    /kadalu/templates/
 
 RUN chmod +x /usr/bin/mount-glustervol
+RUN chmod +x /kadalu/startup.sh
+RUN chmod +x /kadalu/stop-server.sh
 
 ARG version="(unknown)"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')
@@ -41,7 +45,7 @@ LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="org.kadalu.gluster"
 LABEL version="${version}"
 
-ENTRYPOINT ["/usr/bin/python3", "/kadalu/server.py"]
+ENTRYPOINT ["/kadalu/startup.sh", "/usr/bin/python3", "/kadalu/server.py"]
 
 # Debugging, Comment the above line and
 # uncomment below line

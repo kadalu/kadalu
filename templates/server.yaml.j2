@@ -39,6 +39,10 @@ spec:
       containers:
         - name: glusterfsd
           image: docker.io/{{ docker_user }}/kadalu-server:{{ kadalu_version }}
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/kadalu/stop-server.sh", "{{ volname }}"]
           # livenessProbe:
           #   exec:
           #     command:
