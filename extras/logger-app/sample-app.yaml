@@ -1,0 +1,19 @@
+# -*- mode: yaml -*-
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: logger-app
+  labels:
+    app: logger-app
+spec:
+  containers:
+  - name: logger-app
+    image: docker.io/kadalu/logger-app:latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - mountPath: "/logs"
+      name: logpath
+  volumes:
+  - name: logpath
+    emptyDir: {}
