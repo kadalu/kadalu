@@ -199,6 +199,7 @@ kadalu_operator)
 	if [[ $cnt -eq 100 ]]; then
 	    kubectl get pods
 	    echo "giving up after 100 seconds"
+	    fail=1
 	    break
 	fi
 	if [[ $((cnt % 10)) -eq 0 ]]; then
@@ -206,6 +207,11 @@ kadalu_operator)
 	fi
     done
     kubectl get pods -nkadalu
+    # Return failure if fail variable is set to 1
+    if [ $fail -eq 1 ]; then
+	echo "Marking the test as 'FAIL'"
+	exit 1
+    fi
 
     ;;
 
