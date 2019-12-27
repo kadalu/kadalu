@@ -216,6 +216,15 @@ spec:
               mountPath: "/var/lib/gluster"
             - name: gluster-dev
               mountPath: "/dev"
+            - name: varlog
+              mountPath: /var/log/gluster
+        - name: kadalu-logging
+          image: busybox
+          command: ["/bin/sh"]
+          args: ["-c", "while true; do logcnt=$(/bin/ls /var/log/gluster/ | wc -l); if [ ${logcnt} -gt 0 ]; then break; fi; sleep 5; done; tail -f /var/log/gluster/*.log"]
+          volumeMounts:
+            - name: varlog
+              mountPath: "/var/log/gluster"
       volumes:
         - name: plugin-dir
           hostPath:
@@ -235,6 +244,8 @@ spec:
         - name: gluster-dev
           hostPath:
             path: "/dev"
+        - name: varlog
+          emptyDir: {}
 
 ## Deploy CSI Provisioner
 ---
@@ -371,6 +382,15 @@ spec:
               mountPath: "/var/lib/gluster"
             - name: gluster-dev
               mountPath: "/dev"
+            - name: varlog
+              mountPath: "/var/log/gluster"
+        - name: kadalu-logging
+          image: busybox
+          command: ["/bin/sh"]
+          args: ["-c", "while true; do logcnt=$(/bin/ls /var/log/gluster/ | wc -l); if [ ${logcnt} -gt 0 ]; then break; fi; sleep 5; done; tail -f /var/log/gluster/*.log"]
+          volumeMounts:
+            - name: varlog
+              mountPath: "/var/log/gluster"
       volumes:
         - name: socket-dir
           emptyDir:
@@ -380,3 +400,5 @@ spec:
         - name: gluster-dev
           hostPath:
             path: "/dev"
+        - name: varlog
+          emptyDir: {}

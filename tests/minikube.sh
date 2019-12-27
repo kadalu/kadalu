@@ -210,6 +210,12 @@ kadalu_operator)
     # Return failure if fail variable is set to 1
     if [ $fail -eq 1 ]; then
 	echo "Marking the test as 'FAIL'"
+	for p in $(kubectl -n kadalu get pods -o name); do
+	    echo "====================== Start $p ======================"
+	    kubectl -nkadalu --all-containers=true --tail 500 logs $p
+	    kubectl -nkadalu describe $p
+	    echo "======================= End $p ======================="
+	done
 	exit 1
     fi
 
