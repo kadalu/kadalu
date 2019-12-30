@@ -78,10 +78,21 @@ prepare-release:
 		$(MAKE) build-containers
 endif
 
+pypi-build:
+	echo ${KADALU_VERSION} > cli/VERSION
+	cd cli; rm -rf dist; python3 setup.py sdist;
+	@cp lib/kadalulib.py server/kadalu_quotad/
+	echo ${KADALU_VERSION} > server/VERSION
+	cd server; rm -rf dist; python3 setup.py sdist;
+
+pypi-upload: pypi-build
+	cd cli; twine upload --username kadalu dist/*
+	cd server; twine upload --username kadalu dist/*
+
 ifeq ($(KADALU_VERSION), latest)
 release: prepare-release
 else
-release: prepare-release
+release: prepare-release pypi-upload
 	docker push ${DOCKER_USER}/kadalu-operator:${KADALU_VERSION}
 	docker push ${DOCKER_USER}/kadalu-csi:${KADALU_VERSION}
 	docker push ${DOCKER_USER}/kadalu-server:${KADALU_VERSION}

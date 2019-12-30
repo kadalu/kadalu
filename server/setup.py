@@ -1,15 +1,20 @@
 from setuptools import setup
 
 
+def version():
+    with open("VERSION") as version_file:
+        return version_file.read().strip()
+
+
 setup(
-    name="kadalu_quotad",
-    version="0.1.0",
+    name="kadalu-quotad",
+    version=version(),
     packages=["kadalu_quotad"],
     include_package_data=True,
-    install_requires=[""],
+    install_requires=["requests", "xxhash"],
     entry_points={
         "console_scripts": [
-            "kadalu_quotad = quotad.start:main"
+            "kadalu-quotad = kadalu_quotad.quotad:start"
         ]
     },
     platforms="linux",

@@ -6,7 +6,7 @@ import time
 import json
 import logging
 
-from kadalulib import execute, logf, CommandException, \
+from .kadalulib import execute, logf, CommandException, \
     get_volname_hash, get_volume_path, PV_TYPE_SUBVOL
 
 # Config file for kadalu info
@@ -124,8 +124,8 @@ def start():
     """
     first_time = True
     while True:
-        brick_path = os.environ["BRICK_PATH"]
-        if brick_path:
+        brick_path = os.environ.get("BRICK_PATH", None)
+        if brick_path is not None:
             crawl(brick_path)
         try:
             with open(CONFIG_FILE) as f:

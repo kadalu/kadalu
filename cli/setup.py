@@ -1,9 +1,13 @@
 from setuptools import setup
 
+def version():
+    with open("VERSION") as version_file:
+        return version_file.read().strip()
+
 
 setup(
     name="kubectl-kadalu",
-    version="0.1.0",
+    version=version(),
     packages=["kubectl_kadalu"],
     include_package_data=True,
     install_requires=["PyYAML"],

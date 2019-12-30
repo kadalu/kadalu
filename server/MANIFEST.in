@@ -1,0 +1,2 @@
+include README.md VERSION ../LICENSE
+recursive-include kadalu_quotad *.py

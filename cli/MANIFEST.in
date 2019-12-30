@@ -1,0 +1,2 @@
+include README.md VERSION ../LICENSE
+recursive-include kubectl_kadalu *.py

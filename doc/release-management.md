@@ -5,12 +5,12 @@
    Containers for a specific version(and latest). Built Containers
    will be published to dockerhub.
 
-        KADALU_VERSION=0.1.0 make release
+        TWINE_PASSWORD=<secret> KADALU_VERSION=0.4.0 make release
 
    **Note**: If `DOCKER_USER` is specified then it will publish the built
    Containers to respective Dockerhub account.
 
-        DOCKER_USER=aravindavk KADALU_VERSION=0.1.0 make release
+        DOCKER_USER=aravindavk KADALU_VERSION=0.4.0 make release
 
 3. Send the PR with manifest file and CHANGELOG.md file changes
 4. Create a new Github release - [https://github.com/kadalu/kadalu/releases/new](https://github.com/kadalu/kadalu/releases/new). In the
