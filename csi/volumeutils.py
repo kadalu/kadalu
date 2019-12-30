@@ -503,7 +503,8 @@ def mount_glusterfs(volume, target_path):
 
     generate_client_volfile(volume['name'])
     # Fix the log, so we can check it out later
-    log_file = "/var/log/gluster/%s.log" % target_path.replace("/", "-")
+    # log_file = "/var/log/gluster/%s.log" % target_path.replace("/", "-")
+    log_file = "/var/log/gluster/gluster.log"
     cmd = [
         GLUSTERFS_CMD,
         "--process-name", "fuse",
@@ -554,7 +555,8 @@ def mount_glusterfs_with_host(volname, target_path, host, options=None):
     #                 # TODO: handle more options, and document them
 
     # Fix the log, so we can check it out later
-    log_file = "/var/log/gluster/%s.log" % target_path.replace("/", "-")
+    # log_file = "/var/log/gluster/%s.log" % target_path.replace("/", "-")
+    log_file = "/var/log/gluster/gluster.log"
     cmd = [
         GLUSTERFS_CMD,
         "--process-name", "fuse",
@@ -563,11 +565,11 @@ def mount_glusterfs_with_host(volname, target_path, host, options=None):
         "-s", host,
         target_path
     ]
-    #if opt_array:
-    #    cmd.extend(opt_array)
+    # if opt_array:
+    #     cmd.extend(opt_array)
     #
-    ## add mount point after all options
-    #cmd.append(target_path)
+    # # add mount point after all options
+    # cmd.append(target_path)
     logging.debug(logf(
         "glusterfs command",
         cmd=cmd
