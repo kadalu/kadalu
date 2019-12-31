@@ -382,12 +382,13 @@ def deploy_csi_pods(core_v1_client):
     Look for CSI pods, if any one CSI pod found then
     that means it is deployed
     """
+    create_cmd = "create"
     pods = core_v1_client.list_namespaced_pod(
         NAMESPACE)
     for pod in pods.items:
         if pod.metadata.name.startswith(CSI_POD_PREFIX):
-            logging.debug("Ignoring already deployed CSI pods")
-            return
+            logging.info("Updating already deployed CSI pods")
+            create_cmd = "apply"
 
     # Deploy CSI Pods
     api_instance = client.VersionApi().get_code()
@@ -395,19 +396,18 @@ def deploy_csi_pods(core_v1_client):
        api_instance.minor >= "14":
         filename = os.path.join(MANIFESTS_DIR, "csi-driver-object.yaml")
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-        execute(KUBECTL_CMD, "create", "-f", filename)
+        execute(KUBECTL_CMD, create_cmd, "-f", filename)
     else:
         filename = os.path.join(MANIFESTS_DIR, "csi-driver-crd.yaml")
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-        execute(KUBECTL_CMD, "create", "-f", filename)
+        execute(KUBECTL_CMD, create_cmd, "-f", filename)
 
     filename = os.path.join(MANIFESTS_DIR, "csi.yaml")
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
     template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
              docker_user=docker_user)
-    execute(KUBECTL_CMD, "create", "-f", filename)
+    execute(KUBECTL_CMD, create_cmd, "-f", filename)
     logging.info(logf("Deployed CSI Pods", manifest=filename))
-    return
 
 
 def deploy_config_map(core_v1_client):
@@ -415,22 +415,30 @@ def deploy_config_map(core_v1_client):
 
     configmaps = core_v1_client.list_namespaced_config_map(
         NAMESPACE)
+    create_cmd = "create"
+    uid = uuid.uuid4()
     for item in configmaps.items:
         if item.metadata.name == KADALU_CONFIG_MAP:
-            logging.debug(logf(
-                "Found existing configmap",
+            logging.info(logf(
+                "Found existing configmap. Updating",
                 name=item.metadata.name
             ))
-            return None
+
+            create_cmd = "apply"
+            # Don't overwrite UID info.
+            configmap_data = core_v1_client.read_namespaced_config_map(
+                KADALU_CONFIG_MAP, NAMESPACE)
+            if configmap_data.data.get("uid", None):
+                uid = configmap_data.data["uid"]
+            # Keep the config details required to be preserved.
 
     # Deploy Config map
     filename = os.path.join(MANIFESTS_DIR, "configmap.yaml")
-    uid = uuid.uuid4()
     template(filename,
              namespace=NAMESPACE,
              kadalu_version=VERSION,
              uid=uid)
-    execute(KUBECTL_CMD, "create", "-f", filename)
+    execute(KUBECTL_CMD, create_cmd, "-f", filename)
     logging.info(logf("Deployed ConfigMap", manifest=filename))
     return uid
 
@@ -440,14 +448,16 @@ def deploy_storage_class():
 
     api_instance = client.StorageV1Api()
     scs = api_instance.list_storage_class()
+    create_cmd = "create"
     for item in scs.items:
         if item.metadata.name.startswith(STORAGE_CLASS_NAME_PREFIX):
-            return
+            logging.info("Updating already deployed StorageClass")
+            create_cmd = "apply"
 
     # Deploy Storage Class
     filename = os.path.join(MANIFESTS_DIR, "storageclass.yaml")
     template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-    execute(KUBECTL_CMD, "create", "-f", filename)
+    execute(KUBECTL_CMD, create_cmd, "-f", filename)
     logging.info(logf("Deployed StorageClass", manifest=filename))
 
 
