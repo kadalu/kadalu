@@ -11,7 +11,7 @@ RUN python3 -m pip install jinja2 xxhash requests datetime
 COPY lib/kadalulib.py        /kadalu/kadalulib.py
 COPY server/server.py        /kadalu/server.py
 COPY server/glusterfsd.py    /kadalu/glusterfsd.py
-COPY server/quotad.py        /kadalu/quotad.py
+COPY server/kadalu_quotad/quotad.py   /kadalu/quotad.py
 COPY server/shd.py           /kadalu/shd.py
 COPY server/mount-glustervol /usr/bin/mount-glustervol
 COPY lib/startup.sh          /kadalu/startup.sh
