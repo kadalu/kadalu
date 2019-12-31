@@ -8,8 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.4.0] - 2019-12-31
 ### Added
-- Many improvements to tests give more confidence to use Kadalu.
-- Analytics improvements to understand the deployment better.
 - Enhancement to support Kadalu storage on top of existing PVC
 - Support for using external Gluster Volumes with K8s using Kadalu
 - Code improvements and a couple of fixes to Pylint errors
@@ -23,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   external Gluster Volumes.
 - Deploy attacher as a container in provisioner statefulset instead of
   deploying it as a pod
+- Analytics improvements to understand the deployment better.
+- Added tests to cover different Volume types(Replica1 and Replica3). Each PV claim size in tests made different so that it can be easily debugged.
+
 
 ## [0.3.0] - 2019-11-26
 ### Added
