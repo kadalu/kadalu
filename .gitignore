@@ -5,3 +5,9 @@ templates/*.yaml
 manifests/*.vol
 __pycache__
 cli/kubectl_kadalu.egg-info
+cli/VERSION
+cli/LICENSE
+server/VERSION
+server/LICENSE
+server/kadalu_quotad/kadalulib.py*
+server/kadalu_quotad.egg-info
