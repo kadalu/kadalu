@@ -68,7 +68,7 @@ starts the required pods. For example,
          device: /dev/vdc # Device to provide storage to all PVs
    ```
 
-You have more options for config file. Check them [here]()
+You have more options for config file. Check them [here](doc/storage-config-options.md)
 
 2.2 Now request kadalu-operator to setup storage using,
 
