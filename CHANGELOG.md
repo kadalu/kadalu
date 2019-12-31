@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2019-12-31
+### Added
+- Many improvements to tests give more confidence to use Kadalu.
+- Analytics improvements to understand the deployment better.
+- Enhancement to support Kadalu storage on top of existing PVC
+- Support for using external Gluster Volumes with K8s using Kadalu
+- Code improvements and a couple of fixes to Pylint errors
+- Kadalu kubectl plugin(`pip3 install kubectl-kadalu`) is
+  introduced. This plugin helps to define Kadalu storage without the
+  hassle of YAML files.
+- Fixed hang issue while terminating the server pods.
+- Added sidecar container to capture logs from the mount processes
+  in CSI pods.
+- `kadalu-quotad` is now available as pypi package to use with
+  external Gluster Volumes.
+- Deploy attacher as a container in provisioner statefulset instead of
+  deploying it as a pod
+
 ## [0.3.0] - 2019-11-26
 ### Added
 - Improved documentation. (Thanks to @papanito)
@@ -36,7 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.3.0...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.4.0...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
+[0.4.0]: https://github.com/kadalu/kadalu/compare/0.3.0...0.4.0
