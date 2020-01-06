@@ -3,12 +3,16 @@ from argparse import ArgumentParser
 from kubectl_kadalu.storage_add import storage_add_args, subcmd_storage_add, \
     storage_add_validation
 
+from kubectl_kadalu.install import install_args, subcmd_install
+
 
 def get_args():
     parser = ArgumentParser()
     subparsers = parser.add_subparsers(dest="mode")
 
     storage_add_args(subparsers)
+
+    install_args(subparsers)
 
     return parser.parse_args()
 
