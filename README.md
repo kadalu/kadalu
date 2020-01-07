@@ -14,6 +14,8 @@
     - [Pre-Requisites](#pre-requisites)
     - [Setup](#setup)
   - [CSI to claim Persistent Volumes (PVC/PV)](#csi-to-claim-persistent-volumes-pvcpv)
+  - [NOTE](#note)
+  - [Troubleshooting](#troubleshooting)
   - [Talks and Blog posts](#talks-and-blog-posts)
   - [Reach out to some of the developers](#reach-out-to-some-of-the-developers)
 
@@ -132,6 +134,10 @@ If you want 'External' Gluster Storage to be used as PV, checkout [this doc](./d
 
 We are tracking the number of downloads based on 'docker pull' stats, and also
 through google analytics. [This Commit](https://github.com/kadalu/kadalu/commit/cbc83fd751bf0221e22b61bd6ebad4af40e38275) gives detail of what is added to code w.r.to tracking.
+
+## Troubleshooting
+
+see [Troubleshooting](./doc/troubleshooting.md)
 
 ## Talks and Blog posts
 
