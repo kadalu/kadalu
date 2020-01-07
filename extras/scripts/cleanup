@@ -20,4 +20,7 @@ kubectl delete -nkadalu ServiceAccount kadalu-operator
 kubectl delete -nkadalu ClusterRoleBinding kadalu-operator
 kubectl delete -nkadalu Deployment kadalu-operator
 
+# CSIDriver
+kubectl delete CSIDriver org.kadalu.gluster
+
 kubectl delete namespace kadalu
