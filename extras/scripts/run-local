@@ -1,0 +1,36 @@
+#!/bin/bash
+
+TAG="local"
+
+export KADALU_VERSION=$TAG
+
+# Build everything required from latest changes
+
+make build-containers
+make gen-manifest
+
+# This makes the docker start to check image here first
+docker tag kadalu/kadalu-server:$TAG docker.io/kadalu/kadalu-server:$TAG
+docker tag kadalu/kadalu-operator:$TAG docker.io/kadalu/kadalu-operator:$TAG
+docker tag kadalu/kadalu-csi:$TAG docker.io/kadalu/kadalu-csi:$TAG
+
+# Change this to pick the local image
+sed -i -e 's/Always/IfNotPresent/g' manifests/kadalu-operator.yaml
+sed -i -e 's/Always/IfNotPresent/g' manifests/kadalu-operator-openshift.yaml
+
+
+# Now run the operator too
+set +e
+which oc > /dev/null
+if [ $? -eq 0 ]; then
+    oc create -f manifests/kadalu-operator-openshift.yaml
+else
+    kubectl create -f manifests/kadalu-operator.yaml
+fi
+
+
+echo "To reset everything, and start from fresh state, run clean"
+echo ""
+echo "  sudo ./extras/scripts/cleanup"
+echo ""
+echo "----"
