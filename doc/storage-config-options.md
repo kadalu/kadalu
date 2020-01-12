@@ -41,7 +41,7 @@ Native mode is available only with 2 `type` options. one is `Replica1` and anoth
 
 * 'Replica1'
 
-In this mode, Gluster will started without high availability, ie, replicate module. It will use just one storage, from which the RWX and RWO PVs will carved out. This storage will be exposed by a gluster server pod, which gets spawned by kadalu operator.
+In this mode, Gluster will be started without high availability, i.e without replicate module. It will use just one storage, from which the RWX and RWO PVs will be carved out. This storage will be exposed by a gluster server pod, which gets spawned by kadalu operator.
 
 ```
 ...
@@ -104,7 +104,7 @@ Also, if `device` option has a file as option, the same file will be formatted a
 
 In this case, a directory path (/mnt/mount/path or similar) is exported as a brick from a node in the cluster as storage for gluster server process. This is particularly useful when a larger device is mounted and shared with other applications too.
 
-Note that this option is valid only if the file system on the path is xfs, and it has `prjquota` enabled on the mount. This option also works good for those who wants to try out kadalu in already existing setup. When this option is provided, kadalu operator doesn't try to format and mount, but uses the path as is as export path for kadalu storage volume.
+Note that path option is valid only if the file system on the given path is xfs, and is mounted with `prjquota` mount option. path option is helpful for those who want to try kadalu in an existing setup. When path option is provided, kadalu operator doesn't try to format and mount, but uses the path as export path for kadalu storage volume.
 
 The sample config looks like below:
 
