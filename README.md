@@ -29,6 +29,7 @@ The focus of the project is simplicity and stability. We believe simple things c
 
 - Kubernetes 1.13.0 + version
 - The host should support xfs (`mkfs.xfs`)
+  - On some systems this might require installation of xfsprogs package
 - The `mount -t xfs` with `-oprjquota` should work
 
 ### Setup
