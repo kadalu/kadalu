@@ -31,6 +31,7 @@ The focus of the project is simplicity and stability. We believe simple things c
 
 - Kubernetes 1.13.0 + version
 - The host should support xfs (`mkfs.xfs`)
+  - On some systems this might require installation of xfsprogs package
 - The `mount -t xfs` with `-oprjquota` should work
 
 ### Setup
@@ -70,7 +71,7 @@ starts the required pods. For example,
          device: /dev/vdc # Device to provide storage to all PVs
    ```
 
-You have more options for config file. Check them [here](doc/storage-config-options.md)
+More config options can be found [here](doc/storage-config-options.md)
 
 2.2 Now request kadalu-operator to setup storage using,
 
