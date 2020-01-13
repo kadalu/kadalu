@@ -6,8 +6,12 @@ import time
 import json
 import logging
 
-from .kadalulib import execute, logf, CommandException, \
-    get_volname_hash, get_volume_path, PV_TYPE_SUBVOL
+try:
+    from .kadalulib import execute, logf, CommandException, \
+        get_volname_hash, get_volume_path, PV_TYPE_SUBVOL
+except ImportError:
+    from kadalulib import execute, logf, CommandException, \
+        get_volname_hash, get_volume_path, PV_TYPE_SUBVOL
 
 # Config file for kadalu info
 # Config file format:
