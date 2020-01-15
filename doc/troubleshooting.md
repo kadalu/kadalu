@@ -51,7 +51,7 @@ If storage cannot be created, check the logs. In case of the following error
 [2020-01-06 13:21:41,200] ERROR [glusterfsd - 107:create_and_mount_brick] - Failed to create file system fstype=xfs device=/dev/md3
 ````
 
-... you might check your disk config and ensure that there are no partitions and especially no parition table on the disk. The following command may be handy to delete the partition table
+... you might check your disk config and ensure that there are no partitions and especially no partition table on the disk. The following command may be handy to delete the partition table
 
 ```bash
 wipefs -a -t dos -f /dev/md3/
