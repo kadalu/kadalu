@@ -6,6 +6,7 @@ import os
 import json
 import time
 import logging
+import threading
 
 from jinja2 import Template
 
@@ -23,6 +24,9 @@ GLUSTERFS_CMD = "/usr/sbin/glusterfs"
 VOLFILES_DIR = "/kadalu/volfiles"
 TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
+
+statfile_lock = threading.Lock()
+mount_lock = threading.Lock()
 
 
 class Volume():
@@ -117,13 +121,25 @@ def get_pv_hosting_volumes(filters=None):
 def update_free_size(hostvol, sizechange):
     """Update the free size in respective hosting Volume's stat file"""
     stat_file_path = os.path.join(HOSTVOL_MOUNTDIR, hostvol, ".stat")
-    with open(stat_file_path+".tmp", "w") as stat_file_tmp:
-        with open(stat_file_path) as stat_file:
-            data = json.load(stat_file)
-            data["free_size"] += sizechange
-            stat_file_tmp.write(json.dumps(data))
 
-    os.rename(stat_file_path+".tmp", stat_file_path)
+    with statfile_lock:
+        with open(stat_file_path+".tmp", "w") as stat_file_tmp:
+            with open(stat_file_path) as stat_file:
+                data = json.load(stat_file)
+                data["free_size"] += sizechange
+                stat_file_tmp.write(json.dumps(data))
+                logging.debug(logf(
+                    "Updated .stat.tmp file",
+                    hostvol=hostvol,
+                    before=data["free_size"] - sizechange,
+                    after=data["free_size"]
+                ))
+
+        os.rename(stat_file_path+".tmp", stat_file_path)
+        logging.debug(logf(
+            "Renamed .stat.tmp to .stat file",
+            hostvol=hostvol
+        ))
 
 
 def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
@@ -135,21 +151,22 @@ def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
 
         stat_file_path = os.path.join(mntdir, ".stat")
         data = {}
-        if not os.path.exists(stat_file_path):
-            mntdir_stat = os.statvfs(mntdir)
-            data = {
-                "size": mntdir_stat.f_bavail * mntdir_stat.f_bsize,
-                "free_size": mntdir_stat.f_bavail * mntdir_stat.f_bsize
-            }
-            with open(stat_file_path, "w") as stat_file:
-                stat_file.write(json.dumps(data))
-        else:
-            with open(stat_file_path) as stat_file:
-                data = json.load(stat_file)
+        with statfile_lock:
+            if not os.path.exists(stat_file_path):
+                mntdir_stat = os.statvfs(mntdir)
+                data = {
+                    "size": mntdir_stat.f_bavail * mntdir_stat.f_bsize,
+                    "free_size": mntdir_stat.f_bavail * mntdir_stat.f_bsize
+                }
+                with open(stat_file_path, "w") as stat_file:
+                    stat_file.write(json.dumps(data))
+            else:
+                with open(stat_file_path) as stat_file:
+                    data = json.load(stat_file)
 
-        reserved_size = data["free_size"] * RESERVED_SIZE_PERCENTAGE/100
-        if required_size < (data["free_size"] - reserved_size):
-            return hvol
+            reserved_size = data["free_size"] * RESERVED_SIZE_PERCENTAGE/100
+            if required_size < (data["free_size"] - reserved_size):
+                return hvol
 
     return None
 
@@ -319,32 +336,16 @@ def delete_volume(volname):
         # Delete Metadata file
         info_file_path = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol,
                                       "info", vol.volpath+".json")
-        stat_file_path = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, ".stat")
+
         try:
             with open(info_file_path) as info_file:
                 data = json.load(info_file)
-                # TODO: Hold lock on ".stat" file below
                 # We assume there would be a create before delete, but while
                 # developing thats not true. There can be a delete request for
                 # previously created pvc, which would be assigned to you once
                 # you come up. We can't fail then.
-                with open(stat_file_path) as stat_file:
-                    stat_data = json.load(stat_file)
-                    stat_data["free_size"] += data["size"]
-                    with open(stat_file_path+".tmp", "w") as stat_file_tmp:
-                        stat_file_tmp.write(json.dumps(stat_data))
+                update_free_size(vol.hostvol, data["size"])
 
-                    logging.debug(logf(
-                        "Updated .stat.tmp file",
-                        hostvol=vol.hostvol,
-                        before=stat_data["free_size"]-data["size"],
-                        after=stat_data["free_size"]
-                    ))
-            os.rename(stat_file_path+".tmp", stat_file_path)
-            logging.debug(logf(
-                "Renamed .stat.tmp to .stat file",
-                hostvol=vol.hostvol
-            ))
             os.remove(info_file_path)
             logging.debug(logf(
                 "Removed volume metadata file",
@@ -471,62 +472,50 @@ def mount_glusterfs(volume, target_path):
         ))
         return
 
-    # This is just to prevent multiple requests getting here in parallel
-    target_path_lock = "%s.lock" % target_path
-
-    while True:
-        if not os.path.exists(target_path_lock):
-            # Need to create a dummy file, no need to do IO
-            # Hence no open and close business
-            os.mknod(target_path_lock)
-            break
-        time.sleep(0.2)
-
     # Ignore if already mounted
     if os.path.ismount(target_path):
         logging.debug(logf(
             "Already mounted (2nd try)",
             mount=target_path
         ))
-        os.unlink(target_path_lock)
         return
 
     if volume['type'] == 'External':
         # Try to mount the Host Volume, handle failure if
         # already mounted
-        mount_glusterfs_with_host(volume['g_volname'],
-                                  target_path,
-                                  volume['g_host'],
-                                  volume['g_options'])
-        os.unlink(target_path_lock)
+        with mount_lock:
+            mount_glusterfs_with_host(volume['g_volname'],
+                                      target_path,
+                                      volume['g_host'],
+                                      volume['g_options'])
         return
 
-    generate_client_volfile(volume['name'])
-    # Fix the log, so we can check it out later
-    # log_file = "/var/log/gluster/%s.log" % target_path.replace("/", "-")
-    log_file = "/var/log/gluster/gluster.log"
-    cmd = [
-        GLUSTERFS_CMD,
-        "--process-name", "fuse",
-        "-l", log_file,
-        "--volfile-id", volume['name'],
-        "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volume['name']),
-        target_path
-    ]
-    try:
-        execute(*cmd)
-    except Exception as err:
-        logging.error(logf(
-            "error to execute command",
-            volume=volume,
-            cmd=cmd,
-            error=format(err)
-        ))
-        os.unlink(target_path_lock)
-        raise err
+    with mount_lock:
+        generate_client_volfile(volume['name'])
+        # Fix the log, so we can check it out later
+        # log_file = "/var/log/gluster/%s.log" % target_path.replace("/", "-")
+        log_file = "/var/log/gluster/gluster.log"
+        cmd = [
+            GLUSTERFS_CMD,
+            "--process-name", "fuse",
+            "-l", log_file,
+            "--volfile-id", volume['name'],
+            "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volume['name']),
+            target_path
+        ]
+        try:
+            execute(*cmd)
+        except Exception as err:
+            logging.error(logf(
+                "error to execute command",
+                volume=volume,
+                cmd=cmd,
+                error=format(err)
+            ))
+            raise err
 
-    os.unlink(target_path_lock)
     return
+
 
 def mount_glusterfs_with_host(volname, target_path, host, options=None):
     """Mount Glusterfs Volume"""

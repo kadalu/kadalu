@@ -12,7 +12,8 @@ import csi_pb2_grpc
 from volumeutils import mount_and_select_hosting_volume, \
     create_virtblock_volume, create_subdir_volume, delete_volume, \
     get_pv_hosting_volumes, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, \
-    HOSTVOL_MOUNTDIR, check_external_volume, unmount_volume
+    HOSTVOL_MOUNTDIR, check_external_volume, unmount_volume, \
+    update_free_size
 from kadalulib import logf, send_analytics_tracker
 
 VOLINFO_DIR="/var/lib/gluster"
@@ -181,6 +182,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             volpath=vol.volpath,
             duration_seconds=time.time() - start_time
         ))
+
+        update_free_size(hostvol, -pvsize)
 
         send_analytics_tracker("pvc-%s" % filters['hostvol_type'], uid)
         return csi_pb2.CreateVolumeResponse(
