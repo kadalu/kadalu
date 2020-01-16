@@ -30,8 +30,8 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         pvpath = request.volume_context.get("path", "")
         pvtype = request.volume_context.get("pvtype", "")
         voltype = request.volume_context.get("type", "")
-        gserver = request.volume_context.get("gserver", None);
-        options = request.volume_context.get("options", None);
+        gserver = request.volume_context.get("gserver", None)
+        options = request.volume_context.get("options", None)
 
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
 

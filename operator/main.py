@@ -61,20 +61,22 @@ def bricks_validation(bricks):
 
     return ret
 
+
 def validate_ext_details(obj):
-    cluster = obj["spec"].get("details", None)
-    if not cluster:
+    """Validate external Volume details"""
+    clusterdata = obj["spec"].get("details", None)
+    if not clusterdata:
         logging.error(logf("External Cluster details not given."))
         return False
 
     valid = 0
-    if len(cluster) > 1:
+    if len(clusterdata) > 1:
         return False
 
-    for c in cluster:
-        if c.get('gluster_host', None):
+    for cluster in clusterdata:
+        if cluster.get('gluster_host', None):
             valid += 1
-        if c.get('gluster_volname', None):
+        if cluster.get('gluster_volname', None):
             valid += 1
 
     if valid != 2:
@@ -83,6 +85,7 @@ def validate_ext_details(obj):
         return False
 
     return True
+
 
 def validate_volume_request(obj):
     """Validate the Volume request for Replica options, number of bricks etc"""
@@ -232,7 +235,7 @@ def deploy_server_pods(obj):
 
 
 def handle_external_storage_addition(core_v1_client, obj):
-    # Deploy service(One service per Volume)
+    """Deploy service(One service per Volume)"""
     volname = obj["metadata"]["name"]
     details = obj["spec"]["details"][0]
 
@@ -387,8 +390,9 @@ def deploy_csi_pods(core_v1_client):
             return
 
     # Deploy CSI Pods
-    api_instance=client.VersionApi().get_code()
-    if api_instance.major>"1" or api_instance.major=="1" and api_instance.minor>="14":
+    api_instance = client.VersionApi().get_code()
+    if api_instance.major > "1" or api_instance.major == "1" and \
+       api_instance.minor >= "14":
         filename = os.path.join(MANIFESTS_DIR, "csi-driver-object.yaml")
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
         execute(KUBECTL_CMD, "create", "-f", filename)
@@ -403,6 +407,7 @@ def deploy_csi_pods(core_v1_client):
              docker_user=docker_user)
     execute(KUBECTL_CMD, "create", "-f", filename)
     logging.info(logf("Deployed CSI Pods", manifest=filename))
+    return
 
 
 def deploy_config_map(core_v1_client):
@@ -416,11 +421,11 @@ def deploy_config_map(core_v1_client):
                 "Found existing configmap",
                 name=item.metadata.name
             ))
-            return
+            return None
 
     # Deploy Config map
     filename = os.path.join(MANIFESTS_DIR, "configmap.yaml")
-    uid=uuid.uuid4()
+    uid = uuid.uuid4()
     template(filename,
              namespace=NAMESPACE,
              kadalu_version=VERSION,
@@ -428,6 +433,7 @@ def deploy_config_map(core_v1_client):
     execute(KUBECTL_CMD, "create", "-f", filename)
     logging.info(logf("Deployed ConfigMap", manifest=filename))
     return uid
+
 
 def deploy_storage_class():
     """Deploys the default storage class for KaDalu if not exists"""
@@ -444,6 +450,7 @@ def deploy_storage_class():
     execute(KUBECTL_CMD, "create", "-f", filename)
     logging.info(logf("Deployed StorageClass", manifest=filename))
 
+
 def main():
     """Main"""
     config.load_incluster_config()
@@ -452,7 +459,7 @@ def main():
     k8s_client = client.ApiClient()
 
     # ConfigMap
-    uid=deploy_config_map(core_v1_client)
+    uid = deploy_config_map(core_v1_client)
 
     # CSI Pods
     deploy_csi_pods(core_v1_client)

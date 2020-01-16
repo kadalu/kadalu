@@ -11,7 +11,7 @@ import threading
 from jinja2 import Template
 
 from kadalulib import execute, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, \
-    get_volname_hash, get_volume_path, logf, makedirs
+    get_volname_hash, get_volume_path, logf, makedirs, CommandException
 
 
 GLUSTERFS_CMD = "/usr/sbin/glusterfs"
@@ -25,8 +25,8 @@ VOLFILES_DIR = "/kadalu/volfiles"
 TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
 
-statfile_lock = threading.Lock()
-mount_lock = threading.Lock()
+statfile_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
+mount_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 
 
 class Volume():
@@ -283,7 +283,7 @@ def create_subdir_volume(hostvol_mnt, volname, size):
             break
 
         if count >= 6:
-            logging.warn(logf(
+            logging.warning(logf(
                 "Waited for some time, Quota set failed, continuing.",
                 volsize=volsize,
                 num_tries=count
@@ -319,7 +319,7 @@ def delete_volume(volname):
                 os.removedirs(volpath)
             else:
                 os.remove(volpath)
-        except Exception as err:
+        except OSError as err:
             logging.info(logf(
                 "Error while deleting volume",
                 volpath=volpath,
@@ -352,7 +352,7 @@ def delete_volume(volname):
                 path="info/" + vol.volpath + ".json",
                 hostvol=vol.hostvol
             ))
-        except Exception as err:
+        except OSError as err:
             logging.info(logf(
                 "Error while removing the file",
                 path="info/" + vol.volpath + ".json",
@@ -505,7 +505,7 @@ def mount_glusterfs(volume, target_path):
         ]
         try:
             execute(*cmd)
-        except Exception as err:
+        except CommandException as err:
             logging.error(logf(
                 "error to execute command",
                 volume=volume,
@@ -517,6 +517,7 @@ def mount_glusterfs(volume, target_path):
     return
 
 
+# noqa # pylint: disable=unused-argument
 def mount_glusterfs_with_host(volname, target_path, host, options=None):
     """Mount Glusterfs Volume"""
     if not os.path.exists(target_path):
@@ -566,7 +567,7 @@ def mount_glusterfs_with_host(volname, target_path, host, options=None):
 
     try:
         execute(*cmd)
-    except Exception as err:
+    except CommandException as err:
         logging.info(logf(
             "mount command failed",
             cmd=cmd,

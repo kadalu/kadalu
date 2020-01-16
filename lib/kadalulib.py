@@ -109,5 +109,5 @@ def send_analytics_tracker(name, uid=None):
 
     try:
         requests.get(track_url, headers=reqheader)
-    except:
+    except:   # noqa # pylint: disable=bare-except
         pass
