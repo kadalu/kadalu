@@ -8,8 +8,8 @@ import uuid
 import json
 import logging
 
-from kubernetes import client, config, watch
 from jinja2 import Template
+from kubernetes import client, config, watch
 
 from kadalulib import execute, logging_setup, logf, send_analytics_tracker
 
