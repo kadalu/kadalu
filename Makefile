@@ -41,6 +41,7 @@ pylint:
 	@cp lib/kadalulib.py csi/
 	@cp lib/kadalulib.py server/
 	@cp lib/kadalulib.py operator/
+	@cp server/kadalu_quotad/quotad.py server/
 	-pylint --disable=W0511 -s n lib/kadalulib.py
 	-pylint --disable=W0511 -s n server/glusterfsd.py
 	-pylint --disable=W0511 -s n server/quotad.py
@@ -55,6 +56,7 @@ pylint:
 	@rm csi/kadalulib.py
 	@rm server/kadalulib.py
 	@rm operator/kadalulib.py
+	@rm server/quotad.py
 
 ifeq ($(KADALU_VERSION), latest)
 prepare-release:

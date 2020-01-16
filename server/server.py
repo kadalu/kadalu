@@ -7,6 +7,9 @@ Prepares, Validates and then starts the Server process(glusterfsd, shd)
 import os
 
 from kadalulib import logging_setup
+import glusterfsd
+import shd
+import quotad
 
 
 def start_server_process():
@@ -15,16 +18,10 @@ def start_server_process():
     """
     server_role = os.environ.get("KADALU_SERVER_ROLE", "glusterfsd")
     if server_role == "glusterfsd":
-        import glusterfsd
-
         glusterfsd.start()
     elif server_role == "shd":
-        import shd
-
         shd.start()
     elif server_role == "quotad":
-        import quotad
-
         quotad.start()
 
 

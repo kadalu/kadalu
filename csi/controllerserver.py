@@ -16,7 +16,8 @@ from volumeutils import mount_and_select_hosting_volume, \
     update_free_size
 from kadalulib import logf, send_analytics_tracker
 
-VOLINFO_DIR="/var/lib/gluster"
+VOLINFO_DIR = "/var/lib/gluster"
+
 
 class ControllerServer(csi_pb2_grpc.ControllerServicer):
     """
@@ -24,6 +25,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
     volume mount and PV creation.
     Ref:https://github.com/container-storage-interface/spec/blob/master/spec.md
     """
+    # noqa # pylint: disable=too-many-locals,too-many-statements
     def CreateVolume(self, request, context):
         start_time = time.time()
         logging.debug(logf(
@@ -61,8 +63,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         # UID is stored at the time of installation in configmap.
         uid = None
-        with open(os.path.join(VOLINFO_DIR, "uid")) as f:
-            uid = f.read()
+        with open(os.path.join(VOLINFO_DIR, "uid")) as uid_file:
+            uid = uid_file.read()
 
         ext_volume = None
         if filters['hostvol_type'] == 'External':

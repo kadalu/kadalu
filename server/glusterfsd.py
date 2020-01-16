@@ -154,8 +154,8 @@ def start():
 
     # UID is stored at the time of installation in configmap.
     uid = None
-    with open(os.path.join(VOLINFO_DIR, "uid")) as f:
-        uid = f.read()
+    with open(os.path.join(VOLINFO_DIR, "uid")) as uid_file:
+        uid = uid_file.read()
 
     # Send Analytics Tracker
     # The information from this analytics is available for
