@@ -1,12 +1,7 @@
-FROM docker.io/fedora:30
+FROM kadalu/kadalu-base
 
-RUN yum update -y && \
-    yum -y install python3-pyxattr procps-ng glusterfs-server xfsprogs && \
-    yum clean all -y && \
-    rm -rf /var/cache/yum && \
-    rpm -qa | grep gluster | tee /gluster-rpm-versions.txt
-
-RUN python3 -m pip install jinja2 xxhash requests datetime
+RUN yum -y install python3-pyxattr glusterfs-server
+RUN rpm -qa | grep gluster | tee /gluster-rpm-versions.txt
 
 COPY lib/kadalulib.py        /kadalu/kadalulib.py
 COPY server/server.py        /kadalu/server.py

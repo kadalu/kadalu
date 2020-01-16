@@ -1,16 +1,12 @@
-FROM docker.io/fedora:30
+FROM kadalu/kadalu-base
 
-COPY extras/kubernetes.repo /etc/yum.repos.d/kubernetes.repo
+# Always have the latest stable kubectl
+RUN curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl -o /usr/bin/kubectl
 
-RUN yum install -y kubectl
-
-RUN yum update -y && \
-    yum -y install procps-ng kubectl && \
-    yum clean all -y && \
-    rm -rf /var/cache/yum
+RUN chmod +x /usr/bin/kubectl
 
 # Install Python GRPC library and copy all CSI related files
-RUN python3 -m pip install kubernetes jinja2 xxhash requests datetime
+RUN python3 -m pip install kubernetes
 RUN mkdir -p /kadalu/manifests
 
 COPY templates/services.yaml.j2      /kadalu/templates/services.yaml.j2

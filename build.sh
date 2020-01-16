@@ -49,8 +49,9 @@ function build_container()
 {
     IMAGE_NAME=$1
     DOCKERFILE=$2
+    VERSION=$3
     $RUNTIME_CMD $build \
-                 -t "${DOCKER_USER}/${IMAGE_NAME}:${KADALU_VERSION}" \
+                 -t "${DOCKER_USER}/${IMAGE_NAME}:${VERSION}" \
                  "${build_args[@]}" \
                  --network host \
                  -f "$DOCKERFILE" \
@@ -58,6 +59,7 @@ function build_container()
         exit 1
 }
 
-build_container "kadalu-server" "server/Dockerfile"
-build_container "kadalu-csi" "csi/Dockerfile"
-build_container "kadalu-operator" "operator/Dockerfile"
+build_container "kadalu-base" "operator/Dockerfile.base" "latest"
+build_container "kadalu-server" "server/Dockerfile" ${KADALU_VERSION}
+build_container "kadalu-csi" "csi/Dockerfile" ${KADALU_VERSION}
+build_container "kadalu-operator" "operator/Dockerfile" ${KADALU_VERSION}

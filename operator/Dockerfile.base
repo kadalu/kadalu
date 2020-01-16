@@ -1,0 +1,28 @@
+FROM docker.io/fedora:30
+
+RUN yum update -y
+RUN yum -y install procps-ng xfsprogs net-tools telnet
+RUN yum clean all -y
+RUN rm -rf /var/cache/yum
+
+# Install Python GRPC library and copy all CSI related files
+RUN python3 -m pip install jinja2 xxhash requests datetime \
+     prometheus_client
+RUN mkdir -p /kadalu/
+
+ARG version="(unknown)"
+# Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')
+ARG builddate="(unknown)"
+
+LABEL build-date="${builddate}"
+LABEL io.k8s.description="KaDalu Base Image"
+LABEL name="kadalu-base"
+LABEL Summary="KaDalu Base Image"
+LABEL vcs-type="git"
+LABEL vcs-url="https://github.com/kadalu/kadalu"
+LABEL vendor="org.kadalu.gluster"
+LABEL version="${version}"
+
+# Debugging, Comment the above line and
+# uncomment below line
+ENTRYPOINT ["tail", "-f", "/dev/null"]
