@@ -510,6 +510,7 @@ def mount_glusterfs(volume, target_path):
         "--process-name", "fuse",
         "-l", log_file,
         "--volfile-id", volume['name'],
+        "--direct-io-mode=off",
         "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volume['name']),
         target_path
     ]
@@ -562,6 +563,7 @@ def mount_glusterfs_with_host(volname, target_path, host, options=None):
         "--process-name", "fuse",
         "-l", "%s" % log_file,
         "--volfile-id", volname,
+        "--direct-io-mode=off",
         "-s", host,
         target_path
     ]
