@@ -1,12 +1,8 @@
-FROM docker.io/fedora:30
+FROM kadalu/kadalu-base
 
-RUN yum update -y && \
-    yum -y install procps-ng glusterfs-fuse xfsprogs && \
-    yum clean all -y && \
-    rm -rf /var/cache/yum
+RUN yum install -y glusterfs-fuse
+RUN python3 -m pip install grpcio googleapis-common-protos
 
-# Install Python GRPC library and copy all CSI related files
-RUN python3 -m pip install grpcio googleapis-common-protos jinja2 xxhash requests datetime
 RUN mkdir -p /kadalu/volfiles /kadalu/templates
 
 COPY lib/kadalulib.py          /kadalu/
@@ -17,7 +13,7 @@ COPY csi/identityserver.py     /kadalu/
 COPY csi/main.py               /kadalu/
 COPY csi/nodeserver.py         /kadalu/
 COPY csi/volumeutils.py        /kadalu/
-COPY lib/startup.sh            /kadalu/startup.sh
+COPY lib/startup.sh            /kadalu/
 
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/
 COPY templates/Replica3.client.vol.j2 /kadalu/templates/
