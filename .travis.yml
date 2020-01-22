@@ -1,4 +1,19 @@
 ---
+arch:
+  - amd64
+  - arm64
+
+matrix:
+  include:
+   - os: linux
+     arch: amd64
+     dist: xenial
+     sudo: true
+   - os: linux
+     arch: arm64
+     dist: xenial
+     sudo: true
+
 # need for docker build
 sudo: true
 dist: xenial
