@@ -1,11 +1,9 @@
 import os
 import yaml
-import subprocess
 import tempfile
 import sys
 
-
-KUBECTL_CMD = "kubectl"
+from kubectl_kadalu import utils
 
 
 def storage_add_args(subparsers):
@@ -124,16 +122,15 @@ def subcmd_storage_add(args):
         with os.fdopen(fd, 'w') as tmp:
             yaml.dump(data, tmp)
 
-        cmd = [KUBECTL_CMD, "create", "-f", tempfile_path]
-        resp = subprocess.run(cmd, capture_output=True, check=True,
-                              universal_newlines=True)
+        cmd = [utils.KUBECTL_CMD, "create", "-f", tempfile_path]
+        resp = utils.execute(cmd)
         print("Storage add request sent successfully")
         print(resp.stdout)
         print()
         print("Storage Yaml file for your reference:")
         print(yaml.dump(data))
         print()
-    except subprocess.CalledProcessError as err:
+    except utils.CommandError as err:
         print("Error while running the following command", file=sys.stderr)
         print("$ " + " ".join(cmd), file=sys.stderr)
         print("", file=sys.stderr)
