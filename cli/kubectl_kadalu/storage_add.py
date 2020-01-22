@@ -15,8 +15,8 @@ def storage_add_args(subparsers):
     parser_add_storage.add_argument(
         "--type",
         help="Storage Type",
-        choices=["Replica1", "Replica3"],
-        default="Replica1"
+        choices=["Replica1", "Replica3", "External"],
+        default=None
     )
     parser_add_storage.add_argument(
         "--device",
@@ -38,17 +38,39 @@ def storage_add_args(subparsers):
         default=[],
         action="append"
     )
+    parser_add_storage.add_argument(
+        "--external",
+        help="Storage from external gluster, Example: --external gluster-node:/gluster-volname",
+        default=""
+    )
 
 
 def storage_add_validation(args):
-    num_storages = len(args.device) or len(args.path) or len(args.pvc)
+    for vol in args.external:
+        if args.type and args.type != "External":
+            print("'--external' option is used only with '--type External'",
+                  file=sys.stderr)
+            sys.exit(1)
+
+        if ":" not in vol:
+            print("Invalid external storage details. Please specify "
+                  "details in the format <node>:/<volname>", file=sys.stderr)
+            sys.exit(1)
+        # Set type to External as '--external' option is provided
+        args.type = "External"
+
+    if not args.type:
+        args.type = "Replica1"
+
+    num_storages = len(args.device) or len(args.path) or len(args.pvc) or len(args.external)
     if num_storages == 0:
         print("Please specify atleast one storage", file=sys.stderr)
         sys.exit(1)
 
     if (args.type == "Replica1" and num_storages != 1) or (
-            args.type == "Replica3" and num_storages != 3
-    ):
+            args.type == "Replica3" and num_storages != 3) or (
+                args.type == "External" and num_storages != 1
+            ):
         print("Number of storages not matching for type=%s" % args.type,
               file=sys.stderr)
         sys.exit(1)
@@ -109,6 +131,18 @@ def storage_add_data(args):
             content["spec"]["storage"].append(
                 {
                     "pvc": pvc
+                }
+            )
+        return content
+
+    # External details are specified
+    if args.external:
+        for voldata in args.external:
+            node, vol = voldata.split(":")
+            content["spec"]["storage"].append(
+                {
+                    "gluster_host": node,
+                    "gluster_volname": vol.strip("/")
                 }
             )
         return content
