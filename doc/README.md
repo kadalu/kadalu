@@ -22,7 +22,7 @@ it can setup the Storage within operator itself.
 
 You can follow ['Install minikube'](https://kubernetes.io/docs/tasks/tools/install-minikube/) document to setup minikube. Please note that right now (k8s - 1.14.0) there seems to be some issues with default 'minikube', and hence please use only `--vm-driver=none` option.
 
-To get your minikube host (can be VM image too) setup,, pleasefollow link [here.](https://docs.docker.com/install/linux/docker-ce/fedora/) This provides all the required basic steps to get started.
+To get your minikube host (can be VM image too) setup,, please follow link [here.](https://docs.docker.com/install/linux/docker-ce/fedora/) which lists all the required steps to get started.
 
 ## Try kadalu
 
@@ -121,7 +121,7 @@ Also note that, there can be both replica1 and replica3 type volume co-existing 
 
 ### On data recovery
 
-As we use glusterfs in backend, without any sharding/striping/disperse mode, the data remains as is, on your backend storage. Just that each PV would be a subdirectory on your storage. So, no need to panic.
+As we use glusterfs as storage backend, without any sharding/striping/disperse mode, the data remains as is, on your backend storage. Just that each PV would be a subdirectory on your storage. So, no need to panic.
 
 ### On upgrade
 
