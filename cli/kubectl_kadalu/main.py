@@ -1,12 +1,15 @@
+"""
+This is an CLI command to handle kadalu executions
+"""
 from argparse import ArgumentParser
 
 from kubectl_kadalu.storage_add import storage_add_args, subcmd_storage_add, \
     storage_add_validation
-
 from kubectl_kadalu.install import install_args, subcmd_install
 
 
 def get_args():
+    """Argument Parser"""
     parser = ArgumentParser()
     subparsers = parser.add_subparsers(dest="mode")
 
@@ -18,6 +21,7 @@ def get_args():
 
 
 def main():
+    """Handle Commands"""
     try:
         args = get_args()
 

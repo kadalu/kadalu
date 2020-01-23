@@ -1,12 +1,17 @@
+"""
+'storage-add ' sub command
+"""
+
 import os
-import yaml
 import tempfile
 import sys
+import yaml
 
 from kubectl_kadalu import utils
 
 
 def storage_add_args(subparsers):
+    """ add arguments, and their options """
     parser_add_storage = subparsers.add_parser('storage-add')
     parser_add_storage.add_argument(
         "name",
@@ -46,6 +51,7 @@ def storage_add_args(subparsers):
 
 
 def storage_add_validation(args):
+    """ validate arguments """
     for vol in args.external:
         if args.type and args.type != "External":
             print("'--external' option is used only with '--type External'",
@@ -67,10 +73,16 @@ def storage_add_validation(args):
         print("Please specify atleast one storage", file=sys.stderr)
         sys.exit(1)
 
+    storage_mismatch = False
     if (args.type == "Replica1" and num_storages != 1) or (
-            args.type == "Replica3" and num_storages != 3) or (
-                args.type == "External" and num_storages != 1
-            ):
+            args.type == "Replica3" and num_storages != 3
+    ):
+        storage_mismatch = True
+
+    if (args.type == "External" and num_storages != 1):
+        storage_mismatch = True
+
+    if storage_mismatch:
         print("Number of storages not matching for type=%s" % args.type,
               file=sys.stderr)
         sys.exit(1)
@@ -89,6 +101,7 @@ def storage_add_validation(args):
 
 
 def storage_add_data(args):
+    """ Build the config file """
     content = {
         "apiVersion": "kadalu-operator.storage/v1alpha1",
         "kind": "KadaluStorage",
@@ -147,13 +160,15 @@ def storage_add_data(args):
             )
         return content
 
+    return ""
 
 def subcmd_storage_add(args):
+    """ Adds the subcommand arguments back to main CLI tool """
     data = storage_add_data(args)
 
-    fd, tempfile_path = tempfile.mkstemp(prefix="kadalu")
+    config, tempfile_path = tempfile.mkstemp(prefix="kadalu")
     try:
-        with os.fdopen(fd, 'w') as tmp:
+        with os.fdopen(config, 'w') as tmp:
             yaml.dump(data, tmp)
 
         cmd = [utils.KUBECTL_CMD, "create", "-f", tempfile_path]
