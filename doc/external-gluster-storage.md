@@ -1,15 +1,12 @@
 # Use external gluster volume as PV in kadalu
 
-If you are having your storage nodes outside of kubernetes cluster, you
-can still use kadalu. We call the `kind` of this setup as 'External' mainly
-because, the storage server processes are not managed by kadalu operator
-in this case.
+You can still use kadalu even when you have your storage nodes outside of the kubernetes (k8s) cluster. We describe this `kind` of setup as 'External'. Such a description is intended to indicate that the storage server processes are not managed by kadalu operator.
 
 ## Using external gluster in kadalu native way
 
 In this mode, we expect gluster volume to be created and is in 'Started' state.
 kadalu storage config takes one of the node IP/hostname, and gluster volume name
-to use it as the storage for PVs. The PVs would be provided as subdirectories,
+to use it as the storage for PVs. The PVs would be provided as subdirectories - this is
 similar to how a PV is created in kadalu native way.
 
 The best example for this is, what we use in our CI. Checkout this
@@ -34,8 +31,8 @@ spec:
 ```
 
 Note that, if you have an existing gluster setup inside the k8s cluster, you can
-treat that also as 'External' and use kadalu to manage it. All you need to provide
-is pre-created gluster volume name for the config.
+treat that also as 'External' and use kadalu to manage it. In this case, you will need to provide
+the pre-created gluster volume name for the config.
 
 
 ## Using external storage directly
