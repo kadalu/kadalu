@@ -1,12 +1,13 @@
-import os
-import yaml
-import tempfile
+"""
+'install' subcommand for kubectl-kadalu CLI tool
+"""
 import sys
 
 from kubectl_kadalu import utils
 
 
 def install_args(subparsers):
+    """ add arguments to argparser """
     parser_install = subparsers.add_parser('install')
     parser_install.add_argument(
         "--version",
@@ -20,10 +21,10 @@ def install_args(subparsers):
         choices=["openshift", "kubernetes"],
         default="kubernetes"
     )
-    return
 
 
 def subcmd_install(args):
+    """ perform install subcommand """
     file_url = "https://raw.githubusercontent.com/kadalu/kadalu/master/manifests"
     version = ""
     insttype = ""
@@ -48,5 +49,3 @@ def subcmd_install(args):
         print("", file=sys.stderr)
         print(err.stderr, file=sys.stderr)
         sys.exit(1)
-
-    return
