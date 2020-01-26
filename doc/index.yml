@@ -1,0 +1,22 @@
+- section: User Guide
+  chapters:
+    - title: Quick Start
+    - title: Introduction
+    - title: Setup
+    - title: Setup Storage
+    - title: CSI to claim Persistent Volumes
+    - title: Try Kadalu
+    - title: External Gluster Storage
+    - title: Storage Config Options
+    - title: Troubleshooting
+- section: Use cases
+  chapters:
+    - title: Running a Webserver
+    - title: Running Minio
+- section: Articles
+  chapters:
+    - title: How it works?
+    - title: Gluster and Kadalu
+- section: Developer Guide
+  chapters:
+    - title: Get Involved
