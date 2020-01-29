@@ -54,6 +54,7 @@ volume {{ volname }}-replicate
     option quorum-reads no
     option quorum-type none
     option inodelk-trace off
+    option afr-pending-xattr {{ volname }}-client-0,{{ volname }}-client-1,{{ volume_id }}-ta
     option thin-arbiter {{ tiebreaker]["node"] }}:{{ tiebreaker["path"] }}
     subvolumes {{ volname }}-client-0 {{ volname }}-client-1 {{ volume_id }}-ta
 end-volume

@@ -226,18 +226,18 @@ test_kadalu)
 
     get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 191
 
-    get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 191
-
     get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 191
 
     get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 97
 
     get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 1 97
 
+    get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 191
+
     # Log everything so we are sure if things are as expected
     for p in $(kubectl -n kadalu get pods -o name); do
 	echo "====================== Start $p ======================"
-	kubectl -nkadalu --all-containers=true --tail 500 logs $p
+	kubectl -nkadalu --all-containers=true --tail 1000 logs $p
 	echo "======================= End $p ======================="
     done
 
