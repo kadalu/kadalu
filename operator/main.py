@@ -234,8 +234,7 @@ def deploy_server_pods(obj):
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
 
     shd_required = False
-    if voltype == VOLUME_TYPE_REPLICA_3 or \
-       voltype == VOLUME_TYPE_REPLICA_2:
+    if voltype in (VOLUME_TYPE_REPLICA_3, VOLUME_TYPE_REPLICA_2):
         shd_required = True
 
     template_args = {
