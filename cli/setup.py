@@ -13,7 +13,8 @@ setup(
     install_requires=["PyYAML"],
     entry_points={
         "console_scripts": [
-            "kubectl-kadalu = kubectl_kadalu.main:main"
+            "kubectl-kadalu = kubectl_kadalu.main:main",
+            "oc-kadalu = kubectl_kadalu.main:main"
         ]
     },
     platforms="linux",
