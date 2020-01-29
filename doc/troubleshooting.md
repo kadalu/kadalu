@@ -6,8 +6,8 @@ This page is a collection for some common problems and their solution
 
 Kadalu-oerator spins upseveral pods like `csi-provisioner` or `csi-nodeplugin`. In case you don't see them expect the `operator`-pod check the log of the pod.
 
-```bash
-# kubectl get pods -n kadalu
+```console
+$ kubectl get pods -n kadalu
 NAME                        READY   STATUS    RESTARTS   AGE
 operator-68649f4bb6-zq7fp   1/1     Running   0          126m
 ```
@@ -28,17 +28,17 @@ kadalulib.CommandException: [1] b'' b'Error from server (AlreadyExists): error w
 
 If the log complains about ` error when creating "/kadalu/templates/csi-driver-object.yaml"` you might delete the `CSIDriver` as follows
 
-```bash
-kubectl delete CSIDriver org.kadalu.gluster
+```console
+$ kubectl delete CSIDriver org.kadalu.gluster
 ```
 
-> **Note**: Use the [`cleanup`-script](./extras/scripts/cleanup) to properly cleanup kadalu.
+> **Note**: Use the [`cleanup` script](./extras/scripts/cleanup) to properly cleanup kadalu.
 
 ## Storage cannot be created - `Failed to create file system	 fstype=xfs device=/dev/md3`
 
 If storage cannot be created, check the logs. In case of the following error
 
-```python
+```
 + pid=0
 + cmd=/usr/bin/python3
 + script=/kadalu/server.py
@@ -49,10 +49,10 @@ If storage cannot be created, check the logs. In case of the following error
 + wait 7
 + tail -f /dev/null
 [2020-01-06 13:21:41,200] ERROR [glusterfsd - 107:create_and_mount_brick] - Failed to create file system fstype=xfs device=/dev/md3
-````
+```
 
 ... you might check your disk config and ensure that there are no partitions and especially no partition table on the disk. The following command may be handy to delete the partition table
 
-```bash
-wipefs -a -t dos -f /dev/md3/
+```console
+$ wipefs -a -t dos -f /dev/md3/
 ```

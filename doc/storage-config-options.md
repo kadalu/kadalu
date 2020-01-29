@@ -44,12 +44,8 @@ Native mode is available only with 2 `type` options. one is `Replica1` and anoth
 In this mode, Gluster will be started without high availability, i.e without replicate module. It will use just one storage, from which the RWX and RWO PVs will be carved out. This storage will be exposed by a gluster server pod, which gets spawned by kadalu operator.
 
 ```
-...
-spec:
-  type: Replica1
-  storage:
-    - ...
-...
+$ kubectl kadalu storage-add storage-pool1 --type=Replica1 \
+    --device kube-nodename1:/dev/vdc
 ```
 
 To create a PVC from this storage, you need to provide `storageClassName` option as `kadalu.replica1`.
@@ -60,14 +56,10 @@ To create a PVC from this storage, you need to provide `storageClassName` option
 In this mode, Gluster will started with high availability, ie, replicate module. It will require 3 storage options to be provided, and each storage will be one gluster server process pod running as pod.
 
 ```
-...
-spec:
-  type: Replica3
-  storage:
-    - ...
-    - ...
-    - ...
-...
+$ kubectl kadalu storage-add storage-pool1 --type=Replica3 \
+    --device kube-nodename1:/dev/vdc \
+    --device kube-nodename2:/dev/vdc \
+    --device kube-nodename3:/dev/vdc \
 ```
 
 To create a PVC from this storage, you need to provide `storageClassName` option as `kadalu.replica3`.
@@ -78,19 +70,15 @@ To create a PVC from this storage, you need to provide `storageClassName` option
 The native mode storage can be provided by many different types in kadalu. Lets look into each of those, with samples.
 
 
-* Storage from Device
+#### Storage from Device
 
 In this case, a device (`/dev/sd*` or similar), attached to a node in k8s cluster is provided as storage. The device is exported into the gluster server pod, and is formatted and mounted into specific brick path.
 
-The sample config looks like below:
+The sample command looks like below:
 
 ```
-...
-spec:
-  type: ReplicaN
-  storage:
-    - node: kube-nodename
-      device: /dev/vdc
+$ kubectl kadalu storage-add storage-pool1 \
+    --device kube-nodename:/dev/vdc
 ```
 
 Note that both `node` and `device` fields are required. A device info without a node doesn't contain all the required information for kadalu operator to start the brick process.
@@ -100,27 +88,23 @@ According to us, this is most common way of providing the storage to kadalu.
 Also, if `device` option has a file as option, the same file will be formatted and used as device too. This is particularly helpful as a testing option, where from same backend multiple devices needs to be carved out. Our CI/CD tests use this approach.
 
 
-* Storage from path
+#### Storage from path
 
 In this case, a directory path (/mnt/mount/path or similar) is exported as a brick from a node in the cluster as storage for gluster server process. This is particularly useful when a larger device is mounted and shared with other applications too.
 
 Note that path option is valid only if the file system on the given path is xfs, and is mounted with `prjquota` mount option. path option is helpful for those who want to try kadalu in an existing setup. When path option is provided, kadalu operator doesn't try to format and mount, but uses the path as export path for kadalu storage volume.
 
-The sample config looks like below:
+The sample command looks like below:
 
 ```
-...
-spec:
-  type: ReplicaN
-  storage:
-    - node: kube-nodename
-      path: /mnt/mount/export-path
+$ kubectl kadalu storage-add storage-pool1 \
+    --path kube-nodename:/mnt/mount/export-path
 ```
 
 Again here, both `node` and `path` are required fields. kadalu operator won't have all required information to start gluster server pods without these two fields.
 
 
-* Storage from another PVC
+#### Storage from another PVC
 
 This is an interesting option, and makes sense specifically in a cloud environment, where a virtual storage device would be available as PVC in k8s cluster. kadalu can use a PVC, which is not bound to any 'node' as the storage, and provide multiple smaller PVCs through kadalu storageclass.
 
@@ -129,11 +113,8 @@ In this case, a PVC is exposed to kadalu's server pod as storage through `volume
 The sample config looks like below:
 
 ```
-...
-spec:
-  type: ReplicaN
-  storage:
-    - pvc: pvc-name-in-namespace
+$ kubectl kadalu storage-add storage-pool1 \
+    --pvc pvc-name-in-namespace
 ```
 
 Note that this PVC should be available in 'kadalu' namespace. Also there is no need of mentioning `node` field for this storage. k8s itself will start pod in relevant node in cluster.
@@ -147,23 +128,14 @@ The external mode can be specified with `type` as `External`. And when the type 
 
 
 ```
-apiVersion: kadalu-operator.storage/v1alpha1
-kind: KadaluStorage
-metadata:
-  name: ext-config
-spec:
-  type: External
-  details:
-      gluster_host: gluster.kadalu.io
-      gluster_volname: kadalu
-      gluster_options: log-level=DEBUG
+$ kubectl kadalu storage-add storage-pool1 \
+    --external gluster_host:/gluster_volname
 ```
 
 Above,
 
 * 'gluster_host': This option takes one hostname or IP address, which is accessible from the k8s cluster.
 * 'gluster_volname': Gluster volume name to be used as kadalu host storage volume. We prefer it to be a new volume created for kadalu.
-* 'gluster_options': This options would be passed directly to hostvolume mount command.
 
 
 Notice that to create PVC from External Storage config, you need to provide `storageClassName` option as `kadalu.external.{{ config-name }}`. In above case, it becomes **`kadalu.external.ext-config`**.

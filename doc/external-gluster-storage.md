@@ -17,7 +17,7 @@ Please edit 'gluster_host' and 'gluster_volname' parameters in config section.
 You can also setup the external storage through our `kubectl kadalu` CLI.
 
 ```console
-kubectl kadalu storage-add store-name --external gluster.kadalu.io:/kadalu
+$ kubectl kadalu storage-add store-name --external gluster.kadalu.io:/kadalu
 ```
 
 After this, just use `kadalu.external.store-name` (note that 'store-name' is

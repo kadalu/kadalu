@@ -1,42 +1,30 @@
 # Quick Start
 
+Install Kadalu kubectl plugin using,
+
+```console
+$ pip3 install kubectl-kadalu
+```
+
 Deploy KaDalu Operator using,
 
 ```console
-$ kubectl create -f https://kadalu.io/operator-latest.yaml
+$ kubectl kadalu install
 ```
 
 In the case of OpenShift, deploy Kadalu Operator using,
 
 ```console
-$ oc create -f https://kadalu.io/operator-openshift-latest.yaml
+$ oc kadalu install --type=openshift
 ```
 
 **Note**: Security Context Constraints can be applied only by admins, Run `oc login -u system:admin` to login as admin
 
-Prepare your configuration file.
-
-KaDalu Operator listens to Storage setup configuration changes and starts the required pods. For example,
-
-```yaml
-# File: storage-config.yaml
----
-apiVersion: kadalu-operator.storage/v1alpha1
-kind: KadaluStorage
-metadata:
-    # This will be used as name of PV Hosting Volume
-    name: storage-pool-1
-spec:
-    type: Replica1
-    storage:
-      - node: kube1      # node name as shown in `kubectl get nodes`
-        device: /dev/vdc  # Device to provide storage to all PVs
-```
-
-Now request kadalu-operator to setup storage using,
+Identify the devices available from nodes and run the following command to add storage to Kadalu.
 
 ```console
-$ kubectl create -f storage-config.yaml
+$ kubectl kadalu storage-add storage-pool-1 \
+    --device kube1:/dev/vdc
 ```
 
 Operator will start the storage export pods as required. And, in 2 steps, your storage system is up and running.
