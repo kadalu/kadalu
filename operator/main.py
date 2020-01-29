@@ -230,14 +230,21 @@ def deploy_server_pods(obj):
     """
     # Deploy server pod
     volname = obj["metadata"]["name"]
+    voltype = obj["spec"]["type"]
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
+
+    shd_required = False
+    if voltype == VOLUME_TYPE_REPLICA_3 or \
+       voltype == VOLUME_TYPE_REPLICA_2:
+        shd_required = True
+
     template_args = {
         "namespace": NAMESPACE,
         "kadalu_version": VERSION,
         "docker_user": docker_user,
         "volname": volname,
         "volume_id": obj["spec"]["volume_id"],
-        "shd_required": obj["spec"]["type"] == VOLUME_TYPE_REPLICA_3
+        "shd_required": shd_required
     }
 
     # One StatefulSet per Brick
