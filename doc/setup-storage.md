@@ -1,31 +1,14 @@
 # Setup Storage
 
-Prepare your configuration file.
 
-KaDalu Operator listens to Storage setup configuration changes and starts the required pods. For example,
-
-```yaml
-# File: storage-config.yaml
----
-apiVersion: kadalu-operator.storage/v1alpha1
-kind: KadaluStorage
-metadata:
- # This will be used as name of PV Hosting Volume
-  name: storage-pool-1
-spec:
-  type: Replica1
-  storage:
-    - node: kube1      # node name as shown in `kubectl get nodes`
-      device: /dev/vdc # Device to provide storage to all PVs
-```
-
-More config options can be found [here](doc/storage-config-options.md)
-
-Now request kadalu-operator to setup storage using,
+Identify the devices available from nodes and run the following command to add storage to Kadalu.
 
 ```console
-$ kubectl create -f storage-config.yaml
+$ kubectl kadalu storage-add storage-pool-1 \
+    --device kube1:/dev/vdc
 ```
+
+Run `kubectl kadalu storage-add --help` to see all the available options
 
 Operator will start the storage export pods as required. And, in 2 steps,
 your storage system is up and running.

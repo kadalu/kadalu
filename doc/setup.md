@@ -9,16 +9,22 @@
 
 ### Setup
 
+Install Kadalu kubectl plugin using,
+
+```console
+$ pip3 install kubectl-kadalu
+```
+
 Deploy KaDalu Operator using,
 
 ```console
-$ kubectl create -f https://raw.githubusercontent.com/kadalu/kadalu/master/manifests/kadalu-operator.yaml
+$ kubectl kadalu install
 ```
 
 In the case of OpenShift, deploy Kadalu Operator using,
 
 ```console
-$ oc create -f https://raw.githubusercontent.com/kadalu/kadalu/master/manifests/kadalu-operator-openshift.yaml
+$ oc kadalu install --type=openshift
 ```
 
 **Note:** Security Context Constraints can be applied only by admins, Run `oc login -u system:admin` to login as admin
