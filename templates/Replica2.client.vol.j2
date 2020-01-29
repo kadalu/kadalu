@@ -1,37 +1,128 @@
-volume {{ volname }}-client-0
+volume {{ volname }}-replicate-0-client-0
     type protocol/client
+    option opversion 70000
+    option clnt-lk-version 1
+    option volfile-checksum 0
+    option volfile-key /{{ volname }}
+    option client-version 7dev
+    option process-name fuse
+    option process-uuid CTX_ID:9adfef22-2e0c-411f-a979-de075cb3b0db-GRAPH_ID:0-PID:5043-HOST:{{ bricks[0]["node"] }}-PC_NAME:{{ volname }}-replicate-0-client-0-RECON_NO:-0
+    option fops-version 1298437
+    option transport.socket.ssl-enabled off
+    option transport.socket.keepalive-time 20
+    option transport.socket.lowlat off
+    option event-threads 2
+    option transport.tcp-user-timeout 42
+    option transport.socket.keepalive-interval 2
+    option non-blocking-io off
     option remote-subvolume {{ bricks[0]["brick_path"] }}
+    option transport.socket.keepalive-count 9
+    option filter-O_DIRECT disable
     option remote-host {{ bricks[0]["node"] }}
+    option transport.socket.nodelay 1
+    option send-gids on
+    option ping-timeout 42
+    option client-bind-insecure off
+    option transport.socket.own-thread off
+    option transport.listen-backlog 1024
+    option frame-timeout 1800
+    option transport-type socket
+    option transport.socket.read-fail-log off
+    option transport.socket.keepalive 1
 end-volume
 
-volume {{ volname }}-client-1
+volume {{ volname }}-replicate-0-client-1
     type protocol/client
+    option opversion 70000
+    option clnt-lk-version 1
+    option volfile-checksum 0
+    option volfile-key /{{ volname }}
+    option client-version 7dev
+    option process-name fuse
+    option process-uuid CTX_ID:9adfef22-2e0c-411f-a979-de075cb3b0db-GRAPH_ID:0-PID:5043-HOST:{{ bricks[1]["node"] }}-PC_NAME:{{ volname }}-replicate-0-client-1-RECON_NO:-0
+    option fops-version 1298437
+    option transport.socket.ssl-enabled off
+    option frame-timeout 1800
     option remote-host {{ bricks[1]["node"] }}
+    option non-blocking-io off
     option remote-subvolume {{ bricks[1]["brick_path"] }}
+    option transport.socket.lowlat off
+    option transport.tcp-user-timeout 42
+    option transport.socket.read-fail-log off
+    option transport.socket.nodelay 1
+    option event-threads 2
+    option send-gids on
+    option transport.socket.own-thread off
+    option client-bind-insecure off
+    option filter-O_DIRECT disable
+    option transport-type socket
+    option transport.socket.keepalive-interval 2
+    option transport.socket.keepalive-count 9
+    option transport.socket.keepalive-time 20
+    option transport.socket.keepalive 1
+    option transport.listen-backlog 1024
+    option ping-timeout 42
 end-volume
 
 volume {{ volume_id }}-ta
     type protocol/client
+    option opversion 70000
+    option clnt-lk-version 1
+    option volfile-checksum 0
+    option client-version 7dev
+    option process-name fuse
+    option process-uuid CTX_ID:9adfef22-2e0c-411f-a979-de075cb3b0db-GRAPH_ID:0-PID:5043-HOST:{{ ta }}-PC_NAME:{{ volname }}-ta-RECON_NO:-0
+    option fops-version 1298437
+    option transport-type socket
+    option transport.listen-backlog 1024
     option remote-host {{ tiebreaker["node"] }}
     option remote-subvolume {{ tiebreaker["path"] }}
+    option transport.socket.keepalive-count 9
+    option transport.socket.own-thread off
+    option transport.socket.nodelay 1
+    option transport.socket.keepalive-time 20
+    option transport.tcp-user-timeout 42
+    option filter-O_DIRECT disable
+    option send-gids on
+    option ping-timeout 42
+    option transport.socket.read-fail-log off
+    option transport.socket.lowlat off
+    option frame-timeout 1800
+    option event-threads 2
+    option transport.socket.keepalive 1
+    option transport.socket.keepalive-interval 2
+    option non-blocking-io off
+    option client-bind-insecure off
+    option transport.socket.ssl-enabled off
 end-volume
 
-volume {{ volname }}-replicate
+volume {{ volname }}-replicate-0
     type cluster/replicate
     option data-self-heal off
+    option halo-enabled False
+    option halo-shd-max-latency 99999
+    option background-self-heal-count 8
     option afr-dirty-xattr trusted.afr.dirty
     option granular-entry-heal no
     option iam-self-heal-daemon off
+    option pre-op-compat on
     option metadata-self-heal off
+    option consistent-io no
     option favorite-child-policy none
     option full-lock yes
+    option data-self-heal-window-size 1
+    option post-op-delay-secs 1
     option self-heal-daemon off
     option optimistic-change-log on
     option choose-local true
     option ensure-durability on
+    option iam-nfs-daemon off
     option data-change-log on
+    option heal-wait-queue-length 128
     option read-subvolume-index -1
     option use-compound-fops no
+    option afr-pending-xattr {{ volname }}-client-0,{{ volname }}-client-1,{{ volume_id }}-ta
+    option self-heal-readdir-size 1KB
     option eager-lock on
     option entrylk-trace off
     option entry-self-heal off
@@ -39,20 +130,74 @@ volume {{ volname }}-replicate
     option consistent-metadata no
     option entry-change-log on
     option metadata-change-log on
-    option read-hash-mode 4
+    option halo-min-replicas 2
+    option read-hash-mode 5
     option locking-scheme full
     option metadata-splitbrain-forced-heal off
+    option shd-max-threads 1
+    option heal-timeout 600
+    option halo-max-replicas 99999
+    option halo-max-latency 5
+    option halo-nfsd-max-latency 5
     option quorum-reads no
     option quorum-type none
-    option afr-pending-xattr {{ volname }}-client-0,{{ volname }}-client-1,{{ volume_id }}-ta
+    option inodelk-trace off
     option thin-arbiter {{ tiebreaker["node"] }}:{{ tiebreaker["path"] }}
-    subvolumes {{ volname }}-client-0 {{ volname }}-client-1 {{ volume_id }}-ta
+    subvolumes {{ volname }}-replicate-0-client-0 {{ volname }}-replicate-0-client-1 {{ volume_id }}-ta
 end-volume
 
 volume {{ volname }}-utime
     type features/utime
     option noatime on
     subvolumes {{ volname }}-replicate-0
+end-volume
+
+volume {{ volname }}-read-only
+    type features/read-only
+    option read-only off
+    subvolumes {{ volname }}-utime
+end-volume
+
+volume {{ volname }}-md-cache
+    type performance/md-cache
+    option global-cache-invalidation true
+    option cache-samba-metadata false
+    option cache-ima-xattrs true
+    option cache-selinux false
+    option cache-swift-metadata true
+    option cache-capability-xattrs true
+    option pass-through false
+    option md-cache-statfs off
+    option cache-invalidation false
+    option force-readdirp true
+    option md-cache-timeout 1
+    option md-cache on
+    option cache-glusterfs-acl false
+    option cache-posix-acl false
+    subvolumes {{ volname }}-read-only
+end-volume
+
+volume {{ volname }}-write-behind
+    type performance/write-behind
+    option flush-behind on
+    option write-behind on
+    option aggregate-size 128KB
+    option resync-failed-syncs-after-fsync off
+    option strict-write-ordering off
+    option strict-O_DIRECT off
+    option trickling-writes on
+    option cache-size 1MB
+    subvolumes {{ volname }}-md-cache
+end-volume
+
+volume {{ volname }}-open-behind
+    type performance/open-behind
+    option use-anonymous-fd no
+    option open-behind on
+    option pass-through false
+    option read-after-open yes
+    option lazy-open yes
+    subvolumes {{ volname }}-write-behind
 end-volume
 
 volume {{ volname }}-nl-cache
@@ -62,7 +207,7 @@ volume {{ volname }}-nl-cache
     option nl-cache-limit 131072
     option nl-cache-positive-entry false
     option nl-cache on
-    subvolumes {{ volname }}-utime
+    subvolumes {{ volname }}-open-behind
 end-volume
 
 volume {{ volname }}
