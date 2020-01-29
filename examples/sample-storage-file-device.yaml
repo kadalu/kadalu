@@ -16,6 +16,22 @@ kind: KadaluStorage
 metadata:
   name: storage-pool-2
 spec:
+  type: Replica2
+  storage:
+    - node: minikube
+      device: /mnt/DISK/file2.1
+    - node: minikube
+      device: /mnt/DISK/file2.2
+  tiebreaker:
+    node: tie-breaker.kadalu.io
+    path: /mnt
+
+---
+apiVersion: kadalu-operator.storage/v1alpha1
+kind: KadaluStorage
+metadata:
+  name: storage-pool-3
+spec:
   type: Replica3
   storage:
     - node: minikube            # node name as shown in `kubectl get nodes`
@@ -23,4 +39,4 @@ spec:
     - node: minikube            # node name as shown in `kubectl get nodes`
       path: /mnt/DISK/dir3.2    # Using a path from host
     - pvc: local-pvc            # PVC belonging to this namespace, no 'node'
-                                #required when there is PVC
+				#required when there is PVC
