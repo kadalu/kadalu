@@ -12,14 +12,15 @@ TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
 
 
-def generate_shd_volfile(client_volfile, volname):
+def generate_shd_volfile(client_volfile, volname, voltype):
     """Generate Client Volfile for Glusterfs Volume"""
     info_file_path = os.path.join(VOLINFO_DIR, "%s.info" % volname)
     data = {}
     with open(info_file_path) as info_file:
         data = json.load(info_file)
 
-    template_file_path = os.path.join(TEMPLATES_DIR, "Replica3.shd.vol.j2")
+    template_file_path = os.path.join(TEMPLATES_DIR,
+                                      "%s.shd.vol.j2" % voltype)
     content = ""
     with open(template_file_path) as template_file:
         content = template_file.read()
@@ -32,9 +33,10 @@ def start():
     Start the Gluster Self-Heal Process
     """
     volname = os.environ["VOLUME"]
+    voltype = os.environ["VOLUME_TYPE"]
 
     volfile_path = os.path.join(VOLFILES_DIR, "glustershd.vol")
-    generate_shd_volfile(volfile_path, volname)
+    generate_shd_volfile(volfile_path, volname, voltype)
 
     os.execv(
         "/usr/sbin/glusterfs",

@@ -242,6 +242,7 @@ def deploy_server_pods(obj):
         "kadalu_version": VERSION,
         "docker_user": docker_user,
         "volname": volname,
+        "voltype": voltype,
         "volume_id": obj["spec"]["volume_id"],
         "shd_required": shd_required
     }
