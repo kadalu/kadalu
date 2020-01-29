@@ -16,6 +16,7 @@ COPY csi/volumeutils.py        /kadalu/
 COPY lib/startup.sh            /kadalu/
 
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/
+COPY templates/Replica2.client.vol.j2 /kadalu/templates/
 COPY templates/Replica3.client.vol.j2 /kadalu/templates/
 
 RUN chmod +x /kadalu/startup.sh

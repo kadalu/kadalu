@@ -1,0 +1,100 @@
+volume {{ volname }}-client-0
+    type protocol/client
+    option remote-subvolume {{ bricks[0]["brick_path"] }}
+    option remote-host {{ bricks[0]["node"] }}
+end-volume
+
+volume {{ volname }}-client-1
+    type protocol/client
+    option remote-host {{ bricks[1]["node"] }}
+    option remote-subvolume {{ bricks[1]["brick_path"] }}
+end-volume
+
+volume {{ volume_id }}-ta
+    type protocol/client
+    option remote-host {{ tiebreaker["node"] }}
+    option remote-subvolume {{ tiebreaker["path"] }}
+end-volume
+
+volume {{ volname }}-replicate
+    type cluster/replicate
+    option data-self-heal on
+    option halo-enabled False
+    option background-self-heal-count 8
+    option afr-dirty-xattr trusted.afr.dirty
+    option granular-entry-heal no
+    option iam-self-heal-daemon true
+    option pre-op-compat on
+    option metadata-self-heal on
+    option consistent-io no
+    option favorite-child-policy none
+    option full-lock yes
+    option data-self-heal-window-size 1
+    option post-op-delay-secs 1
+    option self-heal-daemon on
+    option optimistic-change-log on
+    option choose-local true
+    option ensure-durability on
+    option data-change-log on
+    option heal-wait-queue-length 128
+    option read-subvolume-index -1
+    option self-heal-readdir-size 16KB
+    option eager-lock on
+    option entrylk-trace off
+    option entry-self-heal on
+    option shd-wait-qlength 1024
+    option consistent-metadata no
+    option entry-change-log on
+    option metadata-change-log on
+    option halo-min-replicas 2
+    option read-hash-mode 5
+    option locking-scheme full
+    option metadata-splitbrain-forced-heal off
+    option shd-max-threads 1
+    option quorum-reads no
+    option quorum-type none
+    option inodelk-trace off
+    option thin-arbiter {{ tiebreaker]["node"] }}:{{ tiebreaker["path"] }}
+    subvolumes {{ volname }}-client-0 {{ volname }}-client-1 {{ volume_id }}-ta
+end-volume
+
+volume {{ volname }}-utime
+    type features/utime
+    option noatime on
+    subvolumes {{ volname }}-replicate-0
+end-volume
+
+volume {{ volname }}
+    type debug/io-stats
+    option brick-log-flush-timeout 120
+    option ios-dump-interval 0
+    option brick-log-format with-msg-id
+    option latency-measurement off
+    option client-threads 16
+    option client-log-buf-size 5
+    option sys-log-level CRITICAL
+    option dump-fd-stats off
+    option client-log-flush-timeout 120
+    option count-fop-hits off
+    option ios-dnscache-ttl-sec 86400
+    option ios-dump-format json
+    option ios-sample-interval 0
+    option log-flush-timeout 120
+    option log-buf-size 5
+    option brick-log-level INFO
+    option client-log-level INFO
+    option brick-threads 16
+    option brick-log-buf-size 5
+    option client-log-format with-msg-id
+    option brick-logger gluster-log
+    option client-logger gluster-log
+    option unique-id /no/such/path
+    option ios-sample-buf-size 65535
+    option global-threading off
+    subvolumes {{ volname }}-utime
+end-volume
+
+volume meta-autoload
+    type meta
+    subvolumes {{ volname }}
+end-volume
