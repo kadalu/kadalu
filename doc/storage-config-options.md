@@ -37,7 +37,7 @@ In this mode, the storage is provided from inside of the kubernetes cluster. Let
 
 ### Type
 
-Native mode is available only with 2 `type` options. one is `Replica1` and another `Replica3`.
+Native mode is available with 3 `type` options. They are `Replica1`, `Replica2` and another `Replica3`.
 
 * 'Replica1'
 
@@ -50,6 +50,25 @@ $ kubectl kadalu storage-add storage-pool1 --type=Replica1 \
 
 To create a PVC from this storage, you need to provide `storageClassName` option as `kadalu.replica1`.
 
+
+* 'Replica2'
+
+In this mode, Gluster will be started with high availability, with 'tie-breaker' (or thin-arbiter in gluster speak) option. It will use 2 storage options, from which the RWX and RWO PVs will be carved out. This storage will be exposed by a gluster server pod, which gets spawned by kadalu operator. The `tie-breaker` node has to be managed outside, and if the user doesn't want to host it, kadalu provides a free service for the same, which can be consumed by not providing any `tie-breaker` option :-)
+
+```
+...
+spec:
+  type: Replica2
+  storage:
+    - ...
+    - ...
+  tie-breaker:
+    node: ...
+    path: ...
+...
+```
+
+To create a PVC from this storage, you need to provide `storageClassName` option as `kadalu.replica2`.
 
 * 'Replica3'
 
