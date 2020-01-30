@@ -6,6 +6,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2020-01-30
+### Added
+- Documentation updated for the new features introduced in
+  0.4.0(Kubectl plugin, External storage, and Storage configurations)
+- Cleanup script enhanced to handle CSIDriver object, which was
+  introduced in the latest version of Kubernetes.
+- Troubleshooting documentation is added.
+- Introduced Thread lock while updating the info file and while
+  mounting the Storage pool to avoid race conditions when PV claim and
+  pod create done in parallel.
+- All Pylint tests are now passing.
+- Upgraded Kadalu Server container images to Gluster latest
+  release(7.x)
+- Fixed Python compatibility issue in Kadalu Kubectl plugin.
+- Introduced "install" subcommand in kubectl-kadalu
+- Added support for external gluster storage in kubectl-kadalu
+
 ## [0.4.0] - 2019-12-31
 ### Added
 - Enhancement to support Kadalu storage on top of existing PVC
@@ -53,8 +70,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.4.0...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.5.0...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
 [0.4.0]: https://github.com/kadalu/kadalu/compare/0.3.0...0.4.0
+[0.5.0]: https://github.com/kadalu/kadalu/compare/0.4.0...0.5.0
