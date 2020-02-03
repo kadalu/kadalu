@@ -10,6 +10,7 @@ import yaml
 from kubectl_kadalu import utils
 
 
+# noqa # pylint: disable=too-many-branches
 def storage_add_args(subparsers):
     """ add arguments, and their options """
     parser_add_storage = subparsers.add_parser('storage-add')
@@ -20,7 +21,7 @@ def storage_add_args(subparsers):
     parser_add_storage.add_argument(
         "--type",
         help="Storage Type",
-        choices=["Replica1", "Replica3", "External"],
+        choices=["Replica1", "Replica3", "External", "Replica2"],
         default=None
     )
     parser_add_storage.add_argument(
@@ -48,6 +49,12 @@ def storage_add_args(subparsers):
         help="Storage from external gluster, Example: --external gluster-node:/gluster-volname",
         default=""
     )
+    parser_add_storage.add_argument(
+        "--tiebreaker",
+        help="If type is 'Replica2', one can have a tiebreaker node along "
+        "with it. like '--tiebreaker tie-breaker-node-name:/data/tiebreaker'",
+        default=None
+    )
 
 
 def storage_add_validation(args):
@@ -65,6 +72,18 @@ def storage_add_validation(args):
         # Set type to External as '--external' option is provided
         args.type = "External"
 
+    if args.tiebreaker:
+        if args.type != "Replica2":
+            print("'--tiebreaker' option should be used only with "
+                  "type 'Replica2'", file=sys.stderr)
+            sys.exit(1)
+        if ":" not in args.tiebreaker:
+            print("Invalid tiebreaker details. Please specify details "
+                  "in the format <node>:/<path>", file=sys.stderr)
+            sys.exit(1)
+    else:
+        args.tiebreaker = "tie-breaker.kadalu.io:/mnt"
+
     if not args.type:
         args.type = "Replica1"
 
@@ -79,7 +98,9 @@ def storage_add_validation(args):
     ):
         storage_mismatch = True
 
-    if (args.type == "External" and num_storages != 1):
+    if (args.type == "External" and num_storages != 1) or (
+            args.type == "Replica2" and num_storages != 2
+    ):
         storage_mismatch = True
 
     if storage_mismatch:
@@ -114,41 +135,7 @@ def storage_add_data(args):
         }
     }
 
-    # Device details are specified
-    if args.device:
-        for devdata in args.device:
-            node, dev = devdata.split(":")
-            content["spec"]["storage"].append(
-                {
-                    "node": node,
-                    "device": dev
-                }
-            )
-        return content
-
-    # Path is spacified instead of Raw device
-    if args.path:
-        for pathdata in args.path:
-            node, path = pathdata.split(":")
-            content["spec"]["storage"].append(
-                {
-                    "node": node,
-                    "path": path
-                }
-            )
-        return content
-
-    # If PVC is specified instead of Raw device and Path
-    if args.pvc:
-        for pvc in args.pvc:
-            content["spec"]["storage"].append(
-                {
-                    "pvc": pvc
-                }
-            )
-        return content
-
-    # External details are specified
+    # External details are specified, no 'storage' section required
     if args.external:
         for voldata in args.external:
             node, vol = voldata.split(":")
@@ -160,7 +147,51 @@ def storage_add_data(args):
             )
         return content
 
-    return ""
+    # Everything below can be provided for a 'Replica3' setup.
+    # Or two types of data can be provided for 'Replica2'.
+    # So, return only at the end.
+
+    # Device details are specified
+    if args.device:
+        for devdata in args.device:
+            node, dev = devdata.split(":")
+            content["spec"]["storage"].append(
+                {
+                    "node": node,
+                    "device": dev
+                }
+            )
+
+    # If Path is spacified
+    if args.path:
+        for pathdata in args.path:
+            node, path = pathdata.split(":")
+            content["spec"]["storage"].append(
+                {
+                    "node": node,
+                    "path": path
+                }
+            )
+
+    # If PVC is specified
+    if args.pvc:
+        for pvc in args.pvc:
+            content["spec"]["storage"].append(
+                {
+                    "pvc": pvc
+                }
+            )
+
+    if args.tiebreaker:
+        for tb_data in args.tiebreaker:
+            node, path = tb_data.split(":")
+            content["spec"]["tiebreaker"] = {
+                "node": node,
+                "path": path
+            }
+
+    return content
+
 
 def subcmd_storage_add(args):
     """ Adds the subcommand arguments back to main CLI tool """
