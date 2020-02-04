@@ -22,8 +22,9 @@ KADALU_CONFIG_MAP = "kadalu-info"
 CSI_POD_PREFIX = "csi-"
 STORAGE_CLASS_NAME_PREFIX = "kadalu."
 # TODO: Add ThinArbiter and Disperse
-VALID_HOSTING_VOLUME_TYPES = ["Replica1", "Replica3", "External"]
+VALID_HOSTING_VOLUME_TYPES = ["Replica1", "Replica2", "Replica3", "External"]
 VOLUME_TYPE_REPLICA_1 = "Replica1"
+VOLUME_TYPE_REPLICA_2 = "Replica2"
 VOLUME_TYPE_REPLICA_3 = "Replica3"
 
 
@@ -43,8 +44,10 @@ def bricks_validation(bricks):
     """Validate Brick path and node options"""
     ret = True
     for idx, brick in enumerate(bricks):
+        if not ret:
+            break
+
         if brick.get("pvc", None) is not None:
-            ret = True
             continue
 
         if brick.get("path", None) is None and \
@@ -55,9 +58,6 @@ def bricks_validation(bricks):
         if brick.get("node", None) is None:
             logging.error(logf("Storage node not specified", number=idx+1))
             ret = False
-
-        if not ret:
-            break
 
     return ret
 
@@ -87,8 +87,13 @@ def validate_ext_details(obj):
     return True
 
 
+# pylint: disable=too-many-return-statements
 def validate_volume_request(obj):
     """Validate the Volume request for Replica options, number of bricks etc"""
+    if not obj.get("spec", None):
+        logging.error("Storage 'spec' not specified")
+        return False
+
     voltype = obj["spec"].get("type", None)
     if voltype is None:
         logging.error("Storage type not specified")
@@ -112,6 +117,19 @@ def validate_volume_request(obj):
         logging.error("Invalid number of storage directories/devices"
                       " specified")
         return False
+
+    if voltype == VOLUME_TYPE_REPLICA_2:
+        if len(bricks) != 2:
+            logging.error("Invalid number of storage directories/devices"
+                          " specified")
+            return False
+
+        tiebreaker = obj["spec"].get("tiebreaker", None)
+        if tiebreaker and (not tiebreaker.get("node", None) or
+                           not tiebreaker.get("path", None)):
+            logging.error(logf("'tiebreaker' provided for replica2 "
+                               "config is not valid"))
+            return False
 
     return True
 
@@ -152,12 +170,13 @@ def update_config_map(core_v1_client, obj):
     Volinfo of new hosting Volume is generated and updated to ConfigMap
     """
     volname = obj["metadata"]["name"]
+    voltype = obj["spec"]["type"]
     data = {
         "namespace": NAMESPACE,
         "kadalu_version": VERSION,
         "volname": volname,
         "volume_id": obj["spec"]["volume_id"],
-        "type": obj["spec"]["type"],
+        "type": voltype,
         "bricks": [],
         "options": obj["spec"].get("options", {})
     }
@@ -167,7 +186,8 @@ def update_config_map(core_v1_client, obj):
         KADALU_CONFIG_MAP, NAMESPACE)
 
     # For each brick, add brick path and node id
-    for idx, storage in enumerate(obj["spec"]["storage"]):
+    bricks = obj["spec"]["storage"]
+    for idx, storage in enumerate(bricks):
         data["bricks"].append({
             "brick_path": "/bricks/%s/data/brick" % volname,
             "node": get_brick_hostname(volname,
@@ -180,6 +200,19 @@ def update_config_map(core_v1_client, obj):
             "brick_device_dir": get_brick_device_dir(storage),
             "brick_index": idx
         })
+
+    if voltype == VOLUME_TYPE_REPLICA_2:
+        tiebreaker = obj["spec"].get("tiebreaker", None)
+        if not tiebreaker:
+            logging.warning(logf("No 'tiebreaker' provided for replica2 "
+                                 "config. Using default tie-breaker.kadalu.io:/mnt",
+                                 volname=volname))
+            # Add default tiebreaker if no tie-breaker option provided
+            tiebreaker = {
+                "node": "tie-breaker.kadalu.io",
+                "path": "/mnt"
+            }
+        data["tiebreaker"] = tiebreaker
 
     volinfo_file = "%s.info" % volname
     configmap_data.data[volinfo_file] = json.dumps(data)
@@ -197,14 +230,21 @@ def deploy_server_pods(obj):
     """
     # Deploy server pod
     volname = obj["metadata"]["name"]
+    voltype = obj["spec"]["type"]
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
+
+    shd_required = False
+    if voltype in (VOLUME_TYPE_REPLICA_3, VOLUME_TYPE_REPLICA_2):
+        shd_required = True
+
     template_args = {
         "namespace": NAMESPACE,
         "kadalu_version": VERSION,
         "docker_user": docker_user,
         "volname": volname,
+        "voltype": voltype,
         "volume_id": obj["spec"]["volume_id"],
-        "shd_required": obj["spec"]["type"] == VOLUME_TYPE_REPLICA_3
+        "shd_required": shd_required
     }
 
     # One StatefulSet per Brick

@@ -16,8 +16,12 @@ RUN mkdir -p /kadalu/templates /kadalu/volfiles
 
 # Copy Volfile templates
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/
+COPY templates/Replica2.client.vol.j2 /kadalu/templates/
 COPY templates/Replica3.client.vol.j2 /kadalu/templates/
 COPY templates/Replica1.brick0.vol.j2 /kadalu/templates/
+COPY templates/Replica2.brick0.vol.j2 /kadalu/templates/
+COPY templates/Replica2.brick1.vol.j2 /kadalu/templates/
+COPY templates/Replica2.shd.vol.j2    /kadalu/templates/
 COPY templates/Replica3.brick0.vol.j2 /kadalu/templates/
 COPY templates/Replica3.brick1.vol.j2 /kadalu/templates/
 COPY templates/Replica3.brick2.vol.j2 /kadalu/templates/

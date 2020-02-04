@@ -148,10 +148,10 @@ up)
     if [[ "${VM_DRIVER}" != "none" ]]; then
 	wait_for_ssh
 	# shellcheck disable=SC2086
-	minikube ssh "sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file{1,3.1}; sudo mkdir -p /mnt/${DISK}/{dir3.2,pvc}"
+	minikube ssh "sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file{1,2.1,2.2,3.1}; sudo mkdir -p /mnt/${DISK}/{dir3.2,pvc}"
     else
 	sudo mkdir -p /mnt/${DISK}
-	sudo truncate -s 4g /mnt/${DISK}/file{1,3.1}
+	sudo truncate -s 4g /mnt/${DISK}/file{1,2.1,2.2,3.1}
 	sudo mkdir -p /mnt/${DISK}/dir3.2
 	sudo mkdir -p /mnt/${DISK}/pvc
     fi
@@ -192,7 +192,7 @@ kadalu_operator)
 	cnt=$((cnt + 1))
 	sleep 1
 	ret=$(kubectl get pods -nkadalu | grep 'Running' | wc -l)
-	if [[ $ret -ge 7 ]]; then
+	if [[ $ret -ge 9 ]]; then
 	    echo "Successful after $cnt seconds"
 	    break
 	fi
@@ -232,10 +232,12 @@ test_kadalu)
 
     get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 1 97
 
+    get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 191
+
     # Log everything so we are sure if things are as expected
     for p in $(kubectl -n kadalu get pods -o name); do
 	echo "====================== Start $p ======================"
-	kubectl -nkadalu --all-containers=true --tail 500 logs $p
+	kubectl -nkadalu --all-containers=true --tail 1000 logs $p
 	echo "======================= End $p ======================="
     done
 

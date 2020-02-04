@@ -21,6 +21,15 @@ parameters:
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
+  name: kadalu.replica2
+provisioner: kadalu
+parameters:
+  hostvol_type: "Replica2"
+
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
   name: kadalu.replica3
 provisioner: kadalu
 parameters:
