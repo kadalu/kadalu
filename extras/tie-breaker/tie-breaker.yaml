@@ -1,0 +1,20 @@
+# -*- mode: yaml -*-
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tie-breaker-pod
+  labels:
+    app: gluster-tie-breaker
+spec:
+  containers:
+  - name: tie-breaker
+    image: docker.io/kadalu/kadalu-tiebreaker:latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - mountPath: "/mnt/brick"
+      name: csivol
+  volumes:
+  - name: csivol
+    persistentVolumeClaim:
+      claimName: pv-for-brick
