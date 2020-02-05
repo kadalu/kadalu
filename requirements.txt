@@ -1,0 +1,6 @@
+requests
+xxhash
+grpcio
+pyxattr
+kubernetes
+#any feedbacks on version_no?
