@@ -1,6 +1,6 @@
 # How gluster and kadalu are related ?
 
-The fundamental idea of the project is described [here](doc/rethinking-gluster-management-using-k8s.pdf)
+The fundamental idea of the project is described [here](./rethinking-gluster-management-using-k8s.pdf)
 
 Compared to `GlusterD` there are various points which we consider worth changing:
 
