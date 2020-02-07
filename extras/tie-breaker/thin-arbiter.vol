@@ -37,7 +37,7 @@ volume /mnt/brick
     type debug/io-stats
     option count-fop-hits off
     option latency-measurement off
-    option unique-id /mnt/brick/
+    option unique-id /mnt/brick
     subvolumes ta-index
 end-volume
 
@@ -53,5 +53,5 @@ volume ta-server
     option auth-path /mnt/brick
     option transport.address-family inet
     option transport-type tcp
-    subvolumes /mnt
+    subvolumes /mnt/brick
 end-volume
