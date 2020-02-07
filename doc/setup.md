@@ -12,8 +12,9 @@
 Install Kadalu kubectl plugin using,
 
 ```console
-$ pip3 install kubectl-kadalu
+$ sudo pip3 install kubectl-kadalu
 ```
+Note: need `sudo` for installing a binary in `/usr/local/bin`
 
 Deploy KaDalu Operator using,
 

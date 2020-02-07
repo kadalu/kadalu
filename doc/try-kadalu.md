@@ -18,7 +18,7 @@ it can setup the Storage within operator itself.
 
 ## Give it a try with 'minikube'
 
-[`minikube`](https://kubernetes.io/docs/setup/minikube/) is a good way to get a hang of k8s for beginners. If you already have a k8s setup available to test out, skip this step, and goto [Next step](./#try-kadalu)
+[`minikube`](https://kubernetes.io/docs/setup/minikube/) is a good way to get a hang of k8s for beginners. If you already have a k8s setup available to test out, skip this step, and goto [Next step](#try-kadalu)
 
 You can follow ['Install minikube'](https://kubernetes.io/docs/tasks/tools/install-minikube/) document to setup minikube. Please note that right now (k8s - 1.14.0) there seems to be some issues with default 'minikube', and hence please use only `--vm-driver=none` option.
 
