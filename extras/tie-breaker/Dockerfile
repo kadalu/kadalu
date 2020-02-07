@@ -20,7 +20,7 @@ LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="org.kadalu.gluster"
 LABEL version="${version}"
 
-ENTRYPOINT ["glusterfsd", "-f", "/kadalu/thin-arbiter.vol", "-l", "/dev/stdout", "-N"]
+ENTRYPOINT ["bash", "-c", "mkdir -p /mnt/brick/.glusterfs && glusterfsd -f /kadalu/thin-arbiter.vol -l /dev/stdout -N"]
 
 # Debugging, Comment the above line and
 # uncomment below line
