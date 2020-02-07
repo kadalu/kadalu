@@ -210,8 +210,11 @@ def update_config_map(core_v1_client, obj):
             # Add default tiebreaker if no tie-breaker option provided
             tiebreaker = {
                 "node": "tie-breaker.kadalu.io",
-                "path": "/mnt"
+                "path": "/mnt",
             }
+        if not tiebreaker.get("port", None):
+            tiebreaker["port"] = 24007
+
         data["tiebreaker"] = tiebreaker
 
     volinfo_file = "%s.info" % volname

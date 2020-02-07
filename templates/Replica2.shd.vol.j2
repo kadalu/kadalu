@@ -76,6 +76,7 @@ volume {{ volume_id }}-ta
     option transport-type socket
     option transport.listen-backlog 1024
     option remote-host {{ tiebreaker["node"] }}
+    option remote-port {{ tiebreaker["port"] }}
     option remote-subvolume {{ tiebreaker["path"] }}
     option transport.socket.keepalive-count 9
     option transport.socket.own-thread off
