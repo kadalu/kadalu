@@ -17,7 +17,7 @@ from volumeutils import mount_and_select_hosting_volume, \
 from kadalulib import logf, send_analytics_tracker
 
 VOLINFO_DIR = "/var/lib/gluster"
-
+KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
 
 class ControllerServer(csi_pb2_grpc.ControllerServicer):
     """
@@ -35,13 +35,17 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         pvsize = request.capacity_range.required_bytes
 
         pvtype = PV_TYPE_SUBVOL
-        for vol_capability in request.volume_capabilities:
-            # using getattr to avoid Pylint error
-            single_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
-                                         "SINGLE_NODE_WRITER")
+        # 'latest' finds a place here, because only till 0.5.0 version
+        # we had 'latest' as a separate version. After that, 'latest' is
+        # just a link to latest version.
+        if KADALU_VERSION in ["0.5.0", "0.4.0", "0.3.0", "latest"]:
+            for vol_capability in request.volume_capabilities:
+                # using getattr to avoid Pylint error
+                single_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
+                                             "SINGLE_NODE_WRITER")
 
-            if vol_capability.access_mode.mode == single_node_writer:
-                pvtype = PV_TYPE_VIRTBLOCK
+                if vol_capability.access_mode.mode == single_node_writer:
+                    pvtype = PV_TYPE_VIRTBLOCK
 
         logging.debug(logf(
             "Found PV type",
