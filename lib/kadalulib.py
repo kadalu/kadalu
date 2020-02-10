@@ -13,6 +13,7 @@ import xxhash
 PV_TYPE_VIRTBLOCK = "virtblock"
 PV_TYPE_SUBVOL = "subvol"
 
+KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
 
 def makedirs(dirpath):
     """exist_ok=True parameter will raise exception even if directory
@@ -96,11 +97,15 @@ def logging_setup():
 
 def send_analytics_tracker(name, uid=None):
     """Send setup events to Google analytics"""
+
+    if KADALU_VERSION == "canary":
+        return
+
     ga_id = "UA-144588868-1" # Static string
     reqheader = {'user-agent': 'Kadalu-App', 'accept': '*/*'}
     url = "https://www.google-analytics.com/collect?v=1&t=pageview"
     track_page = "http://kadalu.org/kadalu-%s-%s" % (
-        name, os.environ.get("KADALU_VERSION", "latest"))
+        name, KADALU_VERSION)
     track_title = "Kadalu %s" % name
 
     if not uid:
