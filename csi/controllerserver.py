@@ -67,7 +67,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             uid = uid_file.read()
 
         ext_volume = None
-        if filters['hostvol_type'] == 'External':
+        hostvoltype = filters.get("hostvol_type", None)
+        if hostvoltype == 'External':
             ext_volume = check_external_volume(request)
             if ext_volume:
                 mntdir = os.path.join(HOSTVOL_MOUNTDIR, ext_volume['name'])
@@ -91,7 +92,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                             "volume_id": request.name,
                             "capacity_bytes": pvsize,
                             "volume_context": {
-                                "type": filters['hostvol_type'],
+                                "type": hostvoltype,
                                 "hostvol": ext_volume['name'],
                                 "pvtype": pvtype,
                                 "gserver": ext_volume['host'],
@@ -130,7 +131,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                         "volume_id": request.name,
                         "capacity_bytes": pvsize,
                         "volume_context": {
-                            "type": filters['hostvol_type'],
+                            "type": hostvoltype,
                             "hostvol": ext_volume['name'],
                             "pvtype": pvtype,
                             "path": vol.volpath,
@@ -187,13 +188,13 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         update_free_size(hostvol, -pvsize)
 
-        send_analytics_tracker("pvc-%s" % filters['hostvol_type'], uid)
+        send_analytics_tracker("pvc-%s" % hostvoltype, uid)
         return csi_pb2.CreateVolumeResponse(
             volume={
                 "volume_id": request.name,
                 "capacity_bytes": pvsize,
                 "volume_context": {
-                    "type": filters['hostvol_type'],
+                    "type": hostvoltype,
                     "hostvol": hostvol,
                     "pvtype": pvtype,
                     "path": vol.volpath,
