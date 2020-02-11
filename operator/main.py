@@ -505,6 +505,11 @@ def main():
     """Main"""
     config.load_incluster_config()
 
+    # As per the issue https://github.com/kubernetes-client/python/issues/254
+    clnt = client.Configuration() #go and get a copy of the default config
+    clnt.verify_ssl = False #set verify_ssl to false in that config
+    client.Configuration.set_default(clnt) #make that config the default for all new clients
+
     core_v1_client = client.CoreV1Api()
     k8s_client = client.ApiClient()
 
