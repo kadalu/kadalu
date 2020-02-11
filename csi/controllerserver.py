@@ -67,6 +67,13 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             uid = uid_file.read()
 
         ext_volume = None
+        if not filters.get("hostvol_type", None):
+            errmsg = "PV request not from kadalu storageclass type"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.UNAUTHENTICATED)
+            return csi_pb2.CreateVolumeResponse()
+
         if filters['hostvol_type'] == 'External':
             ext_volume = check_external_volume(request)
             if ext_volume:
