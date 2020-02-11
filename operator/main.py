@@ -363,6 +363,9 @@ def handle_added(core_v1_client, obj):
     execute(KUBECTL_CMD, "create", "-f", filename)
     logging.info(logf("Deployed Service", volname=volname, manifest=filename))
 
+    # Storage Class
+    deploy_storage_class(voltype)
+
 
 def handle_modified():
     """
@@ -483,20 +486,21 @@ def deploy_config_map(core_v1_client):
     return uid
 
 
-def deploy_storage_class():
+def deploy_storage_class(voltype):
     """Deploys the default storage class for KaDalu if not exists"""
 
     api_instance = client.StorageV1Api()
     scs = api_instance.list_storage_class()
     create_cmd = "create"
+    sc_name = "%s%s" % (STORAGE_CLASS_NAME_PREFIX, voltype.lower())
     for item in scs.items:
-        if item.metadata.name.startswith(STORAGE_CLASS_NAME_PREFIX):
+        if item.metadata.name == sc_name:
             logging.info("Updating already deployed StorageClass")
             create_cmd = "apply"
 
     # Deploy Storage Class
     filename = os.path.join(MANIFESTS_DIR, "storageclass.yaml")
-    template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
+    template(filename, namespace=NAMESPACE, kadalu_version=VERSION, voltype=voltype)
     execute(KUBECTL_CMD, create_cmd, "-f", filename)
     logging.info(logf("Deployed StorageClass", manifest=filename))
 
@@ -513,9 +517,6 @@ def main():
 
     # CSI Pods
     deploy_csi_pods(core_v1_client)
-
-    # Storage Class
-    deploy_storage_class()
 
     # Send Analytics Tracker
     # The information from this analytics is available for
