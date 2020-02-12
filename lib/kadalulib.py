@@ -22,7 +22,7 @@ class TimeoutOSError(OSError):
     pass  # noqa # pylint: disable=unnecessary-pass
 
 
-def retry_errors(func, args, errors, timeout=120, interval=2):
+def retry_errors(func, args, errors, timeout=130, interval=2):
     """Retries given function in case of specified errors"""
     starttime = int(time.time())
 
@@ -40,6 +40,22 @@ def retry_errors(func, args, errors, timeout=120, interval=2):
 
             # Reraise the same error
             raise
+
+
+def is_gluster_mount_proc_running(volname):
+    """
+    Check if glusterfs process is running for the given Volume name
+    to confirm Glusterfs process is mounted
+    """
+    cmd = (
+        r'ps ax | grep -w "/usr/sbin/glusterfs" '
+        r'| grep -q "\-\-volfile\-id %s"' % volname
+    )
+
+    proc = subprocess.Popen(cmd, shell=True, stderr=None,
+                            stdout=None, universal_newlines=True)
+    proc.communicate()
+    return proc.returncode == 0
 
 
 def makedirs(dirpath):

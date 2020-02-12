@@ -13,7 +13,7 @@ from jinja2 import Template
 
 from kadalulib import execute, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, \
     get_volname_hash, get_volume_path, logf, makedirs, CommandException, \
-    retry_errors
+    retry_errors, is_gluster_mount_proc_running
 
 
 GLUSTERFS_CMD = "/usr/sbin/glusterfs"
@@ -473,6 +473,13 @@ def mount_volume(pvpath, target_path, pvtype, fstype=None):
     os.chmod(target_path, 0o777)
 
 
+def unmount_glusterfs(target_path):
+    """Unmount GlusterFS mount"""
+    volname = os.path.basename(target_path)
+    if is_gluster_mount_proc_running(volname):
+        execute(UNMOUNT_CMD, target_path)
+
+
 def unmount_volume(target_path):
     """Unmount a Volume"""
     if os.path.ismount(target_path):
@@ -503,11 +510,13 @@ def generate_client_volfile(volname):
 
 def mount_glusterfs(volume, target_path):
     """Mount Glusterfs Volume"""
-    if not os.path.exists(target_path):
-        makedirs(target_path)
+    if volume["type"] == "External":
+        volname = volume['g_volname']
+    else:
+        volname = volume["name"]
 
-    # Ignore if already mounted
-    if os.path.ismount(target_path):
+    # Ignore if already glusterfs process running for that volume
+    if is_gluster_mount_proc_running(volname):
         logging.debug(logf(
             "Already mounted",
             mount=target_path
@@ -515,12 +524,15 @@ def mount_glusterfs(volume, target_path):
         return
 
     # Ignore if already mounted
-    if os.path.ismount(target_path):
+    if is_gluster_mount_proc_running(volname):
         logging.debug(logf(
             "Already mounted (2nd try)",
             mount=target_path
         ))
         return
+
+    if not os.path.exists(target_path):
+        makedirs(target_path)
 
     if volume['type'] == 'External':
         # Try to mount the Host Volume, handle failure if
@@ -562,16 +574,17 @@ def mount_glusterfs(volume, target_path):
 # noqa # pylint: disable=unused-argument
 def mount_glusterfs_with_host(volname, target_path, host, options=None):
     """Mount Glusterfs Volume"""
-    if not os.path.exists(target_path):
-        makedirs(target_path)
 
     # Ignore if already mounted
-    if os.path.ismount(target_path):
+    if is_gluster_mount_proc_running(volname):
         logging.debug(logf(
             "Already mounted",
             mount=target_path
         ))
         return
+
+    if not os.path.exists(target_path):
+        makedirs(target_path)
 
     # FIXME: make this better later (an issue for external contribution)
     # opt_array = None
@@ -636,7 +649,7 @@ def check_external_volume(pv_request):
 
     time.sleep(0.37)
 
-    if not os.path.ismount(mntdir):
+    if not is_gluster_mount_proc_running(hvol['name']):
         logging.debug(logf(
             "Mount failed",
             hvol=hvol,

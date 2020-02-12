@@ -232,7 +232,7 @@ spec:
           args:
             - "--provisioner=kadalu"
             - "--csi-address=$(ADDRESS)"
-            - "--connection-timeout=15s"
+            - "--connection-timeout=3m"
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock

@@ -43,12 +43,16 @@ spec:
             preStop:
               exec:
                 command: ["/kadalu/stop-server.sh", "{{ volname }}"]
-          # livenessProbe:
-          #   exec:
-          #     command:
-          #       - /usr/bin/ps -ef | grep glusterfsd
-          #   initialDelaySeconds: 120
-          #   periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 24007
+            initialDelaySeconds: 120
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 24007
+            initialDelaySeconds: 120
+            periodSeconds: 20
           env:
 {%- if kube_hostname != "" %}
             - name: HOSTNAME
