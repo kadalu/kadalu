@@ -182,12 +182,14 @@ def storage_add_data(args):
                 }
             )
 
+    # TODO: Support for different port can be added later
     if args.tiebreaker:
         for tb_data in args.tiebreaker:
             node, path = tb_data.split(":")
             content["spec"]["tiebreaker"] = {
                 "node": node,
-                "path": path
+                "path": path,
+                "port": 24007
             }
 
     return content
