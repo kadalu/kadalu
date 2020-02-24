@@ -4,6 +4,7 @@ controller server implementation
 import os
 import logging
 import time
+import random
 
 import grpc
 
@@ -163,6 +164,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             "Got list of hosting Volumes",
             volumes=",".join(v['name'] for v in host_volumes)
         ))
+        # Randomize the entries so we can issue PV from different storage
+        random.shuffle(host_volumes)
 
         hostvol = mount_and_select_hosting_volume(host_volumes, pvsize)
         if hostvol is None:
