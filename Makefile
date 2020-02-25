@@ -80,9 +80,6 @@ prepare-release:
 	@echo "Building containers(Version: ${KADALU_VERSION}).."
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		$(MAKE) build-containers
-	@echo "Building containers(Version: latest).."
-	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=latest \
-		$(MAKE) build-containers
 endif
 
 pypi-build:
@@ -92,14 +89,24 @@ pypi-build:
 	echo ${KADALU_VERSION} > server/VERSION
 	cd server; rm -rf dist; python3 setup.py sdist;
 
+ifeq ($(TWINE_PASSWORD),)
 pypi-upload: pypi-build
 	cd cli; twine upload --username kadalu dist/*
 	cd server; twine upload --username kadalu dist/*
+else
+pypi-upload: pypi-build
+	cd cli; twine upload --username kadalu -p ${TWINE_PASSWORD} dist/*
+	cd server; twine upload --username kadalu -p ${TWINE_PASSWORD} dist/*
+
+endif
 
 ifeq ($(KADALU_VERSION), latest)
 release: prepare-release
 else
 release: prepare-release pypi-upload
+	docker tag ${DOCKER_USER}/kadalu-operator:${KADALU_VERSION} ${DOCKER_USER}/kadalu-operator:latest
+	docker tag ${DOCKER_USER}/kadalu-csi:${KADALU_VERSION} ${DOCKER_USER}/kadalu-csi:latest
+	docker tag ${DOCKER_USER}/kadalu-server:${KADALU_VERSION} ${DOCKER_USER}/kadalu-server:latest
 	docker push ${DOCKER_USER}/kadalu-operator:${KADALU_VERSION}
 	docker push ${DOCKER_USER}/kadalu-csi:${KADALU_VERSION}
 	docker push ${DOCKER_USER}/kadalu-server:${KADALU_VERSION}
