@@ -8,6 +8,8 @@ RUN rm -rf /var/cache/yum
 RUN wget -P /etc/yum.repos.d \
     https://download.gluster.org/pub/gluster/glusterfs/LATEST/Fedora/glusterfs-fedora.repo
 
+RUN sed -i -e 's/fedora-$releasever/f$releasever/g' /etc/yum.repos.d/glusterfs-fedora.repo
+
 # Install Python GRPC library and copy all CSI related files
 RUN python3 -m pip install jinja2 xxhash requests datetime \
      prometheus_client
