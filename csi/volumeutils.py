@@ -165,6 +165,14 @@ def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
                     data = json.load(stat_file)
 
             reserved_size = data["free_size"] * RESERVED_SIZE_PERCENTAGE/100
+            logging.debug(logf(
+                "stat file content",
+                hostvol=hvol,
+                data=data,
+                required_size=required_size,
+                reserved_size=reserved_size
+            ))
+
             if required_size < (data["free_size"] - reserved_size):
                 return hvol
 
@@ -305,61 +313,68 @@ def create_subdir_volume(hostvol_mnt, volname, size):
 def delete_volume(volname):
     """Delete virtual block, sub directory volume, or External"""
     vol = search_volume(volname)
-    if vol is not None:
-        logging.debug(logf(
-            "Volume found for delete",
-            volname=vol.volname,
+    if vol is None:
+        logging.warning(logf(
+            "Volume not found for delete",
+            volname=volname
+        ))
+        return False
+
+    logging.debug(logf(
+        "Volume found for delete",
+        volname=vol.volname,
+        voltype=vol.voltype,
+        volhash=vol.volhash,
+        hostvol=vol.hostvol
+    ))
+    volpath = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath)
+    try:
+        if vol.voltype == PV_TYPE_SUBVOL:
+            os.removedirs(volpath)
+        else:
+            os.remove(volpath)
+    except OSError as err:
+        logging.info(logf(
+            "Error while deleting volume",
+            volpath=volpath,
             voltype=vol.voltype,
-            volhash=vol.volhash,
+            error=err,
+        ))
+
+    logging.debug(logf(
+        "Volume deleted",
+        volpath=volpath,
+        voltype=vol.voltype
+    ))
+
+    # Delete Metadata file
+    info_file_path = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol,
+                                  "info", vol.volpath+".json")
+
+    try:
+        with open(info_file_path) as info_file:
+            data = json.load(info_file)
+            # We assume there would be a create before delete, but while
+            # developing thats not true. There can be a delete request for
+            # previously created pvc, which would be assigned to you once
+            # you come up. We can't fail then.
+            update_free_size(vol.hostvol, data["size"])
+
+        os.remove(info_file_path)
+        logging.debug(logf(
+            "Removed volume metadata file",
+            path="info/" + vol.volpath + ".json",
             hostvol=vol.hostvol
         ))
-        volpath = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath)
-        try:
-            if vol.voltype == PV_TYPE_SUBVOL:
-                os.removedirs(volpath)
-            else:
-                os.remove(volpath)
-        except OSError as err:
-            logging.info(logf(
-                "Error while deleting volume",
-                volpath=volpath,
-                voltype=vol.voltype,
-                error=err,
-            ))
-
-        logging.debug(logf(
-            "Volume deleted",
-            volpath=volpath,
-            voltype=vol.voltype
+    except OSError as err:
+        logging.info(logf(
+            "Error while removing the file",
+            path="info/" + vol.volpath + ".json",
+            hostvol=vol.hostvol,
+            error=err,
         ))
 
-        # Delete Metadata file
-        info_file_path = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol,
-                                      "info", vol.volpath+".json")
-
-        try:
-            with open(info_file_path) as info_file:
-                data = json.load(info_file)
-                # We assume there would be a create before delete, but while
-                # developing thats not true. There can be a delete request for
-                # previously created pvc, which would be assigned to you once
-                # you come up. We can't fail then.
-                update_free_size(vol.hostvol, data["size"])
-
-            os.remove(info_file_path)
-            logging.debug(logf(
-                "Removed volume metadata file",
-                path="info/" + vol.volpath + ".json",
-                hostvol=vol.hostvol
-            ))
-        except OSError as err:
-            logging.info(logf(
-                "Error while removing the file",
-                path="info/" + vol.volpath + ".json",
-                hostvol=vol.hostvol,
-                error=err,
-            ))
-
+    return True
 
 
 def search_volume(volname):
