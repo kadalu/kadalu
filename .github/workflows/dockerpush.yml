@@ -15,11 +15,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Get the version
-        id: env
-        run: echo ::set-output name=VERSION::${github.ref/refs\/tags\/v/}
       - name: Log into registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
       - name: Run tests
         run: |
-          KADALU_VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') make release
+          KADALU_VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') TWINE_PASSWORD=${{ secrets.TWINE_PASSWORD }} make release
