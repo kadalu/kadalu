@@ -1,0 +1,25 @@
+name: Docker
+
+on:
+  push:
+    # Publish `1.2.3` tags as releases.
+    tags:
+      - "*"
+
+jobs:
+  # Run tests.
+  # See also https://docs.docker.com/docker-hub/builds/automated-testing/
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Get the version
+        id: env
+        run: echo ::set-output name=VERSION::${github.ref/refs\/tags\/v/}
+      - name: Log into registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login -u ${{ github.actor }} --password-stdin
+      - name: Run tests
+        run: |
+          KADALU_VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') make release
