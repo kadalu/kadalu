@@ -1,6 +1,6 @@
 # KaDalu
 
-[![Build Status](https://travis-ci.org/kadalu/kadalu.svg?branch=master)](https://travis-ci.org/kadalu/kadalu)
+[![Build Status](https://travis-ci.com/kadalu/kadalu.svg?branch=master)](https://travis-ci.com/kadalu/kadalu)
 [![Operator Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg?label=DockerPulls%20Operator)](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg)
 [![Server Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg?label=DockerPulls%20Server)](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg)
 
