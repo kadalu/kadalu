@@ -100,7 +100,7 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
         try:
             execute("mkfs.xfs", brick_device)
         except CommandException as err:
-            if b"appears to contain an existing filesystem" not in err.err:
+            if "appears to contain an existing filesystem" not in err.err:
                 logging.error(logf(
                     "Failed to create file system",
                     fstype=brickfs,
@@ -116,7 +116,7 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
         try:
             execute("mount", "-oprjquota", brick_device, mountdir)
         except CommandException as err:
-            if b'already mounted' not in err.err:
+            if 'already mounted' not in err.err:
                 logging.error(logf(
                     "Failed to mount export brick",
                     fstype=brickfs,

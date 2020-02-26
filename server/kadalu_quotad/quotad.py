@@ -54,7 +54,7 @@ def get_quota_report(rootdir):
             "-c",
             'report -p -b',
             rootdir)
-        return out.split(b"\n")
+        return out.split("\n")
     except CommandException as err:
         logging.error(logf("Failed to get Quota Report",
                            rootdir=rootdir,
@@ -69,7 +69,7 @@ def handle_quota(quota_report, brick_path, volname, pvtype):
     volhash = get_volname_hash(volname)
     volpath = get_volume_path(pvtype, volhash, volname)
     subdir_path = os.path.join(brick_path, volpath)
-    projid = b"#%d" % os.lstat(subdir_path).st_ino
+    projid = "#%d" % os.lstat(subdir_path).st_ino
     limit_hard = 0
     for line in quota_report:
         if line.startswith(projid):
