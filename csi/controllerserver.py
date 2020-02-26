@@ -13,8 +13,8 @@ import csi_pb2_grpc
 from volumeutils import mount_and_select_hosting_volume, \
     create_virtblock_volume, create_subdir_volume, delete_volume, \
     get_pv_hosting_volumes, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, \
-    HOSTVOL_MOUNTDIR, check_external_volume, unmount_volume, \
-    update_free_size
+    HOSTVOL_MOUNTDIR, check_external_volume, \
+    update_free_size, unmount_glusterfs
 from kadalulib import logf, send_analytics_tracker
 
 VOLINFO_DIR = "/var/lib/gluster"
@@ -80,7 +80,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
                 if not filters.get('kadalu-format', None):
                     # No need to keep the mount on controller
-                    unmount_volume(mntdir)
+                    unmount_glusterfs(mntdir)
                     logging.info(logf(
                         "Volume (External) created",
                         name=request.name,
