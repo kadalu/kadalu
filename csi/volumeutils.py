@@ -7,11 +7,13 @@ import json
 import time
 import logging
 import threading
+from errno import ENOTCONN
 
 from jinja2 import Template
 
 from kadalulib import execute, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, \
-    get_volname_hash, get_volume_path, logf, makedirs, CommandException
+    get_volname_hash, get_volume_path, logf, makedirs, CommandException, \
+    retry_errors
 
 
 GLUSTERFS_CMD = "/usr/sbin/glusterfs"
@@ -120,6 +122,10 @@ def get_pv_hosting_volumes(filters=None):
 
 def update_free_size(hostvol, sizechange):
     """Update the free size in respective hosting Volume's stat file"""
+
+    # Check for mount availability before updating the free size
+    retry_errors(os.statvfs, [os.path.join(HOSTVOL_MOUNTDIR, hostvol)], [ENOTCONN])
+
     stat_file_path = os.path.join(HOSTVOL_MOUNTDIR, hostvol, ".stat")
 
     with statfile_lock:
@@ -152,8 +158,10 @@ def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
         stat_file_path = os.path.join(mntdir, ".stat")
         data = {}
         with statfile_lock:
+            # Stat done before `os.path.exists` to prevent ignoring
+            # file not exists even in case of ENOTCONN
+            mntdir_stat = retry_errors(os.statvfs, [mntdir], [ENOTCONN])
             if not os.path.exists(stat_file_path):
-                mntdir_stat = os.statvfs(mntdir)
                 data = {
                     "size": mntdir_stat.f_bavail * mntdir_stat.f_bsize,
                     "free_size": mntdir_stat.f_bavail * mntdir_stat.f_bsize
@@ -188,6 +196,9 @@ def create_virtblock_volume(hostvol_mnt, volname, size):
         "Volume hash",
         volhash=volhash
     ))
+
+    # Check for mount availability before creating virtblock volume
+    retry_errors(os.statvfs, [hostvol_mnt], [ENOTCONN])
 
     # Create a file with required size
     makedirs(os.path.dirname(volpath_full))
@@ -229,7 +240,7 @@ def save_pv_metadata(hostvol_mnt, pvpath, pvsize):
     info_file_path = os.path.join(hostvol_mnt, "info", pvpath)
     info_file_dir = os.path.dirname(info_file_path)
 
-    makedirs(info_file_dir)
+    retry_errors(makedirs, [info_file_dir], [ENOTCONN])
     logging.debug(logf(
         "Created metadata directory",
         metadata_dir=info_file_dir
@@ -254,6 +265,9 @@ def create_subdir_volume(hostvol_mnt, volname, size):
         "Volume hash",
         volhash=volhash
     ))
+
+    # Check for mount availability before creating subdir volume
+    retry_errors(os.statvfs, [hostvol_mnt], [ENOTCONN])
 
     # Create a subdir
     makedirs(os.path.join(hostvol_mnt, volpath))
@@ -280,7 +294,7 @@ def create_subdir_volume(hostvol_mnt, volname, size):
     count = 0
     while True:
         count += 1
-        pvstat = os.statvfs(os.path.join(hostvol_mnt, volpath))
+        pvstat = retry_errors(os.statvfs, [os.path.join(hostvol_mnt, volpath)], [ENOTCONN])
         volsize = pvstat.f_blocks * pvstat.f_bsize
         if pvsize_min < volsize < pvsize_max:
             logging.debug(logf(
@@ -327,6 +341,10 @@ def delete_volume(volname):
         volhash=vol.volhash,
         hostvol=vol.hostvol
     ))
+    # Check for mount availability before deleting the volume
+    retry_errors(os.statvfs, [os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol)],
+                 [ENOTCONN])
+
     volpath = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath)
     try:
         if vol.voltype == PV_TYPE_SUBVOL:
@@ -388,6 +406,9 @@ def search_volume(volname):
         hvol = volume['name']
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
         mount_glusterfs(volume, mntdir)
+        # Check for mount availability before checking the info file
+        retry_errors(os.statvfs, [mntdir], [ENOTCONN])
+
         for info_path in [subdir_path, virtblock_path]:
             info_path_full = os.path.join(mntdir, "info", info_path + ".json")
             voltype = PV_TYPE_SUBVOL if "/%s/" % PV_TYPE_SUBVOL \
@@ -429,6 +450,10 @@ def volume_list(voltype=None):
         hvol = volume['name']
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
         mount_glusterfs(volume, mntdir)
+
+        # Check for mount availability before listing the Volumes
+        retry_errors(os.statvfs, [mntdir], [ENOTCONN])
+
         if voltype is None or voltype == PV_TYPE_SUBVOL:
             get_subdir_virtblock_vols(mntdir, volumes, PV_TYPE_SUBVOL)
         if voltype is None or voltype == PV_TYPE_VIRTBLOCK:
@@ -444,6 +469,8 @@ def mount_volume(pvpath, target_path, pvtype, fstype=None):
         execute(MOUNT_CMD, "-t", fstype, pvpath, target_path)
     else:
         execute(MOUNT_CMD, "--bind", pvpath, target_path)
+
+    os.chmod(target_path, 0o777)
 
 
 def unmount_volume(target_path):

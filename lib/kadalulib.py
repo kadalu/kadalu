@@ -5,6 +5,7 @@ import logging
 import sys
 import os
 from datetime import datetime
+import time
 
 import requests
 import xxhash
@@ -14,6 +15,32 @@ PV_TYPE_VIRTBLOCK = "virtblock"
 PV_TYPE_SUBVOL = "subvol"
 
 KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
+
+
+class TimeoutOSError(OSError):
+    """Timeout after retries"""
+    pass  # noqa # pylint: disable=unnecessary-pass
+
+
+def retry_errors(func, args, errors, timeout=120, interval=2):
+    """Retries given function in case of specified errors"""
+    starttime = int(time.time())
+
+    while True:
+        try:
+            return func(*args)
+        except (OSError, IOError) as err:
+            currtime = int(time.time())
+            if (currtime - starttime) >= timeout:
+                raise TimeoutOSError(err.errno, err.strerror) from None
+
+            if err.errno in errors:
+                time.sleep(interval)
+                continue
+
+            # Reraise the same error
+            raise
+
 
 def makedirs(dirpath):
     """exist_ok=True parameter will raise exception even if directory
@@ -55,7 +82,8 @@ def execute(*cmd):
     Raises CommandException on error
     """
     proc = subprocess.Popen(cmd, stderr=subprocess.PIPE,
-                            stdout=subprocess.PIPE)
+                            stdout=subprocess.PIPE,
+                            universal_newlines=True)
     out, err = proc.communicate()
     if proc.returncode != 0:
         raise CommandException(proc.returncode, out.strip(), err.strip())
