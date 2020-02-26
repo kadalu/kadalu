@@ -3,4 +3,6 @@ xxhash
 grpcio
 pyxattr
 kubernetes
-
+jinja2
+setuptools
+twine
