@@ -7,6 +7,7 @@ import os
 import uuid
 import json
 import logging
+import re
 
 from jinja2 import Template
 from kubernetes import client, config, watch
@@ -71,6 +72,7 @@ def validate_ext_details(obj):
 
     valid = 0
     if len(clusterdata) > 1:
+        logging.error(logf("Multiple External Cluster details given."))
         return False
 
     for cluster in clusterdata:
@@ -81,9 +83,10 @@ def validate_ext_details(obj):
 
     if valid != 2:
         logging.error(logf("No 'host' and 'volname' details provided."))
-
         return False
 
+    logging.debug(logf("External Storage %s successfully validated" % \
+                       obj["metadata"].get("name", "<unknown>")))
     return True
 
 
@@ -131,6 +134,8 @@ def validate_volume_request(obj):
                                "config is not valid"))
             return False
 
+    logging.debug(logf("Storage %s successfully validated" % \
+                       obj["metadata"].get("name", "<unknown>")))
     return True
 
 
@@ -158,7 +163,12 @@ def get_brick_hostname(volname, node, idx, suffix=True):
     brick_hostname will be "server-spool1-0-minikube-0.spool1" and
     server pod name will be "server-spool1-0-minikube"
     """
-    hostname = "server-%s-%d-%s" % (volname, idx, node.replace(".", "-"))
+    tmp_vol = volname.replace("-", "_")
+    tmp_node = node.replace("-", "_")
+    dns_friendly_volname = re.sub(r'\W+', '', tmp_vol).replace("_", "-")
+    dns_friendly_nodename = re.sub(r'\W+', '', tmp_node).replace("_", "-")
+    hostname = "server-%s-%s-%d" % (dns_friendly_volname,
+                                    dns_friendly_nodename, idx)
     if suffix:
         return "%s-0.%s" % (hostname, volname)
 
@@ -289,7 +299,7 @@ def handle_external_storage_addition(core_v1_client, obj):
         "kadalu-format": True,
         "gluster_host": details["gluster_host"],
         "gluster_volname": details["gluster_volname"],
-        "gluster_options": details.get("gluster_options", ""),
+        "gluster_options": details.get("gluster_options", "ignore-me"),
     }
 
     # Add new entry in the existing config map
@@ -320,7 +330,6 @@ def handle_added(core_v1_client, obj):
             "validation of volume request failed",
             yaml=obj
         ))
-
         return
 
     # Ignore if already deployed
