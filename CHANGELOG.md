@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2020-03-01
+### Added
+- Replica 2 support added using the Thin arbiter feature of GlusterFS
+- Fixed issue showing the wrong status of server Pod as "Running"
+  instead of the actual error.
+- Fixed Gluster remount failure, when connectivity with storage pods
+  goes down, and `df` command doesn't show the Gluster mount.
+- CSI provisioner is enhanced to choose available storages randomly to
+  avoid retrying with the same storage pool if that is down. This
+  method also helps to utilize all the available storage pool for
+  PVs.
+- Fixed permissions issue when app pods try to use mounted PVs with a
+  non-root user.
+- Kadalu base container image upgraded to Fedora 31 and Gluster
+  version in server and CSI container images to 7.3.
+- Fixed issue in kubectl kadalu plugin while parsing arguments related
+  to external storage and Tiebreaker node.
+
 ## [0.5.0] - 2020-01-30
 ### Added
 - Documentation updated for the new features introduced in
@@ -70,9 +88,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.5.0...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.6.0...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
 [0.4.0]: https://github.com/kadalu/kadalu/compare/0.3.0...0.4.0
 [0.5.0]: https://github.com/kadalu/kadalu/compare/0.4.0...0.5.0
+[0.6.0]: https://github.com/kadalu/kadalu/compare/0.5.0...0.6.0

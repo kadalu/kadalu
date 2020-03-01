@@ -12,7 +12,7 @@ def install_args(subparsers):
     parser_install.add_argument(
         "--version",
         help="Kadalu Version to Install [default: latest]",
-        choices=["0.4.0", "latest"],
+        choices=["0.6.0", "latest"],
         default="latest"
     )
     parser_install.add_argument(
