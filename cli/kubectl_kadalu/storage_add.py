@@ -47,7 +47,7 @@ def storage_add_args(subparsers):
     parser_add_storage.add_argument(
         "--external",
         help="Storage from external gluster, Example: --external gluster-node:/gluster-volname",
-        default=""
+        default=None
     )
     parser_add_storage.add_argument(
         "--tiebreaker",
@@ -59,16 +59,17 @@ def storage_add_args(subparsers):
 
 def storage_add_validation(args):
     """ validate arguments """
-    for vol in args.external:
+    if args.external is not None:
         if args.type and args.type != "External":
             print("'--external' option is used only with '--type External'",
                   file=sys.stderr)
             sys.exit(1)
 
-        if ":" not in vol:
+        if ":" not in args.external:
             print("Invalid external storage details. Please specify "
                   "details in the format <node>:/<volname>", file=sys.stderr)
             sys.exit(1)
+
         # Set type to External as '--external' option is provided
         args.type = "External"
 
@@ -87,7 +88,9 @@ def storage_add_validation(args):
     if not args.type:
         args.type = "Replica1"
 
-    num_storages = len(args.device) or len(args.path) or len(args.pvc) or len(args.external)
+    num_storages = len(args.device) or len(args.path) or len(args.pvc) or \
+        (1 if args.external is not None else 0)
+
     if num_storages == 0:
         print("Please specify atleast one storage", file=sys.stderr)
         sys.exit(1)
@@ -137,14 +140,13 @@ def storage_add_data(args):
 
     # External details are specified, no 'storage' section required
     if args.external:
-        for voldata in args.external:
-            node, vol = voldata.split(":")
-            content["spec"]["storage"].append(
-                {
-                    "gluster_host": node,
-                    "gluster_volname": vol.strip("/")
-                }
-            )
+        node, vol = args.external.split(":")
+        content["spec"]["storage"].append(
+            {
+                "gluster_host": node,
+                "gluster_volname": vol.strip("/")
+            }
+        )
         return content
 
     # Everything below can be provided for a 'Replica3' setup.
@@ -183,14 +185,13 @@ def storage_add_data(args):
             )
 
     # TODO: Support for different port can be added later
-    if args.tiebreaker:
-        for tb_data in args.tiebreaker:
-            node, path = tb_data.split(":")
-            content["spec"]["tiebreaker"] = {
-                "node": node,
-                "path": path,
-                "port": 24007
-            }
+    if args.type == "Replica2":
+        node, path = args.tiebreaker.split(":")
+        content["spec"]["tiebreaker"] = {
+            "node": node,
+            "path": path,
+            "port": 24007
+        }
 
     return content
 
