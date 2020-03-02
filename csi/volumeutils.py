@@ -484,7 +484,7 @@ def mount_volume(pvpath, target_path, pvtype, fstype=None):
 def unmount_glusterfs(target_path):
     """Unmount GlusterFS mount"""
     volname = os.path.basename(target_path)
-    if is_gluster_mount_proc_running(volname):
+    if is_gluster_mount_proc_running(volname, target_path):
         execute(UNMOUNT_CMD, target_path)
 
 
@@ -524,7 +524,7 @@ def mount_glusterfs(volume, target_path):
         volname = volume["name"]
 
     # Ignore if already glusterfs process running for that volume
-    if is_gluster_mount_proc_running(volname):
+    if is_gluster_mount_proc_running(volname, target_path):
         logging.debug(logf(
             "Already mounted",
             mount=target_path
@@ -532,7 +532,7 @@ def mount_glusterfs(volume, target_path):
         return
 
     # Ignore if already mounted
-    if is_gluster_mount_proc_running(volname):
+    if is_gluster_mount_proc_running(volname, target_path):
         logging.debug(logf(
             "Already mounted (2nd try)",
             mount=target_path
@@ -584,7 +584,7 @@ def mount_glusterfs_with_host(volname, target_path, host, options=None):
     """Mount Glusterfs Volume"""
 
     # Ignore if already mounted
-    if is_gluster_mount_proc_running(volname):
+    if is_gluster_mount_proc_running(volname, target_path):
         logging.debug(logf(
             "Already mounted",
             mount=target_path
@@ -657,7 +657,7 @@ def check_external_volume(pv_request):
 
     time.sleep(0.37)
 
-    if not is_gluster_mount_proc_running(hvol['name']):
+    if not is_gluster_mount_proc_running(hvol['name'], mntdir):
         logging.debug(logf(
             "Mount failed",
             hvol=hvol,
