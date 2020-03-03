@@ -3,6 +3,42 @@
 #Based on ideas from https://github.com/rook/rook/blob/master/tests/scripts/minikube.sh
 fail=0
 
+function wait_till_pods_start() {
+    # give it some time
+    cnt=0
+    while true; do
+	cnt=$((cnt + 1))
+	sleep 2
+	ret=$(kubectl get pods -nkadalu | grep 'Running' | wc -l)
+	if [[ $ret -ge 9 ]]; then
+	    echo "Successful after $cnt seconds"
+	    break
+	fi
+	if [[ $cnt -eq 100 ]]; then
+	    kubectl get pods
+	    echo "giving up after 200 seconds"
+	    fail=1
+	    break
+	fi
+	if [[ $((cnt % 15)) -eq 0 ]]; then
+	    echo "$cnt: Waiting for pods to come up..."
+	fi
+    done
+
+    kubectl get sc
+    kubectl get pods -nkadalu
+    # Return failure if fail variable is set to 1
+    if [ $fail -eq 1 ]; then
+	echo "Marking the test as 'FAIL'"
+	for p in $(kubectl -n kadalu get pods -o name); do
+	    echo "====================== Start $p ======================"
+	    kubectl -nkadalu --all-containers=true --tail 300 logs $p
+	    kubectl -nkadalu describe $p
+	    echo "======================= End $p ======================="
+	done
+	exit 1
+    fi
+}
 function get_pvc_and_check() {
     yaml_file=$1
     log_text=$2
@@ -155,6 +191,8 @@ up)
 	sudo mkdir -p /mnt/${DISK}/dir3.2
 	sudo mkdir -p /mnt/${DISK}/pvc
     fi
+
+    # Dump Cluster Info
     kubectl cluster-info
     ;;
 down)
@@ -178,47 +216,19 @@ kadalu_operator)
     sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator.yaml
     kubectl create -f manifests/kadalu-operator.yaml
 
+    sleep 1
     # Start storage
-    cp examples/sample-storage-file-device.yaml /tmp/kadalu-storage.yaml
+    cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
     sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
+
+    # Prepare PVC also as a storage
     sed -i -e "s/DISK/${DISK}/g" tests/get-minikube-pvc.yaml
     kubectl create -f tests/get-minikube-pvc.yaml
+
     sleep 1
     kubectl create -f /tmp/kadalu-storage.yaml
 
-    # give it some time
-    cnt=0
-    while true; do
-	cnt=$((cnt + 1))
-	sleep 1
-	ret=$(kubectl get pods -nkadalu | grep 'Running' | wc -l)
-	if [[ $ret -ge 9 ]]; then
-	    echo "Successful after $cnt seconds"
-	    break
-	fi
-	if [[ $cnt -eq 100 ]]; then
-	    kubectl get pods
-	    echo "giving up after 100 seconds"
-	    fail=1
-	    break
-	fi
-	if [[ $((cnt % 10)) -eq 0 ]]; then
-	    echo "$cnt: Waiting for pods to come up..."
-	fi
-    done
-    kubectl get pods -nkadalu
-    # Return failure if fail variable is set to 1
-    if [ $fail -eq 1 ]; then
-	echo "Marking the test as 'FAIL'"
-	for p in $(kubectl -n kadalu get pods -o name); do
-	    echo "====================== Start $p ======================"
-	    kubectl -nkadalu --all-containers=true --tail 500 logs $p
-	    kubectl -nkadalu describe $p
-	    echo "======================= End $p ======================="
-	done
-	exit 1
-    fi
-
+    wait_till_pods_start
     ;;
 
 test_kadalu)
@@ -228,9 +238,9 @@ test_kadalu)
 
     get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 191
 
-    get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 97
+    #get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 131
 
-    get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 1 97
+    get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 1 131
 
     get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 191
 
@@ -252,6 +262,12 @@ test_kadalu)
     fi
 
     ;;
+
+cli_tests)
+    bash tests/kubectl_kadalu_tests.sh "$DISK"
+    wait_till_pods_start
+    ;;
+
 clean)
     minikube delete
     ;;

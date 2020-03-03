@@ -88,8 +88,8 @@ def storage_add_validation(args):
     if not args.type:
         args.type = "Replica1"
 
-    num_storages = len(args.device) or len(args.path) or len(args.pvc) or \
-        (1 if args.external is not None else 0)
+    num_storages = (len(args.device) + len(args.path) + len(args.pvc)) or \
+                   (1 if args.external is not None else 0)
 
     if num_storages == 0:
         print("Please specify atleast one storage", file=sys.stderr)
@@ -101,9 +101,7 @@ def storage_add_validation(args):
     ):
         storage_mismatch = True
 
-    if (args.type == "External" and num_storages != 1) or (
-            args.type == "Replica2" and num_storages != 2
-    ):
+    if args.type == "Replica2" and num_storages != 2:
         storage_mismatch = True
 
     if storage_mismatch:
@@ -141,12 +139,12 @@ def storage_add_data(args):
     # External details are specified, no 'storage' section required
     if args.external:
         node, vol = args.external.split(":")
-        content["spec"]["storage"].append(
+        content["spec"]["details"] = [
             {
                 "gluster_host": node,
                 "gluster_volname": vol.strip("/")
             }
-        )
+        ]
         return content
 
     # Everything below can be provided for a 'Replica3' setup.

@@ -21,24 +21,31 @@ def install_args(subparsers):
         choices=["openshift", "kubernetes"],
         default="kubernetes"
     )
+    parser_install.add_argument(
+        "--local-yaml",
+        help="local operator yaml file path"
+    )
 
 
 def subcmd_install(args):
     """ perform install subcommand """
-    file_url = "https://raw.githubusercontent.com/kadalu/kadalu/master/manifests"
-    version = ""
-    insttype = ""
+    operator_file = args.local_yaml
+    if not operator_file:
+        file_url = "https://raw.githubusercontent.com/kadalu/kadalu/master/manifests"
+        version = ""
+        insttype = ""
 
-    if args.version and args.version != "latest":
-        version = "-%s" % args.version
+        if args.version and args.version != "latest":
+            version = "-%s" % args.version
 
-    if args.type and args.type == "openshift":
-        insttype = "-openshift"
+            if args.type and args.type == "openshift":
+                insttype = "-openshift"
 
-    operator_file = "%s/kadalu-operator%s%s.yaml" % (file_url, insttype, version)
+        operator_file = "%s/kadalu-operator%s%s.yaml" % (file_url, insttype, version)
 
     try:
         cmd = [utils.KUBECTL_CMD, "apply", "-f", operator_file]
+        print("Executing '%s'" % cmd)
         resp = utils.execute(cmd)
         print("Kadalu operator create request sent successfully")
         print(resp.stdout)
