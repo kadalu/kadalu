@@ -204,4 +204,4 @@ spec:
             - name: DOCKER_USER
               value: "kadalu"
             - name: KADALU_VERSION
-              value: "latest"
+              value: "0.6.0"
