@@ -74,8 +74,6 @@ prepare-release:
 		manifests/kadalu-operator-${KADALU_VERSION}.yaml
 	@cp manifests/kadalu-operator-openshift.yaml \
 		manifests/kadalu-operator-openshift-${KADALU_VERSION}.yaml
-	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=latest \
-		$(MAKE) gen-manifest
 	@echo "Generated manifest file. Version: ${KADALU_VERSION}"
 	@echo "Building containers(Version: ${KADALU_VERSION}).."
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
