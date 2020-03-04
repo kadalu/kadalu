@@ -5,11 +5,10 @@
 import os
 import tempfile
 import sys
-import yaml
 import re
+import yaml
 
 from kubectl_kadalu import utils
-
 
 # noqa # pylint: disable=too-many-branches
 def storage_add_args(subparsers):
@@ -96,13 +95,10 @@ def storage_add_validation(args):
         print("Please specify at least one storage", file=sys.stderr)
         sys.exit(1)
 
-    storage_mismatch = False
-    if (args.type == "Replica1" and num_storages != 1) or
-       (args.type == "Replica2" and num_storages != 2) or
-       (args.type == "Replica3" and num_storages != 3):
-        storage_mismatch = True
-
-    if storage_mismatch:
+    # pylint: disable=too-many-boolean-expressions
+    if ((args.type == "Replica1" and num_storages != 1) or
+            (args.type == "Replica2" and num_storages != 2) or
+            (args.type == "Replica3" and num_storages != 3)):
         print("Number of storages not matching for type=%s" % args.type,
               file=sys.stderr)
         sys.exit(1)
@@ -121,14 +117,8 @@ def storage_add_validation(args):
             sys.exit(1)
         validate_node(path)
 
-    for node in args.node:
-        if ":" not in path:
-            print("Invalid storage path details. Please specify path "
-                  "details in the format <node>:<path>", file=sys.stderr)
-            sys.exit(1)
-        validate_node(node)
-
 def validate_node(item):
+    """ Check of provided node value is a valid kubectl node """
     try:
         #cmd = ["kubectl", "get", "nodes", "--no-headers", "-o", "custom-columns=':metadata.name'"]
         # above returns <none>
@@ -137,14 +127,14 @@ def validate_node(item):
         print("The following nodes are available")
         print(resp.stdout)
         print()
-        expected_node_name=item.split(":", 1)[0]
+        expected_node_name = item.split(":", 1)[0]
         valid_node_name = False
         for node in iter(resp.stdout.splitlines()):
             regexp = "^" + expected_node_name
-            if (re.search(regexp,node)):
-               valid_node_name = True
-               print(expected_node_name + " is a valid node")
-               return
+            if re.search(regexp, node):
+                valid_node_name = True
+                print(expected_node_name + " is a valid node")
+                return
 
         if not valid_node_name:
             print("Node name does not appear to be a valid one:")
