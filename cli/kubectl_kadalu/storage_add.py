@@ -132,6 +132,11 @@ def get_kube_nodes():
         print(resp.stdout)
         nodes = []
         for line in resp.stdout.split("\n"):
+            # The last line is empty thus ignore as otherwise we get an
+            # IndexError: list index out of range
+            line = line.strip()
+            if not line:
+                continue
             nodename = line.split()[0]
             if nodename != "NAME":
                 nodes.append(nodename)
