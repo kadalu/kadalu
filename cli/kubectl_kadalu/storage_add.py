@@ -5,7 +5,6 @@
 import os
 import tempfile
 import sys
-import re
 import yaml
 
 from kubectl_kadalu import utils
@@ -103,22 +102,27 @@ def storage_add_validation(args):
               file=sys.stderr)
         sys.exit(1)
 
+    kube_nodes = get_kube_nodes()
+
     for dev in args.device:
         if ":" not in dev:
             print("Invalid storage device details. Please specify device "
                   "details in the format <node>:<device>", file=sys.stderr)
             sys.exit(1)
-        validate_node(dev)
+        if dev.split(":")[0] not in kube_nodes:
+            print("Node name does not appear to be valid: " + dev)
+
 
     for path in args.path:
         if ":" not in path:
             print("Invalid storage path details. Please specify path "
                   "details in the format <node>:<path>", file=sys.stderr)
             sys.exit(1)
-        validate_node(path)
+        if path.split(":")[0] not in kube_nodes:
+            print("Node name does not appear to be valid: " + path)
 
-def validate_node(item):
-    """ Check of provided node value is a valid kubectl node """
+def get_kube_nodes():
+    """ gets all nodes  """
     try:
         #cmd = ["kubectl", "get", "nodes", "--no-headers", "-o", "custom-columns=':metadata.name'"]
         # above returns <none>
@@ -126,20 +130,12 @@ def validate_node(item):
         resp = utils.execute(cmd)
         print("The following nodes are available")
         print(resp.stdout)
-        print()
-        expected_node_name = item.split(":", 1)[0]
-        valid_node_name = False
-        for node in iter(resp.stdout.splitlines()):
-            regexp = "^" + expected_node_name
-            if re.search(regexp, node):
-                valid_node_name = True
-                print(expected_node_name + " is a valid node")
-                return
-
-        if not valid_node_name:
-            print("Node name does not appear to be a valid one:")
-            print(item)
-            sys.exit(1)
+        nodes = []
+        for line in resp.stdout.split("\n"):
+            nodename = line.split()[0]
+            if nodename != "NAME":
+                nodes.append(nodename)
+        return nodes
     except utils.CommandError as err:
         print("Error while running the following command", file=sys.stderr)
         print("$ " + " ".join(cmd), file=sys.stderr)
