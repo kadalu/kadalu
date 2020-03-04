@@ -9,7 +9,6 @@ import yaml
 
 from kubectl_kadalu import utils
 
-
 # noqa # pylint: disable=too-many-branches
 def storage_add_args(subparsers):
     """ add arguments, and their options """
@@ -92,35 +91,62 @@ def storage_add_validation(args):
                    (1 if args.external is not None else 0)
 
     if num_storages == 0:
-        print("Please specify atleast one storage", file=sys.stderr)
+        print("Please specify at least one storage", file=sys.stderr)
         sys.exit(1)
 
-    storage_mismatch = False
-    if (args.type == "Replica1" and num_storages != 1) or (
-            args.type == "Replica3" and num_storages != 3
-    ):
-        storage_mismatch = True
-
-    if args.type == "Replica2" and num_storages != 2:
-        storage_mismatch = True
-
-    if storage_mismatch:
+    # pylint: disable=too-many-boolean-expressions
+    if ((args.type == "Replica1" and num_storages != 1) or
+            (args.type == "Replica2" and num_storages != 2) or
+            (args.type == "Replica3" and num_storages != 3)):
         print("Number of storages not matching for type=%s" % args.type,
               file=sys.stderr)
         sys.exit(1)
+
+    kube_nodes = get_kube_nodes()
 
     for dev in args.device:
         if ":" not in dev:
             print("Invalid storage device details. Please specify device "
                   "details in the format <node>:<device>", file=sys.stderr)
             sys.exit(1)
+        if dev.split(":")[0] not in kube_nodes:
+            print("Node name does not appear to be valid: " + dev)
+
 
     for path in args.path:
         if ":" not in path:
             print("Invalid storage path details. Please specify path "
                   "details in the format <node>:<path>", file=sys.stderr)
             sys.exit(1)
+        if path.split(":")[0] not in kube_nodes:
+            print("Node name does not appear to be valid: " + path)
 
+def get_kube_nodes():
+    """ gets all nodes  """
+    try:
+        #cmd = ["kubectl", "get", "nodes", "--no-headers", "-o", "custom-columns=':metadata.name'"]
+        # above returns <none>
+        cmd = ["kubectl", "get", "nodes"]
+        resp = utils.execute(cmd)
+        print("The following nodes are available")
+        print(resp.stdout)
+        nodes = []
+        for line in resp.stdout.split("\n"):
+            # The last line is empty thus ignore as otherwise we get an
+            # IndexError: list index out of range
+            line = line.strip()
+            if not line:
+                continue
+            nodename = line.split()[0]
+            if nodename != "NAME":
+                nodes.append(nodename)
+        return nodes
+    except utils.CommandError as err:
+        print("Error while running the following command", file=sys.stderr)
+        print("$ " + " ".join(cmd), file=sys.stderr)
+        print("", file=sys.stderr)
+        print(err.stderr, file=sys.stderr)
+        sys.exit(1)
 
 def storage_add_data(args):
     """ Build the config file """
@@ -162,7 +188,7 @@ def storage_add_data(args):
                 }
             )
 
-    # If Path is spacified
+    # If Path is specified
     if args.path:
         for pathdata in args.path:
             node, path = pathdata.split(":")
