@@ -470,28 +470,28 @@ def volume_list(voltype=None):
     return volumes
 
 
-def mount_volume(pvpath, target_path, pvtype, fstype=None):
+def mount_volume(pvpath, mountpoint, pvtype, fstype=None):
     """Mount a Volume"""
     if pvtype == PV_TYPE_VIRTBLOCK:
         fstype = "xfs" if fstype is None else fstype
-        execute(MOUNT_CMD, "-t", fstype, pvpath, target_path)
+        execute(MOUNT_CMD, "-t", fstype, pvpath, mountpoint)
     else:
-        execute(MOUNT_CMD, "--bind", pvpath, target_path)
+        execute(MOUNT_CMD, "--bind", pvpath, mountpoint)
 
-    os.chmod(target_path, 0o777)
+    os.chmod(mountpoint, 0o777)
 
 
-def unmount_glusterfs(target_path):
+def unmount_glusterfs(mountpoint):
     """Unmount GlusterFS mount"""
-    volname = os.path.basename(target_path)
-    if is_gluster_mount_proc_running(volname, target_path):
-        execute(UNMOUNT_CMD, target_path)
+    volname = os.path.basename(mountpoint)
+    if is_gluster_mount_proc_running(volname, mountpoint):
+        execute(UNMOUNT_CMD, "-l", mountpoint)
 
 
-def unmount_volume(target_path):
+def unmount_volume(mountpoint):
     """Unmount a Volume"""
-    if os.path.ismount(target_path):
-        execute(UNMOUNT_CMD, target_path)
+    if os.path.ismount(mountpoint):
+        execute(UNMOUNT_CMD, "-l", mountpoint)
 
 
 def generate_client_volfile(volname):
@@ -516,7 +516,7 @@ def generate_client_volfile(volname):
     Template(content).stream(**data).dump(client_volfile)
 
 
-def mount_glusterfs(volume, target_path):
+def mount_glusterfs(volume, mountpoint):
     """Mount Glusterfs Volume"""
     if volume["type"] == "External":
         volname = volume['g_volname']
@@ -524,30 +524,30 @@ def mount_glusterfs(volume, target_path):
         volname = volume["name"]
 
     # Ignore if already glusterfs process running for that volume
-    if is_gluster_mount_proc_running(volname, target_path):
+    if is_gluster_mount_proc_running(volname, mountpoint):
         logging.debug(logf(
             "Already mounted",
-            mount=target_path
+            mount=mountpoint
         ))
         return
 
     # Ignore if already mounted
-    if is_gluster_mount_proc_running(volname, target_path):
+    if is_gluster_mount_proc_running(volname, mountpoint):
         logging.debug(logf(
             "Already mounted (2nd try)",
-            mount=target_path
+            mount=mountpoint
         ))
         return
 
-    if not os.path.exists(target_path):
-        makedirs(target_path)
+    if not os.path.exists(mountpoint):
+        makedirs(mountpoint)
 
     if volume['type'] == 'External':
         # Try to mount the Host Volume, handle failure if
         # already mounted
         with mount_lock:
             mount_glusterfs_with_host(volume['g_volname'],
-                                      target_path,
+                                      mountpoint,
                                       volume['g_host'],
                                       volume['g_options'])
         return
@@ -555,7 +555,7 @@ def mount_glusterfs(volume, target_path):
     with mount_lock:
         generate_client_volfile(volume['name'])
         # Fix the log, so we can check it out later
-        # log_file = "/var/log/gluster/%s.log" % target_path.replace("/", "-")
+        # log_file = "/var/log/gluster/%s.log" % mountpoint.replace("/", "-")
         log_file = "/var/log/gluster/gluster.log"
         cmd = [
             GLUSTERFS_CMD,
@@ -563,7 +563,7 @@ def mount_glusterfs(volume, target_path):
             "-l", log_file,
             "--volfile-id", volume['name'],
             "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volume['name']),
-            target_path
+            mountpoint
         ]
         try:
             execute(*cmd)
@@ -580,19 +580,19 @@ def mount_glusterfs(volume, target_path):
 
 
 # noqa # pylint: disable=unused-argument
-def mount_glusterfs_with_host(volname, target_path, host, options=None):
+def mount_glusterfs_with_host(volname, mountpoint, host, options=None):
     """Mount Glusterfs Volume"""
 
     # Ignore if already mounted
-    if is_gluster_mount_proc_running(volname, target_path):
+    if is_gluster_mount_proc_running(volname, mountpoint):
         logging.debug(logf(
             "Already mounted",
-            mount=target_path
+            mount=mountpoint
         ))
         return
 
-    if not os.path.exists(target_path):
-        makedirs(target_path)
+    if not os.path.exists(mountpoint):
+        makedirs(mountpoint)
 
     # FIXME: make this better later (an issue for external contribution)
     # opt_array = None
@@ -608,7 +608,7 @@ def mount_glusterfs_with_host(volname, target_path, host, options=None):
     #                 # TODO: handle more options, and document them
 
     # Fix the log, so we can check it out later
-    # log_file = "/var/log/gluster/%s.log" % target_path.replace("/", "-")
+    # log_file = "/var/log/gluster/%s.log" % mountpoint.replace("/", "-")
     log_file = "/var/log/gluster/gluster.log"
     cmd = [
         GLUSTERFS_CMD,
@@ -616,13 +616,13 @@ def mount_glusterfs_with_host(volname, target_path, host, options=None):
         "-l", "%s" % log_file,
         "--volfile-id", volname,
         "-s", host,
-        target_path
+        mountpoint
     ]
     # if opt_array:
     #     cmd.extend(opt_array)
     #
     # # add mount point after all options
-    # cmd.append(target_path)
+    # cmd.append(mountpoint)
     logging.debug(logf(
         "glusterfs command",
         cmd=cmd
@@ -639,25 +639,35 @@ def mount_glusterfs_with_host(volname, target_path, host, options=None):
 
     return
 
-def check_external_volume(pv_request):
+def check_external_volume(pv_request, host_volumes):
     """Mount hosting volume"""
     # Assumption is, this has to have 'hostvol_type' as External.
     params = {}
     for pkey, pvalue in pv_request.parameters.items():
         params[pkey] = pvalue
 
-    hvol = {
-        "host": params['gluster_host'],
-        "name": params['gluster_volname'],
-        "options": params['gluster_options'],
-    }
-    mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol['name'])
+    mntdir = None
+    hvol = None
+    for vol in host_volumes:
+        if vol["type"] != "External":
+            continue
+        if (vol["g_volname"] != params["gluster_volname"]) or \
+           (vol["g_host"] != params["gluster_host"]):
+            continue
 
-    mount_glusterfs_with_host(hvol['name'], mntdir, hvol['host'], hvol['options'])
+        mntdir = os.path.join(HOSTVOL_MOUNTDIR, vol["name"])
+        hvol = vol
+        break
+
+    if not mntdir:
+        logging.warning("No host volume found to provide PV")
+        return None
+
+    mount_glusterfs_with_host(hvol['g_volname'], mntdir, hvol['g_host'], hvol['g_options'])
 
     time.sleep(0.37)
 
-    if not is_gluster_mount_proc_running(hvol['name'], mntdir):
+    if not is_gluster_mount_proc_running(hvol['g_volname'], mntdir):
         logging.debug(logf(
             "Mount failed",
             hvol=hvol,

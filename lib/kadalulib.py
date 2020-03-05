@@ -42,15 +42,15 @@ def retry_errors(func, args, errors, timeout=130, interval=2):
             raise
 
 
-def is_gluster_mount_proc_running(volname, target_path):
+def is_gluster_mount_proc_running(volname, mountpoint):
     """
     Check if glusterfs process is running for the given Volume name
     to confirm Glusterfs process is mounted
     """
     cmd = (
         r'ps ax | grep -w "/usr/sbin/glusterfs" '
-        r'| grep "\-\-volfile\-id %s" '
-        r'| grep -q "%s"' % (volname, target_path)
+        r'| grep -w "\-\-volfile\-id %s" '
+        r'| grep -w -q "%s"' % (volname, mountpoint)
     )
 
     proc = subprocess.Popen(cmd, shell=True, stderr=None,

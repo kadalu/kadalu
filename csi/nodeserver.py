@@ -31,6 +31,7 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         pvtype = request.volume_context.get("pvtype", "")
         voltype = request.volume_context.get("type", "")
         gserver = request.volume_context.get("gserver", None)
+        gvolname = request.volume_context.get("gvolname", None)
         options = request.volume_context.get("options", None)
 
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
@@ -49,7 +50,7 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         if voltype == "External":
             # If no separate PV Path, use the whole volume as PV
             if pvpath == "":
-                mount_glusterfs_with_host(hostvol, request.target_path, gserver, options)
+                mount_glusterfs_with_host(gvolname, request.target_path, gserver, options)
 
                 logging.debug(logf(
                     "Mounted Volume for PV",
@@ -62,7 +63,7 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
 
         volume = {
             'name': hostvol,
-            'g_volname': hostvol,
+            'g_volname': gvolname,
             'g_host': gserver,
             'g_options': options,
             'type': voltype,
