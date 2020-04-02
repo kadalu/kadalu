@@ -129,4 +129,4 @@ As long as glusterfs promises to keep the backend layout same, and continue to p
 
 ### Gluster and Kadalu
 
-We have compiled a list of things [here](./gluster-and-kadalu.md)
+We have compiled a list of things [here](https://kadalu.io/docs/k8s-storage/master/gluster-and-kadalu)
