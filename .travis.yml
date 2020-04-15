@@ -2,6 +2,9 @@
 # need for docker build
 sudo: true
 dist: xenial
+arch:
+  - arm64
+  - amd64
 
 addons:
   apt:
@@ -29,7 +32,6 @@ env:
     - GO_METALINTER_THREADS=1
     - GO_COVER_DIR=_output
     - VM_DRIVER=none
-    - MINIKUBE_VERSION=v1.5.2
     - CHANGE_MINIKUBE_NONE_USER=true
     - KUBECONFIG=$HOME/.kube/config
 
@@ -60,10 +62,10 @@ jobs:
         - tests/setup.sh v1.16.0 || travis_terminate 1;
         - tests/travis-test.sh v1.16.0 || travis_terminate 1;
         - tests/cleanup.sh v1.16.0 || travis_terminate 1;
-    - name: kadalu with kube 1.13.7
+    - name: kadalu with kube 1.18.0
       script:
         - make build-containers || travis_terminate 1;
         - make gen-manifest || travis_terminate 1;
-        - tests/setup.sh v1.13.7 || travis_terminate 1;
-        - tests/travis-test.sh v1.13.7 || travis_terminate 1;
-        - tests/cleanup.sh v1.13.7 || travis_terminate 1;
+        - tests/setup.sh v1.18.0 || travis_terminate 1;
+        - tests/travis-test.sh v1.18.0 || travis_terminate 1;
+        - tests/cleanup.sh v1.18.0 || travis_terminate 1;
