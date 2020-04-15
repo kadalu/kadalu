@@ -4,6 +4,8 @@ DISK="$1"
 
 # This test assumes a kubernetes setup available with host as minikube
 
+HOSTNAME="$2"
+
 function install_cli_package() {
     apt install python3-pip
     python3 -m pip install setuptools
@@ -27,18 +29,18 @@ function test_storage_add() {
     kubectl create -f tests/get-minikube-pvc.yaml
 
     sleep 1
-    kubectl kadalu storage-add test-volume3 --type Replica3 --device minikube:/mnt/${DISK}/file3.1 --path minikube:/mnt/${DISK}/dir3.2 --pvc local-pvc || return 1
+    kubectl kadalu storage-add test-volume3 --type Replica3 --device ${HOSTNAME}:/mnt/${DISK}/file3.1 --path ${HOSTNAME}:/mnt/${DISK}/dir3.2 --pvc local-pvc || return 1
 
     # Test Replica2 option
-    kubectl kadalu storage-add test-volume2 --type Replica2 --device minikube:/mnt/${DISK}/file2.1 --device minikube:/mnt/${DISK}/file2.2 || return 1
+    kubectl kadalu storage-add test-volume2 --type Replica2 --device ${HOSTNAME}:/mnt/${DISK}/file2.1 --device ${HOSTNAME}:/mnt/${DISK}/file2.2 || return 1
 
     # Test Replica2 with tie-breaker option
     sudo truncate -s 2g /mnt/${DISK}/file2.{10,20}
 
-    kubectl kadalu storage-add test-volume2-1 --type Replica2 --device minikube:/mnt/${DISK}/file2.10 --device minikube:/mnt/${DISK}/file2.20 --tiebreaker tie-breaker.kadalu.io:/mnt || return 1
+    kubectl kadalu storage-add test-volume2-1 --type Replica2 --device ${HOSTNAME}:/mnt/${DISK}/file2.10 --device ${HOSTNAME}:/mnt/${DISK}/file2.20 --tiebreaker tie-breaker.kadalu.io:/mnt || return 1
 
     # Check if the type default is Replica1
-    kubectl kadalu storage-add test-volume1 --device minikube:/mnt/${DISK}/file1 || return 1
+    kubectl kadalu storage-add test-volume1 --device ${HOSTNAME}:/mnt/${DISK}/file1 || return 1
 
     # Check for external storage
     # TODO: (For now, keep the name as 'ext-config' as PVC should use this

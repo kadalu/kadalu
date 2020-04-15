@@ -2,7 +2,7 @@
 
 DOCKER_USER?=kadalu
 KADALU_VERSION?=latest
-
+KADALU_LATEST?=latest
 
 help:
 	@echo "    make build-grpc        - To generate grpc Python Code"
@@ -102,13 +102,13 @@ ifeq ($(KADALU_VERSION), latest)
 release: prepare-release
 else
 release: prepare-release pypi-upload
-	docker tag ${DOCKER_USER}/kadalu-operator:${KADALU_VERSION} ${DOCKER_USER}/kadalu-operator:latest
-	docker tag ${DOCKER_USER}/kadalu-csi:${KADALU_VERSION} ${DOCKER_USER}/kadalu-csi:latest
-	docker tag ${DOCKER_USER}/kadalu-server:${KADALU_VERSION} ${DOCKER_USER}/kadalu-server:latest
+	docker tag ${DOCKER_USER}/kadalu-operator:${KADALU_VERSION} ${DOCKER_USER}/kadalu-operator:${KADALU_LATEST}
+	docker tag ${DOCKER_USER}/kadalu-csi:${KADALU_VERSION} ${DOCKER_USER}/kadalu-csi:${KADALU_LATEST}
+	docker tag ${DOCKER_USER}/kadalu-server:${KADALU_VERSION} ${DOCKER_USER}/kadalu-server:${KADALU_LATEST}
 	docker push ${DOCKER_USER}/kadalu-operator:${KADALU_VERSION}
 	docker push ${DOCKER_USER}/kadalu-csi:${KADALU_VERSION}
 	docker push ${DOCKER_USER}/kadalu-server:${KADALU_VERSION}
-	docker push ${DOCKER_USER}/kadalu-operator:latest
-	docker push ${DOCKER_USER}/kadalu-csi:latest
-	docker push ${DOCKER_USER}/kadalu-server:latest
+	docker push ${DOCKER_USER}/kadalu-operator:${KADALU_LATEST}
+	docker push ${DOCKER_USER}/kadalu-csi:${KADALU_LATEST}
+	docker push ${DOCKER_USER}/kadalu-server:${KADALU_LATEST}
 endif
