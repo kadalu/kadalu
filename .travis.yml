@@ -35,21 +35,20 @@ env:
     - CHANGE_MINIKUBE_NONE_USER=true
     - KUBECONFIG=$HOME/.kube/config
 
-install:
-  - sudo chown -Rv $USER ~/.cache/pip/wheels
-  - pip install pylint jinja2
-
-before_script:
-  - pylint --version
-
 jobs:
   include:
     - name: pylint tests
       script:
+        - sudo chown -Rv $USER ~/.cache/pip/wheels
+        - pip install pylint jinja2
+        - pylint --version
         - pip install requests xxhash grpcio pyxattr kubernetes
         - make pylint || travis_terminate 1;
     - name: kadalu with kube 1.15.0
       script:
+        - sudo chown -Rv $USER ~/.cache/pip/wheels
+        - pip install pylint jinja2
+        - pylint --version
         - make build-containers || travis_terminate 1;
         - make gen-manifest || travis_terminate 1;
         - tests/setup.sh v1.15.0 || travis_terminate 1;
@@ -58,6 +57,9 @@ jobs:
         - tests/cleanup.sh v1.15.0 || travis_terminate 1;
     - name: kadalu with kube 1.16.0
       script:
+        - sudo chown -Rv $USER ~/.cache/pip/wheels
+        - pip install pylint jinja2
+        - pylint --version
         - make build-containers || travis_terminate 1;
         - make gen-manifest || travis_terminate 1;
         - tests/setup.sh v1.16.0 || travis_terminate 1;
@@ -65,6 +67,9 @@ jobs:
         - tests/cleanup.sh v1.16.0 || travis_terminate 1;
     - name: kadalu with kube 1.18.0
       script:
+        - sudo chown -Rv $USER ~/.cache/pip/wheels
+        - pip install pylint jinja2
+        - pylint --version
         - make build-containers || travis_terminate 1;
         - make gen-manifest || travis_terminate 1;
         - tests/setup.sh v1.18.0 || travis_terminate 1;
