@@ -36,6 +36,7 @@ env:
     - KUBECONFIG=$HOME/.kube/config
 
 install:
+  - sudo chown -Rv $USER ~/.cache/pip/wheels
   - pip install pylint jinja2
 
 before_script:
