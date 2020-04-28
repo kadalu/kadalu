@@ -1,5 +1,5 @@
 # Number of days of inactivity before an issue becomes stale
-daysUntilStale: 90
+daysUntilStale: 180
 # Number of days of inactivity before a stale issue is closed
 daysUntilClose: 15
 # Issues with these labels will never be considered stale
@@ -13,8 +13,13 @@ staleLabel: wontfix
 markComment: >
   Thank you for your contributions.
 
-  We are marking this issue as stale because it has not had recent activity.
-  It will be closed in 2 weeks if no further activity occurs.
+  Noticed that this issue is idle since 180 days! There is a possibility
+  that this issue is already fixed in later releases. Please upgrade and
+  check! If I don't hear any update in this issue in next 2 weeks, will
+  be closing the issue.
+
+  That doesn't mean one can't re-open the issue! Just comment on the
+  issue, and click 'Reopen', if you still have the issue.
 
 # Comment to post when closing a stale issue. Set to `false` to disable
 closeComment: false
