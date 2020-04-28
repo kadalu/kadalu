@@ -153,22 +153,19 @@ def get_brick_device_dir(brick):
     return brick_device_dir
 
 
-def get_brick_hostname(volname, node, idx, suffix=True):
+def get_brick_hostname(volname, idx, suffix=True):
     """Brick hostname is <statefulset-name>-<ordinal>.<service-name>
     statefulset name is the one which is visible when the
     `get pods` command is run, so the format used for that name
-    is "server-<volname>-<idx>-<hostname>". Escape dots from the
+    is "server-<volname>-<idx>". Escape dots from the
     hostname from the input otherwise will become invalid name.
     Service is created with name as Volume name. For example,
-    brick_hostname will be "server-spool1-0-minikube-0.spool1" and
-    server pod name will be "server-spool1-0-minikube"
+    brick_hostname will be "server-spool1-0-0.spool1" and
+    server pod name will be "server-spool1-0"
     """
     tmp_vol = volname.replace("-", "_")
-    tmp_node = node.replace("-", "_")
     dns_friendly_volname = re.sub(r'\W+', '', tmp_vol).replace("_", "-")
-    dns_friendly_nodename = re.sub(r'\W+', '', tmp_node).replace("_", "-")
-    hostname = "server-%s-%s-%d" % (dns_friendly_volname,
-                                    dns_friendly_nodename, idx)
+    hostname = "server-%s-%d" % (dns_friendly_volname, idx)
     if suffix:
         return "%s-0.%s" % (hostname, volname)
 
@@ -201,9 +198,7 @@ def update_config_map(core_v1_client, obj):
         data["bricks"].append({
             "brick_path": "/bricks/%s/data/brick" % volname,
             "kube_hostname": storage.get("node", ""),
-            "node": get_brick_hostname(volname,
-                                       storage.get("node", "pvc"),
-                                       idx),
+            "node": get_brick_hostname(volname, idx),
             "node_id": storage["node_id"],
             "host_brick_path": storage.get("path", ""),
             "brick_device": storage.get("device", ""),
@@ -268,7 +263,6 @@ def deploy_server_pods(obj):
         # TODO: Understand the need, and usage of suffix
         template_args["serverpod_name"] = get_brick_hostname(
             volname,
-            storage.get("node", "pvc"),
             idx,
             suffix=False
         )
