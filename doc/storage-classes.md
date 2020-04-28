@@ -1,0 +1,216 @@
+# Storage Classes
+
+From [kubernetes.io/docs/concepts/storage/storage-classes](https://kubernetes.io/docs/concepts/storage/storage-classes/)
+
+> A StorageClass provides a way for administrators to describe the
+> “classes” of storage they offer. Different classes might map to
+> quality-of-service levels, or to backup policies, or to arbitrary
+> policies determined by the cluster administrators. Kubernetes itself
+> is unopinionated about what classes represent. This concept is
+> sometimes called “profiles” in other storage systems.
+
+Kadalu provides a few storage classes by default, but users are not
+limited to only these classes. This document helps to understand the
+default available storage classes and how to create new ones for your
+requirements.
+
+## kadalu
+
+On using this Storage class, Kadalu can provision PVs from any of the
+available volumes without applying any filters.
+
+Example PVC,
+
+```
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv1
+spec:
+  storageClassName: kadalu
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+## kadalu.replica1
+
+On using this Storage class, Kadalu will provision PVs only from
+Replica 1 Storage pools across the Cluster. Use this option when high
+availability is provided by the application and not required from the
+Storage.
+
+Example PVC,
+
+```
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv2
+spec:
+  storageClassName: kadalu.replica1
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+## kadalu.replica2
+
+On using this Storage class, Kadalu will provision PVs only from
+Replica 2 Storage pools across the Cluster. Replica 2 Storage pools
+use Tiebreaker to avoid Split-brain.
+
+Example PVC,
+
+```
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv3
+spec:
+  storageClassName: kadalu.replica2
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+## kadalu.replica3
+
+On using this Storage class, Kadalu will provision PVs only from
+Replica 3 Storage pools across the Cluster. Use this Storage class
+when PVs require high availability.
+
+Example PVC,
+
+```
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv4
+spec:
+  storageClassName: kadalu.replica3
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+## How to Create a custom Storage Class?
+
+The following filters are available. Use any of the filters to create
+a new Storage class.
+
+
+### storage_name
+
+Specify the name of the Storage pool from which PVs need to
+provision.
+
+Example Storage Class
+
+```
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: kadalu.fast-storage
+provisioner: kadalu
+parameters:
+  storage_name: "storage-pool-1"
+```
+
+And the PVC,
+
+```
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv5
+spec:
+  storageClassName: kadalu.fast-storage
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+### node_affinity
+
+Use this option if a PV needs to provision from the locally available
+Storage, This Storage Class behaves the same as local Storage but with
+the support for dynamic provisioning.
+
+Example Storage Class
+
+```
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: kadalu.local-kube1
+provisioner: kadalu
+parameters:
+  node_affinity: "kube1"  # Node name as shown in `kubectl get nodes`
+```
+
+And the PVC,
+
+```
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv6
+spec:
+  storageClassName: kadalu.local-kube1
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+
+### storage_type
+
+Specify the name of the Storage pool type from which PVs need to
+provision. By default, Kadalu provides Storage Class for all supported
+Storage types.
+
+Example Storage Class
+
+```
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: kadalu.replica2
+provisioner: kadalu
+parameters:
+  storage_type: "Replica2"
+```
+
+And the PVC,
+
+```
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv7
+spec:
+  storageClassName: kadalu.replica2
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+The number of customization a Storage Class can provide is
+impressive. The only limit is your imagination. Please open a new
+[issue](https://github.com/kadalu/kadalu/issues) if your use case
+needs more filters than the ones listed above.
