@@ -10,6 +10,7 @@
 * [Try Kadalu](try-kadalu.md)
 * [External Gluster Storage](external-gluster-storage.md)
 * [Storage Config Options](storage-config-options.md)
+* [Storage Classes](storage-classes.md)
 * [Troubleshooting](troubleshooting.md)
 
 
