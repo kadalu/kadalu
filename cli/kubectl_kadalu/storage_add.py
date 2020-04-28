@@ -1,14 +1,18 @@
 """
 'storage-add ' sub command
 """
+from __future__ import print_function   
 
 import os
 import tempfile
 import sys
 import yaml
 
-from kubectl_kadalu import utils
-
+try:
+    import utils
+except ImportError:
+    from kubectl_kadalu import utils
+    
 # noqa # pylint: disable=too-many-branches
 def storage_add_args(subparsers):
     """ add arguments, and their options """

@@ -1,10 +1,14 @@
 """
 'install' subcommand for kubectl-kadalu CLI tool
 """
+from __future__ import print_function
+
 import sys
 
-from kubectl_kadalu import utils
-
+try:
+    import utils
+except ImportError:
+    from kubectl_kadalu import utils
 
 def install_args(subparsers):
     """ add arguments to argparser """
