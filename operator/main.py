@@ -200,6 +200,7 @@ def update_config_map(core_v1_client, obj):
     for idx, storage in enumerate(bricks):
         data["bricks"].append({
             "brick_path": "/bricks/%s/data/brick" % volname,
+            "kube_hostname": storage.get("node", ""),
             "node": get_brick_hostname(volname,
                                        storage.get("node", "pvc"),
                                        idx),

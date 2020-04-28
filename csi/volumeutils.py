@@ -56,48 +56,116 @@ class Volume():
         return self.volname
 
 
-def get_pv_hosting_volumes(filters=None):
+def filter_node_affinity(volume, filters):
+    """
+    Filter volume based on node affinity provided
+    """
+    node_name = filters.get("node_affinity", None)
+    if node_name is not None:
+        # Node affinity is only applicable for Replica1 Volumes
+        if volume["type"] != "Replica1":
+            return None
+
+        # Volume is not from the requested node
+        if node_name != volume["bricks"][0]["kube_hostname"]:
+            return None
+
+    return volume
+
+
+def filter_storage_name(volume, filters):
+    """
+    filter volume based on the name provided in filter
+    """
+    storage_name = filters.get("storage_name", None)
+    if storage_name is not None and storage_name != volume["volname"]:
+        return None
+
+    return volume
+
+
+def filter_storage_type(volume, filters):
+    """
+    If Host Volume type is specified then only get the hosting
+    volumes which belongs to requested types
+    """
+    hvoltype = filters.get(
+        "storage_type",
+        filters.get("hostvol_type", None)
+    )
+    if hvoltype is not None and hvoltype != volume["type"]:
+        return None
+
+    return volume
+
+
+def filter_supported_pvtype(volume, filters):
+    """
+    If a storageclass created by specifying supported_pvtype
+    then only include those hosting Volumes.
+    This is useful when different Volume option needs to be
+    set to host virtblock PVs
+    """
+    f_supported_pvtype = filters.get("supported_pvtype", None)
+    supported_pvtype = volume.get("supported_pvtype", "all")
+    if supported_pvtype == "all":
+        return volume
+
+    if f_supported_pvtype is not None \
+       and f_supported_pvtype != supported_pvtype:
+        return None
+
+    return volume
+
+
+# Disabled pylint here because filters argument is used as
+# readonly in all functions
+# noqa # pylint: disable=dangerous-default-value
+def get_pv_hosting_volumes(filters={}):
     """Get list of pv hosting volumes"""
     volumes = []
     total_volumes = 0
+
+    filter_funcs = [
+        filter_node_affinity,
+        filter_storage_type,
+        filter_supported_pvtype
+    ]
 
     for filename in os.listdir(VOLINFO_DIR):
         if filename.endswith(".info"):
             total_volumes += 1
             volname = filename.replace(".info", "")
 
-            if filters is not None:
-                filter_volname = filters.get("storage_name", None)
-
-                # If specific Hosting Volume name is specified
-                if filter_volname is not None and filter_volname != volname:
-                    continue
+            filtered = filter_storage_name({"volname": volname}, filters)
+            if filtered is None:
+                logging.debug(logf(
+                    "Volume doesn't match the filter",
+                    volname=volname,
+                    **filters
+                ))
+                continue
 
             data = {}
             with open(os.path.join(VOLINFO_DIR, filename)) as info_file:
                 data = json.load(info_file)
 
-            # If Host Volume type is specified then only get the hosting
-            # volumes which belongs to requested types
-            if filters is not None:
-                filter_hvoltype = filters.get("storage_type", None)
-                if not filter_hvoltype:
-                    filter_hvoltype = filters.get("hostvol_type", None)
-                if filter_hvoltype is not None and \
-                   filter_hvoltype != data["type"]:
-                    continue
+            filtered_data = True
+            for filter_func in filter_funcs:
+                filtered = filter_func(data, filters)
+                # Node affinity is not matching for this Volume,
+                # Try other volumes
+                if filtered is None:
+                    filtered_data = False
+                    logging.debug(logf(
+                        "Volume doesn't match the filter",
+                        volname=data["volname"],
+                        **filters
+                    ))
+                    break
 
-            # If a storageclass created by specifying supported_pvtype
-            # then only include those hosting Volumes.
-            # This is useful when different Volume option needs to be
-            # set to host virtblock PVs
-            if filters is not None:
-                filter_supported_pvtype = filters.get("supported_pvtype", None)
-                supported_pvtype = data.get("supported_pvtype", "all")
-                if filter_supported_pvtype is not None and \
-                   supported_pvtype != "all" and \
-                   filter_supported_pvtype != supported_pvtype:
-                    continue
+            if not filtered_data:
+                continue
 
             volume = {
                 "name": volname,
