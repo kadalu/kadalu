@@ -9,13 +9,13 @@ function wait_till_pods_start() {
     while true; do
 	cnt=$((cnt + 1))
 	sleep 2
-	ret=$(kubectl get pods -nkadalu | grep 'Running' | wc -l)
+	ret=$(kubectl get pods -nkadalu -o wide | grep 'Running' | wc -l)
 	if [[ $ret -ge 9 ]]; then
 	    echo "Successful after $cnt seconds"
 	    break
 	fi
 	if [[ $cnt -eq 100 ]]; then
-	    kubectl get pods
+	    kubectl get pods -o wide
 	    echo "giving up after 200 seconds"
 	    fail=1
 	    break
@@ -26,7 +26,7 @@ function wait_till_pods_start() {
     done
 
     kubectl get sc
-    kubectl get pods -nkadalu
+    kubectl get pods -nkadalu -o wide
     # Return failure if fail variable is set to 1
     if [ $fail -eq 1 ]; then
 	echo "Marking the test as 'FAIL'"
@@ -53,15 +53,15 @@ function get_pvc_and_check() {
     while true; do
 	cnt=$((cnt + 1))
 	sleep 1
-	ret=$(kubectl get pods | grep 'Completed' | wc -l)
+	ret=$(kubectl get pods -o wide | grep 'Completed' | wc -l)
 	if [[ $ret -eq ${pod_count} ]]; then
 	    echo "Successful after $cnt seconds"
 	    break
 	fi
 	if [[ $cnt -eq ${time_limit} ]]; then
 	    kubectl get pvc
-	    kubectl get pods -nkadalu
-	    kubectl get pods
+	    kubectl get pods -nkadalu -o wide
+	    kubectl get pods -o wide
 	    echo "exiting after ${time_limit} seconds"
 	    result=1
 	    fail=1
@@ -72,7 +72,7 @@ function get_pvc_and_check() {
 	fi
     done
     kubectl get pvc
-    kubectl get pods
+    kubectl get pods -o wide
 
     #Delete the pods/pvc
     for p in $(kubectl get pods -o name); do
