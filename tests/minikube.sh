@@ -14,7 +14,7 @@ function wait_till_pods_start() {
 	    echo "Successful after $cnt seconds"
 	    break
 	fi
-	if [[ $cnt -eq 100 ]]; then
+	if [[ $cnt -eq 200 ]]; then
 	    kubectl get pods -o wide
 	    echo "giving up after 200 seconds"
 	    fail=1
@@ -218,8 +218,13 @@ kadalu_operator)
 
     sleep 1
     # Start storage
+    output=$(kubectl get nodes -o=name)
+    # output will be in format 'node/hostname'. We need 'hostname'
+    HOSTNAME=$(basename $output)
+    echo "Hostname is ${HOSTNAME}"
     cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
     sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
+    sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
 
     # Prepare PVC also as a storage
     sed -i -e "s/DISK/${DISK}/g" tests/get-minikube-pvc.yaml
@@ -264,7 +269,11 @@ test_kadalu)
     ;;
 
 cli_tests)
-    bash tests/kubectl_kadalu_tests.sh "$DISK"
+    output=$(kubectl get nodes -o=name)    
+    # output will be in format 'node/hostname'. We need 'hostname'
+    HOSTNAME=$(basename $output)
+    echo "Hostname is ${HOSTNAME}"
+    bash tests/kubectl_kadalu_tests.sh "$DISK" "${HOSTNAME}"
     wait_till_pods_start
     ;;
 
