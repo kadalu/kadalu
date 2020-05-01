@@ -1,0 +1,57 @@
+name: buildx
+
+on:
+  pull_request:
+    branches: master
+  push:
+    tags:
+      - "*"
+
+jobs:
+  buildx:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      -
+        name: Set up Docker Buildx
+        if: success()
+        id: buildx
+        uses: crazy-max/ghaction-docker-buildx@v1
+        with:
+          buildx-version: latest
+          qemu-version: latest
+      -
+        name: Available platforms
+        run: echo ${{ steps.buildx.outputs.platforms }}
+      -
+        name: Prepare Tags
+        if: success()
+        id: prepare
+        run: |
+          echo ::set-output name=version::${GITHUB_RUN_NUMBER}
+      -
+        name: Run Buildx
+        if: success()
+        run: |
+          docker buildx build \
+            --platform linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x \
+            --tag kadalu-base:latest \
+            --output "type=image,push=false" \
+            --file operator/Dockerfile.base .
+          docker buildx build \
+            --platform linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x \
+            --tag kadalu-server:${{ steps.prepare.outputs.version }} \
+            --output "type=image,push=false" \
+            --file server/Dockerfile .
+          docker buildx build \
+            --platform linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x \
+            --tag kadalu-csi:${{ steps.prepare.outputs.version }} \
+            --output "type=image,push=false" \
+            --file csi/Dockerfile .
+          docker buildx build \
+            --platform linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64,linux/ppc64le,linux/s390x \
+            --tag kadalu-operator:${{ steps.prepare.outputs.version }} \
+            --output "type=image,push=false" \
+            --file operator/Dockerfile .
