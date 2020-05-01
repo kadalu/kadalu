@@ -1,4 +1,4 @@
-FROM kadalu/kadalu-base
+FROM kadalu/kadalu-base:${KADALU_VERSION}
 
 # Always have the latest stable kubectl
 RUN curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl -o /usr/bin/kubectl
@@ -23,7 +23,7 @@ COPY lib/startup.sh                  /kadalu/startup.sh
 
 RUN chmod +x /kadalu/startup.sh
 
-ARG version="(unknown)"
+ARG version="(${KADALU_VERSION})"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')
 ARG builddate="(unknown)"
 

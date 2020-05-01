@@ -1,0 +1,41 @@
+name: buildx
+
+on:
+  pull_request:
+    branches: master
+  push:
+    tags:
+      - "*"
+
+jobs:
+  buildx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
+      -
+        name: Set up Docker Buildx
+        if: success()
+        id: buildx
+        uses: crazy-max/ghaction-docker-buildx@v1
+        with:
+          buildx-version: latest
+          qemu-version: latest
+      -
+        name: Available platforms
+        run: echo ${{ steps.buildx.outputs.platforms }}
+      -
+        name: Run Buildx
+        if: success()
+        run: |
+          KADALU_VERSION=$(echo "${{ github.ref }}" docker buildx build \
+            --platform linux/arm64 \
+            --tag kadalu-base:${{ github.ref }} \
+            --output "type=image,push=true" \
+            --file operator/Dockerfile.base .
+          KADALU_VERSION=$(echo "${{ github.ref }}" docker buildx build \
+            --platform linux/arm64 \
+            --tag kadalu-operator:${{ github.ref }} \
+            --output "type=image,push=true" \
+            --file operator/Dockerfile .

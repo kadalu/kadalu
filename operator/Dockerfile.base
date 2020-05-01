@@ -6,8 +6,8 @@ RUN yum clean all -y
 RUN rm -rf /var/cache/yum
 
 # Install Python GRPC library and copy all CSI related files
-RUN python3 -m pip install jinja2 xxhash requests datetime \
-     prometheus_client
+RUN python3 -m pip install jinja2 requests datetime
+
 RUN mkdir -p /kadalu/
 
 ARG version="(unknown)"

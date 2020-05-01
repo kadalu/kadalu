@@ -8,7 +8,7 @@ from datetime import datetime
 import time
 
 import requests
-import xxhash
+import hashlib
 
 
 PV_TYPE_VIRTBLOCK = "virtblock"
@@ -80,7 +80,7 @@ class CommandException(Exception):
 
 def get_volname_hash(volname):
     """XXHash based on Volume name"""
-    return xxhash.xxh64_hexdigest(volname)
+    return hashlib.sha256(volname).hexdigest()
 
 
 def get_volume_path(voltype, volhash, volname):

@@ -1,5 +1,4 @@
 requests
-xxhash
 grpcio
 pyxattr
 kubernetes
