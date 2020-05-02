@@ -118,7 +118,7 @@ rules:
       - daemonsets
       - replicasets
       - statefulsets
-    verbs: ["create", "get", "list", "watch", "update", "delete"]
+    verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
   - apiGroups: ["monitoring.coreos.com"]
     resources:
       - servicemonitors
@@ -177,7 +177,7 @@ rules:
     verbs: ["get", "create", "delete"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["csidrivers"]
-    verbs: ["get", "create", "delete"]
+    verbs: ["get", "create", "delete", "patch"]
 
 ---
 kind: ClusterRoleBinding
