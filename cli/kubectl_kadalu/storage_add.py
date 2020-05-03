@@ -2,6 +2,9 @@
 'storage-add ' sub command
 """
 
+#To prevent Py2 to interpreting print(val) as a tuple.
+from __future__ import print_function
+
 import os
 import tempfile
 import sys
@@ -237,6 +240,7 @@ def subcmd_storage_add(args):
         print("Storage Yaml file for your reference:")
         print(yaml.dump(data))
         print()
+    #noqa #pylint : disable=R0801
     except utils.CommandError as err:
         print("Error while running the following command", file=sys.stderr)
         print("$ " + " ".join(cmd), file=sys.stderr)
