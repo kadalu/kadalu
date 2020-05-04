@@ -1,0 +1,48 @@
+name: buildx
+
+on:
+  push:
+    branches:
+      - master
+      - buildx_test
+# Add tags later (for pushing release)
+
+jobs:
+  buildx:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
+      -
+        name: Set up Docker Buildx
+        if: success()
+        id: buildx
+        uses: crazy-max/ghaction-docker-buildx@v1
+        with:
+          buildx-version: latest
+          qemu-version: latest
+      -
+        name: Run Buildx
+        if: success()
+        run: |
+          KADALU_VERSION=master docker buildx build \
+            --platform linux/arm64,linux/amd64 \
+            --tag docker.io/kadalu/kadalu-base:latest \
+            --output "type=image,name=docker.io/kadalu/kadalu-base,push=false" \
+            --file operator/Dockerfile.base .
+          KADALU_VERSION=master docker buildx build \
+            --platform linux/arm64,linux/amd64 \
+            --tag docker.io/kadalu/kadalu-csi:master \
+            --output "type=image,name=docker.io/kadalu/kadalu-csi,push=true" \
+            --file csi/Dockerfile .
+          KADALU_VERSION=master docker buildx build \
+            --platform linux/arm64,linux/amd64 \
+            --tag docker.io/kadalu/kadalu-operator:master \
+            --output "type=image,name=docker.io/kadalu/kadalu-operator,push=true" \
+            --file operator/Dockerfile .
+          KADALU_VERSION=master docker buildx build \
+            --platform linux/arm64,linux/amd64 \
+            --tag docker.io/kadalu/kadalu-server:master \
+            --output "type=image,name=docker.io/kadalu/kadalu-server,push=true" \
+            --file server/Dockerfile .
