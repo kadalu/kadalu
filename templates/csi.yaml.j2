@@ -1,3 +1,4 @@
+{% set plugin_registry_dir=kubelet_dir/plugins_registry %}
 # -*- mode: yaml -*-
 ## Deploy CSI NodePlugin
 ---
@@ -96,7 +97,7 @@ spec:
             - name: plugin-dir
               mountPath: /plugin
             - name: pods-mount-dir
-              mountPath: /var/lib/kubelet/pods
+              mountPath: {{kubelet_dir}}/pods
               mountPropagation: "Bidirectional"
             - name: glusterfsd-volfilesdir
               mountPath: "/var/lib/gluster"
@@ -118,7 +119,7 @@ spec:
             type: DirectoryOrCreate
         - name: pods-mount-dir
           hostPath:
-            path: /var/lib/kubelet/pods
+            path: {{kubelet_dir}}/pods
             type: Directory
         - name: registration-dir
           hostPath:

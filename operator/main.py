@@ -19,7 +19,7 @@ NAMESPACE = os.environ.get("KADALU_NAMESPACE", "kadalu")
 VERSION = os.environ.get("KADALU_VERSION", "latest")
 MANIFESTS_DIR = "/kadalu/templates"
 KUBECTL_CMD = "/usr/bin/kubectl"
-PLUGIN_REGISTRY_DIR= os.environ.get("PLUGIN_REGISTRY_DIR","/var/lib/kubelet/plugins_registry")
+KUBELET_DIR = os.environ.get("KUBELET_DIR","/var/lib/kubelet")
 KADALU_CONFIG_MAP = "kadalu-info"
 CSI_POD_PREFIX = "csi-"
 STORAGE_CLASS_NAME_PREFIX = "kadalu."
@@ -180,7 +180,7 @@ def update_config_map(core_v1_client, obj):
     volname = obj["metadata"]["name"]
     voltype = obj["spec"]["type"]
     data = {
-        "plugin_registry_dir":PLUGIN_REGISTRY_DIR
+        "kubelet_dir":KUBELET_DIR
         "namespace": NAMESPACE,
         "kadalu_version": VERSION,
         "volname": volname,
@@ -256,7 +256,7 @@ def deploy_server_pods(obj):
         "voltype": voltype,
         "volume_id": obj["spec"]["volume_id"],
         "shd_required": shd_required,
-        "plugin_registry_dir": PLUGIN_REGISTRY_DIR
+        "kubelet_dir": KUBELET_DIR
     }
 
     # One StatefulSet per Brick
