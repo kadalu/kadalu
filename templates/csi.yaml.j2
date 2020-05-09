@@ -64,7 +64,7 @@ spec:
             - name: ADDRESS
               value: /plugin/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              value: {{plugin_registry_dir}}/kadalu/csi.sock
+              value: "{{ plugin_registry_dir }}/kadalu/csi.sock"
             - name: KUBE_NODE_NAME
               valueFrom:
                 fieldRef:
@@ -96,7 +96,7 @@ spec:
             - name: plugin-dir
               mountPath: /plugin
             - name: pods-mount-dir
-              mountPath: {{kubelet_dir}}/pods
+              mountPath: "{{kubelet_dir}}/pods"
               mountPropagation: "Bidirectional"
             - name: glusterfsd-volfilesdir
               mountPath: "/var/lib/gluster"

@@ -33,6 +33,7 @@ VOLUME_TYPE_REPLICA_3 = "Replica3"
 def template(filename, **kwargs):
     """Substitute the template with provided fields"""
     content = ""
+    logging.info(f'templating ${filename} with args:  ${kwargs}')
     with open(filename + ".j2") as template_file:
         content = template_file.read()
 
@@ -181,6 +182,7 @@ def update_config_map(core_v1_client, obj):
     voltype = obj["spec"]["type"]
     data = {
         "kubelet_dir":KUBELET_DIR,
+        "plugin_registry_dir": KUBELET_DIR + "/plugins_registry",
         "namespace": NAMESPACE,
         "kadalu_version": VERSION,
         "volname": volname,
@@ -256,8 +258,6 @@ def deploy_server_pods(obj):
         "voltype": voltype,
         "volume_id": obj["spec"]["volume_id"],
         "shd_required": shd_required,
-        "kubelet_dir": KUBELET_DIR,
-        "plugin_registry_dir": KUBELET_DIR + "/plugins_registry"
     }
 
     # One StatefulSet per Brick
@@ -433,6 +433,8 @@ def deploy_csi_pods(core_v1_client):
     Look for CSI pods, if any one CSI pod found then
     that means it is deployed
     """
+
+    
     create_cmd = "create"
     pods = core_v1_client.list_namespaced_pod(
         NAMESPACE)
@@ -455,8 +457,14 @@ def deploy_csi_pods(core_v1_client):
 
     filename = os.path.join(MANIFESTS_DIR, "csi.yaml")
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
-    template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
-             docker_user=docker_user)
+    template_args = {
+        "namespace": NAMESPACE,
+        "kadalu_version": VERSION,
+        "docker_user": docker_user,
+        "kubelet_dir": KUBELET_DIR,
+        "plugin_registry_dir": KUBELET_DIR + "/plugins_registry"
+    }
+    template(filename, **template_args)
     execute(KUBECTL_CMD, create_cmd, "-f", filename)
     logging.info(logf("Deployed CSI Pods", manifest=filename))
 
