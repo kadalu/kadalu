@@ -180,7 +180,7 @@ def update_config_map(core_v1_client, obj):
     volname = obj["metadata"]["name"]
     voltype = obj["spec"]["type"]
     data = {
-        "kubelet_dir":KUBELET_DIR
+        "kubelet_dir":KUBELET_DIR,
         "namespace": NAMESPACE,
         "kadalu_version": VERSION,
         "volname": volname,
@@ -256,7 +256,8 @@ def deploy_server_pods(obj):
         "voltype": voltype,
         "volume_id": obj["spec"]["volume_id"],
         "shd_required": shd_required,
-        "kubelet_dir": KUBELET_DIR
+        "kubelet_dir": KUBELET_DIR,
+        "plugin_registry_dir": KUBELET_DIR + "/plugins_registry"
     }
 
     # One StatefulSet per Brick
