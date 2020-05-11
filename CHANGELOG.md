@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2020-05-11
+### Added
+- New documentation added for Storage Classes
+- Kadalu can be used as Local storage with the introduction of new
+  Storage Class filter `node_affinity`.
+- Experimental Arm support added with separate tag `master.`
+- Python 2 support for Kadalu Kubectl extension
+- Added support for Kubernetes 1.18
+- Kadalu Server and CSI container images are upgraded to the latest
+  stable release of Gluster(7.4).
+- Fixed an issue of Server pods not starting due to long
+  names. Removed hostname identifier from the Server pod names so that
+  the Server pod name length will be well within limits. Use `kubectl
+  get pods -n kadalu -o wide` to see the hostnames.
+
 ## [0.6.0] - 2020-03-01
 ### Added
 - Replica 2 support added using the Thin arbiter feature of GlusterFS
@@ -88,10 +103,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.6.0...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.7.0...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
 [0.4.0]: https://github.com/kadalu/kadalu/compare/0.3.0...0.4.0
 [0.5.0]: https://github.com/kadalu/kadalu/compare/0.4.0...0.5.0
 [0.6.0]: https://github.com/kadalu/kadalu/compare/0.5.0...0.6.0
+[0.7.0]: https://github.com/kadalu/kadalu/compare/0.6.0...0.7.0
