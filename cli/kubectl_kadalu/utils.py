@@ -3,11 +3,8 @@ Utility methods for the CLI tool
 """
 
 import subprocess
-#import sys
 KUBECTL_CMD = "kubectl"
 
-'''Old Styled Class'''
-#class CmdResponse: # noqa # pylint: disable=too-few-public-methods
 
 class CmdResponse(object): # noqa # pylint: disable=too-few-public-methods
     """ Class for checking the response """
@@ -20,10 +17,6 @@ class CmdResponse(object): # noqa # pylint: disable=too-few-public-methods
 class CommandError(Exception):
     """ Class for handling exceptions """
     def __init__(self, returncode, err):
-        # if sys.version_info >= (3,):
-        #     super().__init__("error %d %s" % (returncode, err))
-        # else:
-        #     super(CommandError, self).__init__(u"error %d %s" % (returncode, err))
         super(CommandError, self).__init__(u"error %d %s" % (returncode, err))
         self.returncode = returncode
         self.stderr = err
