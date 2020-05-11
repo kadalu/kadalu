@@ -5,8 +5,10 @@ Utility methods for the CLI tool
 import subprocess
 KUBECTL_CMD = "kubectl"
 
-
-class CmdResponse(object): # noqa # pylint: disable=too-few-public-methods
+# noqa # pylint: disable=useless-object-inheritance
+# noqa # pylint: disable=too-few-public-methods
+# noqa # pylint: disable=bad-option-value
+class CmdResponse(object):
     """ Class for checking the response """
     def __init__(self, returncode, out, err):
         self.returncode = returncode
