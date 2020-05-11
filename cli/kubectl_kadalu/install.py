@@ -1,10 +1,12 @@
 """
 'install' subcommand for kubectl-kadalu CLI tool
 """
+#To prevent Py2 to interpreting print(val) as a tuple.
+from __future__ import print_function
+
 import sys
 
 from kubectl_kadalu import utils
-
 
 def install_args(subparsers):
     """ add arguments to argparser """
@@ -50,6 +52,7 @@ def subcmd_install(args):
         print("Kadalu operator create request sent successfully")
         print(resp.stdout)
         print()
+    #noqa #pylint : disable=R0801
     except utils.CommandError as err:
         print("Error while running the following command", file=sys.stderr)
         print("$ " + " ".join(cmd), file=sys.stderr)

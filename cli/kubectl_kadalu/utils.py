@@ -3,23 +3,24 @@ Utility methods for the CLI tool
 """
 
 import subprocess
-
 KUBECTL_CMD = "kubectl"
 
-
-class CmdResponse: # noqa # pylint: disable=too-few-public-methods
+# noqa # pylint: disable=useless-object-inheritance
+# noqa # pylint: disable=too-few-public-methods
+# noqa # pylint: disable=bad-option-value
+class CmdResponse(object):
     """ Class for checking the response """
-    def __init__(self, rc, out, err):
-        self.returncode = rc
+    def __init__(self, returncode, out, err):
+        self.returncode = returncode
         self.stdout = out
         self.stderr = err
 
 
 class CommandError(Exception):
     """ Class for handling exceptions """
-    def __init__(self, rc, err):
-        super().__init__("error %d %s" % (rc, err))
-        self.returncode = rc
+    def __init__(self, returncode, err):
+        super(CommandError, self).__init__(u"error %d %s" % (returncode, err))
+        self.returncode = returncode
         self.stderr = err
 
 

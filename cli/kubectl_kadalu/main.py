@@ -1,10 +1,14 @@
 """
 This is an CLI command to handle kadalu executions
 """
+#To prevent Py2 to interpreting print(val) as a tuple.
+from __future__ import print_function
+
 from argparse import ArgumentParser
 
+# noqa # pylint: disable=unused-import
 from kubectl_kadalu.storage_add import storage_add_args, subcmd_storage_add, \
-    storage_add_validation
+     storage_add_validation
 from kubectl_kadalu.install import install_args, subcmd_install
 
 
