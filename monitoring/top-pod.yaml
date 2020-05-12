@@ -1,0 +1,54 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics-server-sa
+  namespace: kube-system
+  labels:
+    k8s-app: metrics-server
+spec:
+  selector:
+    matchLabels:
+      k8s-app: metrics-server
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+  template:
+    metadata:
+      name: metrics-server
+      labels:
+        k8s-app: metrics-server
+    spec:
+      serviceAccountName: metrics-server
+      volumes:
+      - name: tmp-dir
+        emptyDir: {}
+      containers:
+      - name: metrics-server
+        image: gcr.io/k8s-staging-metrics-server/metrics-server:master
+        imagePullPolicy: IfNotPresent
+        args:
+          - --cert-dir=/tmp
+          - --secure-port=4443
+          - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+        command:
+        - /metrics-server
+        - --kubelet-insecure-tls
+        ports:
+        - name: main-port
+          containerPort: 4443
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: main-port
+            scheme: HTTPS
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+        volumeMounts:
+        - name: tmp-dir
+          mountPath: /tmp
+      nodeSelector:
+        kubernetes.io/os: linux
