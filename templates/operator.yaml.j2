@@ -220,7 +220,7 @@ spec:
             capabilities: {}
             privileged: true
           image: docker.io/{{ docker_user }}/kadalu-operator:{{ kadalu_version }}
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
               valueFrom:
