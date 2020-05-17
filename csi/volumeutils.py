@@ -7,6 +7,7 @@ import json
 import time
 import logging
 import threading
+import shutil
 from errno import ENOTCONN
 
 from jinja2 import Template
@@ -424,7 +425,7 @@ def delete_volume(volname):
     volpath = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath)
     try:
         if vol.voltype == PV_TYPE_SUBVOL:
-            os.removedirs(volpath)
+            shutil.rmtree(volpath)
         else:
             os.remove(volpath)
     except OSError as err:
