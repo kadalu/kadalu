@@ -3,6 +3,12 @@
 [![Build Status](https://travis-ci.com/kadalu/kadalu.svg?branch=master)](https://travis-ci.com/kadalu/kadalu)
 [![Operator Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg?label=DockerPulls%20Operator)](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg)
 [![Server Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg?label=DockerPulls%20Server)](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg)
+[![BuildX](https://github.com/kadalu/kadalu/workflows/buildx/badge.svg)](https://github.com/kadalu/kadalu/actions?query=workflow%3Abuildx)
+
+
+### Stargazers over time
+
+[![Stargazers over time](https://starchart.cc/kadalu/kadalu.svg)](https://starchart.cc/kadalu/kadalu)
 
 >
 >**Note 1:** If you like the project, give a github star :-)
