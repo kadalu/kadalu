@@ -1,6 +1,6 @@
 # KaDalu
 
-[![Build Status](https://travis-ci.com/kadalu/kadalu.svg?branch=master)](https://travis-ci.com/kadalu/kadalu)
+[![TravisCI](https://travis-ci.com/kadalu/kadalu.svg?branch=master)](https://travis-ci.com/kadalu/kadalu)
 [![Operator Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg?label=DockerPulls%20Operator)](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg)
 [![Server Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg?label=DockerPulls%20Server)](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg)
 [![BuildX](https://github.com/kadalu/kadalu/workflows/buildx/badge.svg)](https://github.com/kadalu/kadalu/actions?query=workflow%3Abuildx)
@@ -17,6 +17,14 @@
 # Kadalu Documentation
 
 See [Documentation](doc/)
+
+## How to pronounce kadalu ?
+
+One is free to pronounce 'kaDalu' as they wish. Below is a sample of how we pronounce it!
+
+[!Pronounce]()
+[![Pronounce](https://raw.githubusercontent.com/kadalu/kadalu/master/extras/assets/speaker.svg)](https://raw.githubusercontent.com/kadalu/kadalu/master/extras/assets/kadalu_01.wav)
+
 
 ## Talks and Blog posts
 
