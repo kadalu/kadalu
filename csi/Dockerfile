@@ -1,11 +1,8 @@
 FROM kadalu/kadalu-base
 
-RUN yum install -y glusterfs-fuse
+RUN apt install -y glusterfs-client
 
 # need these to get grpcio (on arm64/ppc64le/s390x)
-RUN yum -y install make automake gcc-g++ openssl-devel kernel-headers  python3-distutils-extra
-
-RUN python3 -m pip install --upgrade pip setuptools
 
 # Suggested in one of the issues to speed up pip install
 ENV GRPC_PYTHON_BUILD_EXT_COMPILER_JOBS 8

@@ -1,7 +1,7 @@
 FROM kadalu/kadalu-base
 
-RUN yum -y install python3-pyxattr glusterfs-server
-RUN rpm -qa | grep gluster | tee /gluster-rpm-versions.txt
+RUN apt -y install python3-pyxattr glusterfs-server
+RUN apt list --installed | grep gluster | tee /gluster-rpm-versions.txt
 
 COPY lib/kadalulib.py        /kadalu/kadalulib.py
 COPY server/server.py        /kadalu/server.py

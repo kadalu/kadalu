@@ -1,13 +1,12 @@
-FROM docker.io/fedora:31
+FROM docker.io/ubuntu
 
-RUN yum update -y
-RUN yum -y install procps-ng xfsprogs net-tools telnet wget e2fsprogs python3-pip
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt update -y
+RUN apt-get install -y xfsprogs net-tools telnet wget e2fsprogs python3-pip
+# procps-ng
 
 # need below dependencies to have xxhash
-RUN yum -y install gcc python3-devel
-
-RUN yum clean all -y
-RUN rm -rf /var/cache/yum
+RUN apt -y install gcc python3-dev
 
 # Install Python GRPC library and copy all CSI related files
 RUN python3 -m pip install jinja2 requests datetime xxhash
