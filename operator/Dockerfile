@@ -1,6 +1,8 @@
 FROM kadalu/kadalu-base
 
 # Always have the latest stable kubectl
+
+RUN apt-get install -y curl
 RUN curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`/kubectl -o /usr/bin/kubectl
 
 RUN chmod +x /usr/bin/kubectl
