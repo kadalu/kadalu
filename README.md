@@ -22,8 +22,7 @@ See [Documentation](doc/)
 
 One is free to pronounce 'kaDalu' as they wish. Below is a sample of how we pronounce it!
 
-[!Pronounce]()
-[![Pronounce](https://raw.githubusercontent.com/kadalu/kadalu/master/extras/assets/speaker.svg)](https://raw.githubusercontent.com/kadalu/kadalu/master/extras/assets/kadalu_01.wav)
+[<img src="https://raw.githubusercontent.com/kadalu/kadalu/master/extras/assets/speaker.svg" width="64"/>](https://raw.githubusercontent.com/kadalu/kadalu/master/extras/assets/kadalu_01.wav)
 
 
 ## Talks and Blog posts
