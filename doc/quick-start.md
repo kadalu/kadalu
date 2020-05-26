@@ -24,10 +24,21 @@ $ oc kadalu install --type=openshift
 
 Identify the devices available from nodes and run the following command to add storage to Kadalu.
 
+NOTE: if your host is running RHEL/CentOS 7.x series or Ubuntu/Debian older than 18.04, you may need to do below tasks before adding storage to kadalu.
+
+```
+# On CentOS7.x/Ubuntu-16.04
+sudo wipefs -a -t dos -f /dev/sdc
+sudo mkfs.xfs /dev/sdc
+```
+
+Once the device is ready, add it to kadalu pool.
+
 ```console
 $ kubectl kadalu storage-add storage-pool-1 \
-    --device kube1:/dev/vdc
+    --device kube1:/dev/sdc
 ```
+
 
 Operator will start the storage export pods as required. And, in 2 steps, your storage system is up and running.
 
