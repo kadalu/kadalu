@@ -36,7 +36,7 @@ LABEL name="kadalu-operator"
 LABEL Summary="KaDalu Operator"
 LABEL vcs-type="git"
 LABEL vcs-url="https://github.com/kadalu/kadalu"
-LABEL vendor="org.kadalu.gluster"
+LABEL vendor="kadalu"
 LABEL version="${version}"
 
 ENTRYPOINT ["/kadalu/startup.sh", "/usr/bin/python3", "/kadalu/main.py"]

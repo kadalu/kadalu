@@ -23,13 +23,13 @@ Traceback (most recent call last):
     execute(KUBECTL_CMD, "create", "-f", filename)
   File "/kadalu/kadalulib.py", line 60, in execute
     raise CommandException(proc.returncode, out.strip(), err.strip())
-kadalulib.CommandException: [1] b'' b'Error from server (AlreadyExists): error when creating "/kadalu/templates/csi-driver-object.yaml": csidrivers.storage.k8s.io "org.kadalu.gluster" already exists'
+kadalulib.CommandException: [1] b'' b'Error from server (AlreadyExists): error when creating "/kadalu/templates/csi-driver-object.yaml": csidrivers.storage.k8s.io "kadalu" already exists'
 ```
 
 If the log complains about ` error when creating "/kadalu/templates/csi-driver-object.yaml"` you might delete the `CSIDriver` as follows
 
 ```console
-$ kubectl delete CSIDriver org.kadalu.gluster
+$ kubectl delete CSIDriver kadalu
 ```
 
 > **Note**: Use the [cleanup script](https://github.com/kadalu/kadalu/blob/master/extras/scripts/cleanup) to properly cleanup kadalu.

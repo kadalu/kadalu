@@ -8,7 +8,7 @@ kubectl -nkadalu delete DaemonSet csi-nodeplugin
 kubectl -nkadalu delete ClusterRoleBinding csi-nodeplugin
 kubectl -nkadalu delete ClusterRole csi-nodeplugin
 kubectl -nkadalu delete ServiceAccount csi-nodeplugin
-kubectl delete CSIDriver org.kadalu.gluster
+kubectl delete CSIDriver kadalu
 kubectl get Service -nkadalu | awk '{print $1}' | xargs kubectl -nkadalu delete Service
 kubectl get StatefulSet -nkadalu | awk '{print $1}' | xargs kubectl -nkadalu delete StatefulSet
 kubectl get storageclass | grep kadalu | awk '{print $1}' | xargs kubectl delete storageclass
@@ -21,6 +21,6 @@ kubectl delete -nkadalu ClusterRoleBinding kadalu-operator
 kubectl delete -nkadalu Deployment kadalu-operator
 
 # CSIDriver
-kubectl delete CSIDriver org.kadalu.gluster
+kubectl delete CSIDriver kadalu
 
 kubectl delete namespace kadalu

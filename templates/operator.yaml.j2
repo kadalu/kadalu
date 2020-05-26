@@ -10,21 +10,18 @@ kind: ServiceAccount
 metadata:
   name: kadalu-operator-sa
   namespace: {{ namespace }}
-
 ---
 kind: ServiceAccount
 apiVersion: v1
 metadata:
   name: kadalu-csi-nodeplugin-sa
   namespace: {{ namespace }}
-
 ---
 kind: ServiceAccount
 apiVersion: v1
 metadata:
   name: kadalu-csi-provisioner-sa
   namespace: {{ namespace }}
-
 ---
 kind: ServiceAccount
 apiVersion: v1

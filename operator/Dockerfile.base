@@ -24,7 +24,7 @@ LABEL name="kadalu-base"
 LABEL Summary="KaDalu Base Image"
 LABEL vcs-type="git"
 LABEL vcs-url="https://github.com/kadalu/kadalu"
-LABEL vendor="org.kadalu.gluster"
+LABEL vendor="kadalu"
 LABEL version="${version}"
 
 # Debugging, Comment the above line and
