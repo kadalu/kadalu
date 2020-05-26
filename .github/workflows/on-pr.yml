@@ -20,3 +20,21 @@ jobs:
     - name: Run pylint
       run: make pylint
 
+  run-on-minikube:
+    name: kube 1.20.0
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Docker Dependencies
+      run: sudo apt-get install -y conntrack
+    - name: Build locally
+      run: make build-containers
+    - name: Generate Manifests
+      run: make gen-manifest
+    - name: Setup Minikube
+      run: tests/setup.sh v1.20.0
+    - name: Run tests
+      run: tests/travis-test.sh v1.20.0
+    - name: Cleanup
+      run: tests/cleanup.sh v1.20.0
+

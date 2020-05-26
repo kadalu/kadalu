@@ -19,7 +19,7 @@ else
     sudo tests/minikube.sh cli_tests
 fi
 
-sudo chown -R travis: "$HOME"/.minikube /usr/local/bin/kubectl
+#sudo chown -R travis: "$HOME"/.minikube /usr/local/bin/kubectl
 # functional tests
 # sample test
 

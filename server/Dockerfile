@@ -1,7 +1,7 @@
-FROM kadalu/kadalu-base
+FROM kadalu/kadalu-base:latest
 
-RUN yum -y install python3-pyxattr glusterfs-server
-RUN rpm -qa | grep gluster | tee /gluster-rpm-versions.txt
+RUN apt-get install -y python3-pyxattr glusterfs-server
+RUN apt list --installed | grep -v WARNING | grep gluster | tee /gluster-rpm-versions.txt
 
 RUN python3 -m pip install glustercli || true && echo "External storage Quota feature may not work"
 
@@ -16,6 +16,8 @@ COPY lib/startup.sh          /kadalu/startup.sh
 COPY server/stop-server.sh   /kadalu/stop-server.sh
 
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
+
+RUN mkdir -p /var/run/gluster /var/log/glusterfs
 
 # Copy Volfile templates
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/
