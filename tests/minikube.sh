@@ -3,6 +3,7 @@
 #Based on ideas from https://github.com/rook/rook/blob/master/tests/scripts/minikube.sh
 fail=0
 
+ARCH=`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`
 function wait_till_pods_start() {
     # give it some time
     cnt=0
@@ -131,7 +132,7 @@ function install_minikube() {
     fi
 
     echo "Installing minikube. Version: ${MINIKUBE_VERSION}"
-    curl -Lo minikube https://storage.googleapis.com/minikube/releases/"${MINIKUBE_VERSION}"/minikube-linux-amd64 && chmod +x minikube && mv minikube /usr/local/bin/
+    curl -Lo minikube https://storage.googleapis.com/minikube/releases/"${MINIKUBE_VERSION}"/minikube-linux-${ARCH} && chmod +x minikube && mv minikube /usr/local/bin/
 }
 
 function install_kubectl() {
@@ -147,7 +148,7 @@ function install_kubectl() {
     fi
     # Download kubectl, which is a requirement for using minikube.
     echo "Installing kubectl. Version: ${KUBE_VERSION}"
-    curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/"${KUBE_VERSION}"/bin/linux/amd64/kubectl && chmod +x kubectl && mv kubectl /usr/local/bin/
+    curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/"${KUBE_VERSION}"/bin/linux/${ARCH}/kubectl && chmod +x kubectl && mv kubectl /usr/local/bin/
 }
 
 # configure minikube
