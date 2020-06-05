@@ -14,7 +14,7 @@ from jinja2 import Template
 
 from kadalulib import execute, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, \
     get_volname_hash, get_volume_path, logf, makedirs, CommandException, \
-    retry_errors, is_gluster_mount_proc_running
+    retry_errors, is_gluster_mount_proc_running, SizeAccounting
 
 
 GLUSTERFS_CMD = "/usr/sbin/glusterfs"
@@ -189,32 +189,21 @@ def get_pv_hosting_volumes(filters={}):
     return volumes
 
 
-def update_free_size(hostvol, sizechange):
-    """Update the free size in respective hosting Volume's stat file"""
+def update_free_size(hostvol, pvname, sizechange):
+    """Update the free size in respective host volume's stats.db file"""
+
+    mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
 
     # Check for mount availability before updating the free size
-    retry_errors(os.statvfs, [os.path.join(HOSTVOL_MOUNTDIR, hostvol)], [ENOTCONN])
-
-    stat_file_path = os.path.join(HOSTVOL_MOUNTDIR, hostvol, ".stat")
+    retry_errors(os.statvfs, [mntdir], [ENOTCONN])
 
     with statfile_lock:
-        with open(stat_file_path+".tmp", "w") as stat_file_tmp:
-            with open(stat_file_path) as stat_file:
-                data = json.load(stat_file)
-                data["free_size"] += sizechange
-                stat_file_tmp.write(json.dumps(data))
-                logging.debug(logf(
-                    "Updated .stat.tmp file",
-                    hostvol=hostvol,
-                    before=data["free_size"] - sizechange,
-                    after=data["free_size"]
-                ))
-
-        os.rename(stat_file_path+".tmp", stat_file_path)
-        logging.debug(logf(
-            "Renamed .stat.tmp to .stat file",
-            hostvol=hostvol
-        ))
+        with SizeAccounting(hostvol, mntdir) as acc:
+            # Reclaim space
+            if sizechange > 0:
+                acc.remove_pv_record(pvname)
+            else:
+                acc.update_pv_record(pvname, -sizechange)
 
 
 def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
@@ -224,33 +213,27 @@ def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
         mount_glusterfs(volume, mntdir)
 
-        stat_file_path = os.path.join(mntdir, ".stat")
-        data = {}
         with statfile_lock:
             # Stat done before `os.path.exists` to prevent ignoring
             # file not exists even in case of ENOTCONN
             mntdir_stat = retry_errors(os.statvfs, [mntdir], [ENOTCONN])
-            if not os.path.exists(stat_file_path):
-                data = {
-                    "size": mntdir_stat.f_bavail * mntdir_stat.f_bsize,
-                    "free_size": mntdir_stat.f_bavail * mntdir_stat.f_bsize
-                }
-                with open(stat_file_path, "w") as stat_file:
-                    stat_file.write(json.dumps(data))
-            else:
-                with open(stat_file_path) as stat_file:
-                    data = json.load(stat_file)
+            with SizeAccounting(hvol, mntdir) as acc:
+                acc.update_summary(mntdir_stat.f_bavail * mntdir_stat.f_bsize)
+                pv_stats = acc.get_stats()
+                reserved_size = pv_stats["free_size_bytes"] * RESERVED_SIZE_PERCENTAGE/100
 
-            reserved_size = data["free_size"] * RESERVED_SIZE_PERCENTAGE/100
             logging.debug(logf(
-                "stat file content",
+                "pv stats",
                 hostvol=hvol,
-                data=data,
+                total_size_bytes=pv_stats["total_size_bytes"],
+                used_size_bytes=pv_stats["used_size_bytes"],
+                free_size_bytes=pv_stats["free_size_bytes"],
+                number_of_pvs=pv_stats["number_of_pvs"],
                 required_size=required_size,
                 reserved_size=reserved_size
             ))
 
-            if required_size < (data["free_size"] - reserved_size):
+            if required_size < (pv_stats["free_size_bytes"] - reserved_size):
                 return hvol
 
     return None
@@ -453,7 +436,7 @@ def delete_volume(volname):
             # developing thats not true. There can be a delete request for
             # previously created pvc, which would be assigned to you once
             # you come up. We can't fail then.
-            update_free_size(vol.hostvol, data["size"])
+            update_free_size(vol.hostvol, volname, data["size"])
 
         os.remove(info_file_path)
         logging.debug(logf(

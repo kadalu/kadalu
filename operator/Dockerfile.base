@@ -1,7 +1,7 @@
 FROM docker.io/fedora:31
 
 RUN yum update -y
-RUN yum -y install procps-ng xfsprogs net-tools telnet wget e2fsprogs python3-pip
+RUN yum -y install procps-ng xfsprogs net-tools telnet wget e2fsprogs python3-pip sqlite
 
 # need below dependencies to have xxhash
 RUN yum -y install gcc python3-devel

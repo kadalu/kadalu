@@ -6,11 +6,27 @@ import sys
 import os
 from datetime import datetime
 import time
+import sqlite3
 
 import requests
 import xxhash
 
+CREATE_TABLE_1 = """CREATE TABLE IF NOT EXISTS summary (
+    volname    VARCHAR PRIMARY KEY,
+    size       INTEGER,
+    created_at REAL DEFAULT (datetime('now', 'localtime')),
+    updated_at REAL
+)"""
 
+CREATE_TABLE_2 = """CREATE TABLE IF NOT EXISTS pv_stats (
+    pvname     VARCHAR PRIMARY KEY,
+    hash       VARCHAR,
+    size       INTEGER,
+    created_at REAL DEFAULT (datetime('now', 'localtime')),
+    updated_at REAL
+)"""
+
+DB_NAME = "stat.db"
 PV_TYPE_VIRTBLOCK = "virtblock"
 PV_TYPE_SUBVOL = "subvol"
 
@@ -161,3 +177,107 @@ def send_analytics_tracker(name, uid=None):
         requests.get(track_url, headers=reqheader)
     except:   # noqa # pylint: disable=bare-except
         pass
+
+
+class SizeAccounting:
+    """
+    Context manager to read and update Volume size and PV size info
+
+    Usage:
+
+    with SizeAccounting("storage-pool-1", "/mnt/storage-pool-1") as acc:
+        acc.update_pv_record("pv1", 20000000)
+    """
+
+    def __init__(self, volname, mount_path):
+        self.mount_path = mount_path
+        self.volname = volname
+        self.conn = None
+        self.cursor = None
+
+    def __enter__(self):
+        """Initialize the Db Connection"""
+        self.conn = sqlite3.connect(os.path.join(self.mount_path, DB_NAME))
+        self.cursor = self.conn.cursor()
+        self._create_tables()
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        """Close Db connection on exit of the Context manager"""
+        self.conn.close()
+
+    def _create_tables(self):
+        """Create required tables"""
+        self.cursor.execute(CREATE_TABLE_1)
+        self.cursor.execute(CREATE_TABLE_2)
+
+    def update_summary(self, size):
+        """Update the total available size in storage pool"""
+
+        # To retain the old value of created_at, select from existing
+        query = """
+        INSERT OR REPLACE INTO summary (
+            volname, size, created_at, updated_at
+        )
+        VALUES (
+            ?,
+            ?,
+            COALESCE((SELECT created_at FROM summary WHERE volname = ?),
+                     datetime('now', 'localtime')),
+            datetime('now', 'localtime')
+        )
+        """
+
+        self.cursor.execute(query, (self.volname, size, self.volname))
+        self.conn.commit()
+
+    def update_pv_record(self, pvname, size):
+        """Update Each PV size"""
+
+        # To retain the old value of created_at, select from existing
+        query = """
+        INSERT OR REPLACE INTO pv_stats (
+            pvname, size, hash, created_at, updated_at
+        )
+        VALUES (
+            ?,
+            ?,
+            ?,
+            COALESCE((SELECT created_at FROM pv_stats WHERE pvname = ?),
+                     datetime('now', 'localtime')),
+            datetime('now', 'localtime')
+        )
+        """
+        pv_hash = get_volname_hash(pvname)
+        self.cursor.execute(query, (pvname, size, pv_hash, pvname))
+        self.conn.commit()
+
+    def remove_pv_record(self, pvname):
+        """Remove PV related entry when PV is deleted"""
+
+        self.cursor.execute("DELETE FROM pv_stats WHERE pvname = ?", (pvname, ))
+        self.conn.commit()
+
+    def get_stats(self):
+        """Get Statistics: total/used/free size, number of pvs"""
+        self.cursor.execute("SELECT COUNT(pvname), SUM(size) FROM pv_stats")
+        number_of_pvs, used_size_bytes = self.cursor.fetchone()
+
+        self.cursor.execute("SELECT volname, size FROM summary")
+        _, total_size_bytes = self.cursor.fetchone()
+
+        if total_size_bytes is None:
+            total_size_bytes = 0
+
+        if used_size_bytes is None:
+            used_size_bytes = 0
+
+        if number_of_pvs is None:
+            number_of_pvs = 0
+
+        return {
+            "number_of_pvs": number_of_pvs,
+            "total_size_bytes": total_size_bytes,
+            "used_size_bytes": used_size_bytes,
+            "free_size_bytes": total_size_bytes - used_size_bytes
+        }
