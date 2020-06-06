@@ -1,7 +1,7 @@
 .PHONY: help build-grpc build-containers gen-manifest pylint prepare-release release
 
 DOCKER_USER?=kadalu
-KADALU_VERSION?=latest
+KADALU_VERSION?=master
 KADALU_LATEST?=latest
 
 help:
@@ -11,6 +11,7 @@ help:
 	@echo "    make pylint            - To validate all Python code with Pylint"
 	@echo "    make prepare-release   - Generate Manifest file and build containers for specific version and latest"
 	@echo "    make release           - Publish the built container images"
+	@echo "    make prepare-release-manifests - Prepare release manifest files"
 
 build-grpc:
 	python3 -m grpc_tools.protoc -I./csi/protos --python_out=csi --grpc_python_out=csi ./csi/protos/csi.proto
@@ -18,16 +19,18 @@ build-grpc:
 build-containers:
 	DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} bash build.sh
 
+SUFFIX?="-master"
+
 gen-manifest:
 	@echo "Generating manifest files, run the following commands"
 	@echo
 	@mkdir -p manifests
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
-		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator.yaml
-	@echo "kubectl create -f manifests/kadalu-operator.yaml"
+		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator${SUFFIX}.yaml
+	@echo "kubectl create -f manifests/kadalu-operator${SUFFIX}.yaml"
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
-		OPENSHIFT=1                                          \
-		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-openshift.yaml
+		K8S_DIST=openshift                                   \
+		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-openshift${SUFFIX}.yaml
 	@echo
 	@echo "In the case of OpenShift, deploy Kadalu Operator by running "
 	@echo "the following command"
@@ -35,7 +38,16 @@ gen-manifest:
 	@echo "Note: Security Context Constraints can be applied only by admins, "
 	@echo 'Run `oc login -u system:admin` to login as admin'
 	@echo
-	@echo "oc create -f manifests/kadalu-operator-openshift.yaml"
+	@echo "oc create -f manifests/kadalu-operator-openshift${SUFFIX}.yaml"
+
+	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
+		K8S_DIST=microk8s                                    \
+		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-microk8s${SUFFIX}.yaml
+	@echo
+	@echo "In the case of MicroK8s, deploy Kadalu Operator by running "
+	@echo "the following command"
+	@echo
+	@echo "kubectl create -f manifests/kadalu-operator-microk8s${SUFFIX}.yaml"
 
 pylint:
 	@cp lib/kadalulib.py csi/
@@ -64,17 +76,24 @@ pylint:
 	@rm server/quotad.py
 
 ifeq ($(KADALU_VERSION), latest)
-prepare-release:
+prepare-release-manifests:
 	@echo "KADALU_VERSION can't be latest for release"
 else
-prepare-release:
+prepare-release-manifests:
+	# For each k8s distribution(specific version)
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
-		$(MAKE) gen-manifest
-	@cp manifests/kadalu-operator.yaml \
-		manifests/kadalu-operator-${KADALU_VERSION}.yaml
-	@cp manifests/kadalu-operator-openshift.yaml \
-		manifests/kadalu-operator-openshift-${KADALU_VERSION}.yaml
+		SUFFIX="-${KADALU_VERSION}" $(MAKE) gen-manifest
+	# File names without version suffix
+	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
+		SUFFIX= $(MAKE) gen-manifest
 	@echo "Generated manifest file. Version: ${KADALU_VERSION}"
+endif
+
+ifeq ($(KADALU_VERSION), latest)
+prepare-release: prepare-release-manifests
+	@echo "KADALU_VERSION can't be latest for release"
+else
+prepare-release: prepare-release-manifests
 	@echo "Building containers(Version: ${KADALU_VERSION}).."
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		$(MAKE) build-containers

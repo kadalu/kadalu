@@ -220,7 +220,7 @@ spec:
           securityContext:
             capabilities: {}
             privileged: true
-          image: docker.io/kadalu/kadalu-operator:0.7.0
+          image: docker.io/kadalu/kadalu-operator:master
           imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
@@ -236,7 +236,7 @@ spec:
             - name: DOCKER_USER
               value: "kadalu"
             - name: KADALU_VERSION
-              value: "0.7.0"
+              value: "master"
             - name: KUBELET_DIR
               value: "/var/lib/kubelet"
             - name: K8S_DIST

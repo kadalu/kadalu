@@ -29,12 +29,17 @@ def template(filename, template_file=None, template_args=None):
 if __name__ == "__main__":
     DOCKER_USER = os.environ.get("DOCKER_USER", "kadalu")
     KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
-    OPENSHIFT = bool(int(os.environ.get("OPENSHIFT", 0)))
+    K8S_DIST = os.environ.get("K8S_DIST", "kubernetes")
+    KUBELET_DIR = "/var/lib/kubelet"
+    if K8S_DIST == "microk8s":
+        KUBELET_DIR = "/var/snap/microk8s/common/var/lib/kubelet"
+
     TEMPLATE_ARGS = {
         "namespace": "kadalu",
         "kadalu_version": KADALU_VERSION,
         "docker_user": DOCKER_USER,
-        "openshift": OPENSHIFT
+        "k8s_dist": K8S_DIST,
+        "kubelet_dir": KUBELET_DIR
     }
 
     template(sys.argv[1], template_file="operator.yaml.j2", template_args=TEMPLATE_ARGS)
