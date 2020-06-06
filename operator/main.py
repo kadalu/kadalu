@@ -495,17 +495,25 @@ def deploy_storage_class():
 
     api_instance = client.StorageV1Api()
     scs = api_instance.list_storage_class()
-    create_cmd = "create"
-    for item in scs.items:
-        if item.metadata.name.startswith(STORAGE_CLASS_NAME_PREFIX):
-            logging.info("Updating already deployed StorageClass")
-            create_cmd = "apply"
+    sc_names = []
+    for tmpl in os.listdir(MANIFESTS_DIR):
+        if tmpl.startswith("storageclass-"):
+            sc_names.append(
+                tmpl.replace("storageclass-", "").replace(".yaml.j2", "")
+            )
 
-    # Deploy Storage Class
-    filename = os.path.join(MANIFESTS_DIR, "storageclass.yaml")
-    template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-    execute(KUBECTL_CMD, create_cmd, "-f", filename)
-    logging.info(logf("Deployed StorageClass", manifest=filename))
+    installed_scs = [item.metadata.name for item in scs.items]
+    for sc_name in sc_names:
+        filename = os.path.join(MANIFESTS_DIR, "storageclass-%s.yaml" % sc_name)
+        if sc_name in installed_scs:
+            logging.info(logf("Ignoring already deployed StorageClass",
+                              manifest=filename))
+            continue
+
+        # Deploy Storage Class
+        template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
+        execute(KUBECTL_CMD, "create", "-f", filename)
+        logging.info(logf("Deployed StorageClass", manifest=filename))
 
 
 def main():
