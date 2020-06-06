@@ -1,0 +1,9 @@
+# -*- mode: yaml -*-
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: kadalu.replica1
+provisioner: kadalu
+parameters:
+  hostvol_type: "Replica1"
