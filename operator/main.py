@@ -17,6 +17,8 @@ from kadalulib import execute, logging_setup, logf, send_analytics_tracker
 
 NAMESPACE = os.environ.get("KADALU_NAMESPACE", "kadalu")
 VERSION = os.environ.get("KADALU_VERSION", "latest")
+K8S_DIST = os.environ.get("K8S_DIST", "kubernetes")
+KUBELET_DIR = os.environ.get("KUBELET_DIR")
 MANIFESTS_DIR = "/kadalu/templates"
 KUBECTL_CMD = "/usr/bin/kubectl"
 KADALU_CONFIG_MAP = "kadalu-info"
@@ -272,6 +274,7 @@ def deploy_server_pods(obj):
         template_args["pvc_name"] = storage.get("pvc", "")
         template_args["brick_device_dir"] = get_brick_device_dir(storage)
         template_args["brick_node_id"] = storage["node_id"]
+        template_args["k8s_dist"] = K8S_DIST
 
         filename = os.path.join(MANIFESTS_DIR, "server.yaml")
         template(filename, **template_args)
@@ -452,7 +455,8 @@ def deploy_csi_pods(core_v1_client):
     filename = os.path.join(MANIFESTS_DIR, "csi.yaml")
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
     template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
-             docker_user=docker_user)
+             docker_user=docker_user, k8s_dist=K8S_DIST,
+             kubelet_dir=KUBELET_DIR)
     execute(KUBECTL_CMD, create_cmd, "-f", filename)
     logging.info(logf("Deployed CSI Pods", manifest=filename))
 

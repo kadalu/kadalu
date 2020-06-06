@@ -64,13 +64,15 @@ spec:
             - name: ADDRESS
               value: /plugin/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              value: /var/lib/kubelet/plugins_registry/kadalu/csi.sock
+              value: {{ kubelet_dir }}/plugins_registry/kadalu/csi.sock
             - name: KUBE_NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
             - name: KADALU_VERSION
               value: "{{ kadalu_version }}"
+            - name: K8S_DIST
+              value: "{{ k8s_dist }}"
           volumeMounts:
             - name: plugin-dir
               mountPath: /plugin
@@ -92,11 +94,13 @@ spec:
               value: unix://plugin/csi.sock
             - name: KADALU_VERSION
               value: "{{ kadalu_version }}"
+            - name: K8S_DIST
+              value: "{{ k8s_dist }}"
           volumeMounts:
             - name: plugin-dir
               mountPath: /plugin
             - name: pods-mount-dir
-              mountPath: /var/lib/kubelet/pods
+              mountPath: {{ kubelet_dir }}/pods
               mountPropagation: "Bidirectional"
             - name: glusterfsd-volfilesdir
               mountPath: "/var/lib/gluster"
@@ -114,15 +118,15 @@ spec:
       volumes:
         - name: plugin-dir
           hostPath:
-            path: /var/lib/kubelet/plugins_registry/kadalu
+            path: {{ kubelet_dir }}/plugins_registry/kadalu
             type: DirectoryOrCreate
         - name: pods-mount-dir
           hostPath:
-            path: /var/lib/kubelet/pods
+            path: {{ kubelet_dir }}/pods
             type: Directory
         - name: registration-dir
           hostPath:
-            path: /var/lib/kubelet/plugins_registry/
+            path: {{ kubelet_dir }}/plugins_registry/
             type: Directory
         - name: glusterfsd-volfilesdir
           configMap:
@@ -238,6 +242,8 @@ spec:
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
             - name: KADALU_VERSION
               value: "{{ kadalu_version }}"
+            - name: K8S_DIST
+              value: "{{ k8s_dist }}"
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -249,6 +255,10 @@ spec:
           env:
             - name: ADDRESS
               value: /var/lib/csi/sockets/pluginproxy/csi.sock
+            - name: KADALU_VERSION
+              value: "{{ kadalu_version }}"
+            - name: K8S_DIST
+              value: "{{ k8s_dist }}"
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -268,6 +278,8 @@ spec:
               value: unix://plugin/csi.sock
             - name: KADALU_VERSION
               value: "{{ kadalu_version }}"
+            - name: K8S_DIST
+              value: "{{ k8s_dist }}"
           volumeMounts:
             - name: socket-dir
               mountPath: /plugin

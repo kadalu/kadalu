@@ -143,7 +143,7 @@ rules:
     verbs: ["create", "list", "watch", "delete"]
   - apiGroups: ["csi.storage.k8s.io"]
     resources: ["csidrivers"]
-    verbs: ["get", "create", "delete"]
+    verbs: ["get", "create", "delete", "patch"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["csidrivers"]
     verbs: ["get", "create", "delete", "patch"]
@@ -205,3 +205,7 @@ spec:
               value: "kadalu"
             - name: KADALU_VERSION
               value: "0.7.0"
+            - name: KUBELET_DIR
+              value: "/var/lib/kubelet"
+            - name: K8S_DIST
+              value: "kubernetes"

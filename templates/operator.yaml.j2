@@ -32,7 +32,7 @@ metadata:
   name: kadalu-server-sa
   namespace: {{ namespace }}
 
-{% if openshift %}
+{% if k8s_dist == "openshift" %}
 ---
 kind: SecurityContextConstraints
 apiVersion: security.openshift.io/v1
@@ -174,7 +174,7 @@ rules:
     verbs: ["create", "list", "watch", "delete"]
   - apiGroups: ["csi.storage.k8s.io"]
     resources: ["csidrivers"]
-    verbs: ["get", "create", "delete"]
+    verbs: ["get", "create", "delete", "patch"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["csidrivers"]
     verbs: ["get", "create", "delete", "patch"]
@@ -236,3 +236,7 @@ spec:
               value: "{{ docker_user }}"
             - name: KADALU_VERSION
               value: "{{ kadalu_version }}"
+            - name: KUBELET_DIR
+              value: "{{ kubelet_dir }}"
+            - name: K8S_DIST
+              value: "{{ k8s_dist }}"

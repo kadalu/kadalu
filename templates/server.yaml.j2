@@ -74,6 +74,8 @@ spec:
               value: "{{ brick_device }}"
             - name: KADALU_VERSION
               value: "{{ kadalu_version }}"
+            - name: K8S_DIST
+              value: "{{ k8s_dist }}"
           securityContext:
             capabilities: {}
             privileged: true
@@ -123,6 +125,8 @@ spec:
               value: "{{ brick_device }}"
             - name: KADALU_VERSION
               value: "{{ kadalu_version }}"
+            - name: K8S_DIST
+              value: "{{ k8s_dist }}"
           securityContext:
             capabilities: {}
             privileged: true
@@ -158,6 +162,8 @@ spec:
               value: "{{ brick_device }}"
             - name: KADALU_VERSION
               value: "{{ kadalu_version }}"
+            - name: K8S_DIST
+              value: "{{ k8s_dist }}"
           securityContext:
             capabilities: {}
             privileged: true
