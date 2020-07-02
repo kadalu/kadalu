@@ -51,7 +51,7 @@ spec:
       serviceAccountName: kadalu-csi-nodeplugin-sa
       containers:
         - name: csi-node-driver-registrar
-          image: quay.io/k8scsi/csi-node-driver-registrar:v1.0.1
+          image: quay.io/k8scsi/csi-node-driver-registrar:v2.2.0
           args:
             - "--v=5"
             - "--csi-address=$(ADDRESS)"
@@ -232,7 +232,7 @@ spec:
       serviceAccountName: kadalu-csi-provisioner-sa
       containers:
         - name: csi-provisioner
-          image: quay.io/k8scsi/csi-provisioner:v1.0.1
+          image: quay.io/k8scsi/csi-provisioner:v2.2.0
           args:
             - "--provisioner=kadalu"
             - "--csi-address=$(ADDRESS)"
@@ -248,7 +248,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-attacher
-          image: quay.io/k8scsi/csi-attacher:v1.0.1
+          image: quay.io/k8scsi/csi-attacher:v2.2.0
           args:
             - "--v=5"
             - "--csi-address=$(ADDRESS)"
