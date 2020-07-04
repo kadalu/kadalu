@@ -32,17 +32,40 @@ jobs:
             --output "type=image,name=docker.io/kadalu/kadalu-base,push=false" \
             --file operator/Dockerfile.base .
           KADALU_VERSION=master docker buildx build \
-            --platform linux/arm64,linux/amd64 \
+            --platform linux/amd64 \
             --tag docker.io/kadalu/kadalu-csi:master \
             --output "type=image,name=docker.io/kadalu/kadalu-csi,push=true" \
             --file csi/Dockerfile .
           KADALU_VERSION=master docker buildx build \
-            --platform linux/arm64,linux/amd64 \
+            --platform linux/amd64 \
             --tag docker.io/kadalu/kadalu-operator:master \
             --output "type=image,name=docker.io/kadalu/kadalu-operator,push=true" \
             --file operator/Dockerfile .
           KADALU_VERSION=master docker buildx build \
-            --platform linux/arm64,linux/amd64 \
+            --platform linux/amd64 \
             --tag docker.io/kadalu/kadalu-server:master \
+            --output "type=image,name=docker.io/kadalu/kadalu-server,push=true" \
+            --file server/Dockerfile .
+      -
+        name: Run Buildx
+        if: success()
+        run: |
+          sed -i -e 's#.io/k8scsi/csi-#.io/enr0s/csi-#g' templates/csi.yaml.j2
+          sed -i -e 's/registrar:v1.0.1/registrar:v1.3.0-arm64/g' templates/csi.yaml.j2
+          sed -i -e 's/provisioner:v1.0.1/provisioner:v1.6.0-arm64/g' templates/csi.yaml.j2
+          sed -i -e 's/attacher:v1.0.1/attacher:v3.0.0-arm64/g' templates/csi.yaml.j2
+          KADALU_VERSION=master docker buildx build \
+            --platform linux/arm64 \
+            --tag docker.io/kadalu/kadalu-csi:master-arm \
+            --output "type=image,name=docker.io/kadalu/kadalu-csi,push=true" \
+            --file csi/Dockerfile .
+          KADALU_VERSION=master docker buildx build \
+            --platform linux/arm64 \
+            --tag docker.io/kadalu/kadalu-operator:master-arm \
+            --output "type=image,name=docker.io/kadalu/kadalu-operator,push=true" \
+            --file operator/Dockerfile .
+          KADALU_VERSION=master docker buildx build \
+            --platform linux/arm64 \
+            --tag docker.io/kadalu/kadalu-server:master-arm \
             --output "type=image,name=docker.io/kadalu/kadalu-server,push=true" \
             --file server/Dockerfile .

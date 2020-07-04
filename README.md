@@ -51,7 +51,7 @@ See [CONTRIBUTING](CONTRIBUTING.md)
 
 The release versions and 'latest' versions are not yet ARM ready! But we have an image for linux/arm64 platform support!
 
-Start the operator with `kubectl create -f https://raw.githubusercontent.com/kadalu/kadalu/master/manifests/kadalu-operator-master.yml` to get started! Once we have few users confirming it works, will tag it in a release!
+Start the operator with `kubectl create -f https://raw.githubusercontent.com/kadalu/kadalu/master/manifests/kadalu-operator-master-arm.yaml` to get started! Once we have few users confirming it works, will tag it in a release!
 
 
 ## NOTE
