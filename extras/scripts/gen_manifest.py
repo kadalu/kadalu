@@ -33,6 +33,8 @@ if __name__ == "__main__":
     KUBELET_DIR = "/var/lib/kubelet"
     if K8S_DIST == "microk8s":
         KUBELET_DIR = "/var/snap/microk8s/common/var/lib/kubelet"
+    elif K8S_DIST == "rke":
+        KUBELET_DIR = "/opt/rke/var/lib/kubelet"
 
     TEMPLATE_ARGS = {
         "namespace": "kadalu",
