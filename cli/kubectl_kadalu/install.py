@@ -20,7 +20,7 @@ def install_args(subparsers):
     parser_install.add_argument(
         "--type",
         help="Type of installation - k8s/openshift [default: kubernetes]",
-        choices=["openshift", "kubernetes", "microk8s"],
+        choices=["openshift", "kubernetes", "microk8s", "rke"],
         default="kubernetes"
     )
     parser_install.add_argument(
