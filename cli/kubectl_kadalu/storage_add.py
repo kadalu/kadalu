@@ -250,10 +250,6 @@ def run(args):
 
     #noqa #pylint : disable=R0801
     except utils.CommandError as err:
-        print("Error while running the following command", file=sys.stderr)
-        print("$ " + " ".join(cmd), file=sys.stderr)
-        print("", file=sys.stderr)
-        print(err.stderr, file=sys.stderr)
-        sys.exit(1)
+        utils.command_error(cmd, err.stderr)
     finally:
         os.remove(tempfile_path)
