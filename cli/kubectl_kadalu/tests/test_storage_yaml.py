@@ -64,9 +64,11 @@ spec:
 
 def test_replica1_storage_device():
     content = {
-        "name": STORAGE_POOL_NAME,
-        "type": REPLICA_1,
+        "metadata": {
+            "name": STORAGE_POOL_NAME
+        },
         "spec": {
+            "type": REPLICA_1,
             "storage": [
                 {
                     "node": NODE_1,
@@ -80,9 +82,11 @@ def test_replica1_storage_device():
 
 def test_replica2_storage_device():
     content = {
-        "name": STORAGE_POOL_NAME,
-        "type": REPLICA_2,
+        "metadata": {
+            "name": STORAGE_POOL_NAME
+        },
         "spec": {
+            "type": REPLICA_2,
             "storage": [
                 {
                     "node": NODE_1,
@@ -100,9 +104,11 @@ def test_replica2_storage_device():
 
 def test_replica3_storage_device():
     content = {
-        "name": STORAGE_POOL_NAME,
-        "type": REPLICA_3,
+        "metadata": {
+            "name": STORAGE_POOL_NAME
+        },
         "spec": {
+            "type": REPLICA_3,
             "storage": [
                 {
                     "node": NODE_1,
@@ -163,9 +169,11 @@ spec:
 
 def test_replica1_storage_path():
     content = {
-        "name": STORAGE_POOL_NAME,
-        "type": REPLICA_1,
+        "metadata": {
+            "name": STORAGE_POOL_NAME
+        },
         "spec": {
+            "type": REPLICA_1,
             "storage": [
                 {
                     "node": NODE_1,
@@ -179,9 +187,11 @@ def test_replica1_storage_path():
 
 def test_replica2_storage_path():
     content = {
-        "name": STORAGE_POOL_NAME,
-        "type": REPLICA_2,
+        "metadata": {
+            "name": STORAGE_POOL_NAME
+        },
         "spec": {
+            "type": REPLICA_2,
             "storage": [
                 {
                     "node": NODE_1,
@@ -199,9 +209,11 @@ def test_replica2_storage_path():
 
 def test_replica3_storage_path():
     content = {
-        "name": STORAGE_POOL_NAME,
-        "type": REPLICA_3,
+        "metadata": {
+            "name": STORAGE_POOL_NAME
+        },
         "spec": {
+            "type": REPLICA_3,
             "storage": [
                 {
                     "node": NODE_1,
@@ -260,9 +272,11 @@ spec:
 
 def test_replica1_storage_pvc():
     content = {
-        "name": STORAGE_POOL_NAME,
-        "type": REPLICA_1,
+        "metadata": {
+            "name": STORAGE_POOL_NAME
+        },
         "spec": {
+            "type": REPLICA_1,
             "storage": [
                 {
                     "pvc": PVC_1
@@ -275,9 +289,11 @@ def test_replica1_storage_pvc():
 
 def test_replica2_storage_pvc():
     content = {
-        "name": STORAGE_POOL_NAME,
-        "type": REPLICA_2,
+        "metadata": {
+            "name": STORAGE_POOL_NAME
+        },
         "spec": {
+            "type": REPLICA_2,
             "storage": [
                 {
                     "pvc": PVC_1
@@ -298,9 +314,11 @@ def test_replica2_storage_pvc():
 
 def test_replica3_storage_pvc():
     content = {
-        "name": STORAGE_POOL_NAME,
-        "type": REPLICA_3,
+        "metadata": {
+            "name": STORAGE_POOL_NAME
+        },
         "spec": {
+            "type": REPLICA_3,
             "storage": [
                 {
                     "pvc": PVC_1
@@ -332,9 +350,11 @@ spec:
 
 def test_external_storage():
     content = {
-        "name": STORAGE_POOL_NAME,
-        "type": EXTERNAL,
+        "metadata": {
+            "name": STORAGE_POOL_NAME
+        },
         "spec": {
+            "type": EXTERNAL,
             "details": [
                 {
                     "gluster_host": EXTERNAL_HOST,
