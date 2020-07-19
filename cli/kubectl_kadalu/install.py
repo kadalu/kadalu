@@ -4,8 +4,6 @@
 #To prevent Py2 to interpreting print(val) as a tuple.
 from __future__ import print_function
 
-import sys
-
 import utils
 
 def set_args(name, subparsers):
@@ -62,8 +60,4 @@ def run(args):
         print()
     #noqa #pylint : disable=R0801
     except utils.CommandError as err:
-        print("Error while running the following command", file=sys.stderr)
-        print("$ " + " ".join(cmd), file=sys.stderr)
-        print("", file=sys.stderr)
-        print(err.stderr, file=sys.stderr)
-        sys.exit(1)
+        utils.command_error(cmd, err.stderr)

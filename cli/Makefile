@@ -13,7 +13,7 @@ pytest:
 	${PYTHON} -m pytest kubectl_kadalu
 
 pylint:
-	cd kubectl_kadalu && ${PYTHON} -m pylint *.py
+	cd kubectl_kadalu && ${PYTHON} -m pylint --disable W0511 *.py
 
 mypy:
 	cd kubectl_kadalu && ${PYTHON} -m mypy *.py

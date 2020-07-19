@@ -3,6 +3,8 @@ Utility methods for the CLI tool
 """
 
 import subprocess
+import sys
+
 KUBECTL_CMD = "kubectl"
 
 # noqa # pylint: disable=useless-object-inheritance
@@ -50,3 +52,12 @@ def add_global_flags(parser):
                         help="Skip execution only preview")
     parser.add_argument("--script-mode", action="store_true",
                         help="Script mode, bypass Prompts")
+
+
+def command_error(cmd, msg):
+    """Print error message and Exit"""
+    print("Error while running the following command", file=sys.stderr)
+    print("$ " + " ".join(cmd), file=sys.stderr)
+    print("", file=sys.stderr)
+    print(msg, file=sys.stderr)
+    sys.exit(1)
