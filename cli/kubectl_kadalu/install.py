@@ -5,6 +5,8 @@
 from __future__ import print_function
 
 import utils
+from version import VERSION
+
 
 def set_args(name, subparsers):
     """ add arguments to argparser """
@@ -14,7 +16,7 @@ def set_args(name, subparsers):
     arg(
         "--version",
         help="Kadalu Version to Install [default: latest]",
-        choices=["0.7.0", "master", "latest"],
+        choices=[VERSION, "master", "latest"],
         default="latest"
     )
     arg(
@@ -52,12 +54,16 @@ def run(args):
         operator_file = "%s/kadalu-operator%s%s.yaml" % (file_url, insttype, version)
 
     try:
-        cmd = [utils.KUBECTL_CMD, "apply", "-f", operator_file]
-        print("Executing '%s'" % cmd)
+        cmd = [args.kubectl_cmd, "apply", "-f", operator_file]
+        print("Executing '%s'" % " ".join(cmd))
+        if args.dry_run:
+            return
+
         resp = utils.execute(cmd)
         print("Kadalu operator create request sent successfully")
         print(resp.stdout)
         print()
-    #noqa #pylint : disable=R0801
     except utils.CommandError as err:
         utils.command_error(cmd, err.stderr)
+    except FileNotFoundError:
+        utils.kubectl_cmd_help(args.kubectl_cmd)

@@ -76,12 +76,12 @@ pylint:
 	@pylint --disable=W0511 -s n csi/volumeutils.py
 	@pylint --disable=W0511 -s n operator/main.py
 	@pylint --disable=W0511 -s n extras/scripts/gen_manifest.py
-	@pylint --disable=W0511,W0611 -s n cli/kubectl_kadalu/main.py
 	@rm csi/kadalulib.py
 	@rm server/kadalulib.py
 	@rm operator/kadalulib.py
 	@rm server/quotad.py
-	@cd cli && make pylint
+	@cd cli && make gen-version
+	@cd cli/kubectl_kadalu && pylint --disable W0511 *.py
 
 ifeq ($(KADALU_VERSION), latest)
 prepare-release-manifests:

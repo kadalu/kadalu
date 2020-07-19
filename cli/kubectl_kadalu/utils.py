@@ -61,3 +61,11 @@ def command_error(cmd, msg):
     print("", file=sys.stderr)
     print(msg, file=sys.stderr)
     sys.exit(1)
+
+
+def kubectl_cmd_help(cmd):
+    """Print error and exit if kubectl not found"""
+    print("Failed to execute the command: \"%s\"" % cmd, file=sys.stderr)
+    print("Use `--kubectl-cmd` option if kubectl is installed "
+          "in custom path", file=sys.stderr)
+    sys.exit(1)
