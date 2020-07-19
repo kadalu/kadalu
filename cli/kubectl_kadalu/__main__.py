@@ -24,10 +24,12 @@ def get_args():
 
 
 def show_version():
+    """Show version information"""
     print("kubectl-kadalu %s" % VERSION)
 
 
 def version_set_args(name, parser):
+    """Version subcommand"""
     parser.add_parser(name)
 
 
