@@ -6,30 +6,37 @@ from __future__ import print_function
 
 import sys
 
-from kubectl_kadalu import utils
+import utils
 
-def install_args(subparsers):
+def set_args(name, subparsers):
     """ add arguments to argparser """
-    parser_install = subparsers.add_parser('install')
-    parser_install.add_argument(
+    parser = subparsers.add_parser(name)
+    arg = parser.add_argument
+
+    arg(
         "--version",
         help="Kadalu Version to Install [default: latest]",
         choices=["0.7.0", "master", "latest"],
         default="latest"
     )
-    parser_install.add_argument(
+    arg(
         "--type",
         help="Type of installation - k8s/openshift [default: kubernetes]",
         choices=["openshift", "kubernetes", "microk8s", "rke"],
         default="kubernetes"
     )
-    parser_install.add_argument(
+    arg(
         "--local-yaml",
         help="local operator yaml file path"
     )
+    utils.add_global_flags(parser)
 
 
-def subcmd_install(args):
+def validate(args):
+    pass
+
+
+def run(args):
     """ perform install subcommand """
     operator_file = args.local_yaml
     if not operator_file:

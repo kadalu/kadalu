@@ -38,3 +38,14 @@ def execute(cmd):
         return CmdResponse(proc.returncode, out, err)
 
     raise CommandError(proc.returncode, err)
+
+
+def add_global_flags(parser):
+    parser.add_argument("--kubectl-cmd", default="kubectl",
+                        help="Kubectl Command Path")
+    parser.add_argument("--verbose", action="store_true",
+                        help="Verbose output")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Skip execution only preview")
+    parser.add_argument("--script-mode", action="store_true",
+                        help="Script mode, bypass Prompts")

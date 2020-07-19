@@ -9,56 +9,59 @@ import os
 import tempfile
 import sys
 import yaml
-from kubectl_kadalu import utils
+import utils
 
 # noqa # pylint: disable=too-many-branches
-def storage_add_args(subparsers):
+def set_args(name, subparsers):
     """ add arguments, and their options """
-    parser_add_storage = subparsers.add_parser('storage-add')
-    parser_add_storage.add_argument(
+    parser = subparsers.add_parser(name)
+    arg = parser.add_argument
+
+    arg(
         "name",
         help="Storage Name"
     )
-    parser_add_storage.add_argument(
+    arg(
         "--type",
         help="Storage Type",
         choices=["Replica1", "Replica3", "External", "Replica2"],
         default=None
     )
-    parser_add_storage.add_argument(
+    arg(
         "--device",
         help=("Storage device in <node>:<device> format, "
               "Example: --device kube1.example.com:/dev/vdc"),
         default=[],
         action="append"
     )
-    parser_add_storage.add_argument(
+    arg(
         "--path",
         help=("Storage path in <node>:<path> format, "
               "Example: --path kube1.example.com:/exports/data"),
         default=[],
         action="append"
     )
-    parser_add_storage.add_argument(
+    arg(
         "--pvc",
         help="Storage from pvc, Example: --pvc local-pvc-1",
         default=[],
         action="append"
     )
-    parser_add_storage.add_argument(
+    arg(
         "--external",
         help="Storage from external gluster, Example: --external gluster-node:/gluster-volname",
         default=None
     )
-    parser_add_storage.add_argument(
+    arg(
         "--tiebreaker",
         help="If type is 'Replica2', one can have a tiebreaker node along "
         "with it. like '--tiebreaker tie-breaker-node-name:/data/tiebreaker'",
         default=None
     )
+    utils.add_global_flags(parser)
 
 
-def storage_add_validation(args):
+def validate(args):
     """ validate arguments """
     if args.external is not None:
         if args.type and args.type != "External":
@@ -123,6 +126,7 @@ def storage_add_validation(args):
         if path.split(":")[0] not in kube_nodes:
             print("Node name does not appear to be valid: " + path)
 
+
 def get_kube_nodes():
     """ gets all nodes  """
     try:
@@ -149,6 +153,7 @@ def get_kube_nodes():
         print("", file=sys.stderr)
         print(err.stderr, file=sys.stderr)
         sys.exit(1)
+
 
 def storage_add_data(args):
     """ Build the config file """
@@ -222,7 +227,7 @@ def storage_add_data(args):
     return content
 
 
-def subcmd_storage_add(args):
+def run(args):
     """ Adds the subcommand arguments back to main CLI tool """
     data = storage_add_data(args)
 
