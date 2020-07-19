@@ -12,6 +12,7 @@ help:
 	@echo "    make prepare-release   - Generate Manifest file and build containers for specific version and latest"
 	@echo "    make release           - Publish the built container images"
 	@echo "    make prepare-release-manifests - Prepare release manifest files"
+	@echo "    make cli-build         - Build CLI binary"
 
 build-grpc:
 	python3 -m grpc_tools.protoc -I./csi/protos --python_out=csi --grpc_python_out=csi ./csi/protos/csi.proto
@@ -76,13 +77,11 @@ pylint:
 	@pylint --disable=W0511 -s n operator/main.py
 	@pylint --disable=W0511 -s n extras/scripts/gen_manifest.py
 	@pylint --disable=W0511,W0611 -s n cli/kubectl_kadalu/main.py
-	@pylint --disable=W0511 -s n cli/kubectl_kadalu/utils.py
-	@pylint --disable=W0511 -s n cli/kubectl_kadalu/storage_add.py
-	@pylint --disable=W0511 -s n cli/kubectl_kadalu/install.py
 	@rm csi/kadalulib.py
 	@rm server/kadalulib.py
 	@rm operator/kadalulib.py
 	@rm server/quotad.py
+	@cd cli && make pylint
 
 ifeq ($(KADALU_VERSION), latest)
 prepare-release-manifests:
@@ -108,20 +107,19 @@ prepare-release: prepare-release-manifests
 		$(MAKE) build-containers
 endif
 
+cli-build:
+	cd cli && VERSION=${KADALU_VERSION} $(MAKE) release
+
 pypi-build:
-	echo ${KADALU_VERSION} > cli/VERSION
-	cd cli; rm -rf dist; python3 setup.py sdist;
 	@cp lib/kadalulib.py server/kadalu_quotad/
 	echo ${KADALU_VERSION} > server/VERSION
 	cd server; rm -rf dist; python3 setup.py sdist;
 
 ifeq ($(TWINE_PASSWORD),)
 pypi-upload: pypi-build
-	cd cli; twine upload --username kadalu dist/*
 	cd server; twine upload --username kadalu dist/*
 else
 pypi-upload: pypi-build
-	cd cli; twine upload --username kadalu -p ${TWINE_PASSWORD} dist/*
 	cd server; twine upload --username kadalu -p ${TWINE_PASSWORD} dist/*
 
 endif
@@ -129,7 +127,7 @@ endif
 ifeq ($(KADALU_VERSION), latest)
 release: prepare-release
 else
-release: prepare-release pypi-upload
+release: prepare-release pypi-upload cli-build
 	docker tag ${DOCKER_USER}/kadalu-operator:${KADALU_VERSION} ${DOCKER_USER}/kadalu-operator:${KADALU_LATEST}
 	docker tag ${DOCKER_USER}/kadalu-csi:${KADALU_VERSION} ${DOCKER_USER}/kadalu-csi:${KADALU_LATEST}
 	docker tag ${DOCKER_USER}/kadalu-server:${KADALU_VERSION} ${DOCKER_USER}/kadalu-server:${KADALU_LATEST}
