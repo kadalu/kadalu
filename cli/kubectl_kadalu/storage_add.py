@@ -8,8 +8,10 @@ from __future__ import print_function
 import os
 import tempfile
 import sys
-import yaml
+
 import utils
+from storage_yaml import to_storage_yaml
+
 
 # noqa # pylint: disable=too-many-branches
 def set_args(name, subparsers):
@@ -233,8 +235,9 @@ def run(args):
 
     config, tempfile_path = tempfile.mkstemp(prefix="kadalu")
     try:
-        with os.fdopen(config, 'w') as tmp:
-            yaml.dump(data, tmp)
+        yaml_content = to_storage_yaml(data)
+        with os.open(config, 'w') as tmp:
+            tmp.write(yaml_content)
 
         cmd = [utils.KUBECTL_CMD, "create", "-f", tempfile_path]
         resp = utils.execute(cmd)
@@ -242,7 +245,7 @@ def run(args):
         print(resp.stdout)
         print()
         print("Storage Yaml file for your reference:")
-        print(yaml.dump(data))
+        print(yaml_content)
         print()
 
     #noqa #pylint : disable=R0801

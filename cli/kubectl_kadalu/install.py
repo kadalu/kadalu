@@ -32,8 +32,9 @@ def set_args(name, subparsers):
     utils.add_global_flags(parser)
 
 
-def validate(args):
-    pass
+def validate(_args):
+    """No validation available"""
+    return
 
 
 def run(args):

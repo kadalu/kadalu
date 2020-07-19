@@ -41,7 +41,8 @@ def execute(cmd):
 
 
 def add_global_flags(parser):
-    parser.add_argument("--kubectl-cmd", default="kubectl",
+    """Global Flags available with every subcommand"""
+    parser.add_argument("--kubectl-cmd", default=KUBECTL_CMD,
                         help="Kubectl Command Path")
     parser.add_argument("--verbose", action="store_true",
                         help="Verbose output")
