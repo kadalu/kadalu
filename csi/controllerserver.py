@@ -26,7 +26,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
     volume mount and PV creation.
     Ref:https://github.com/container-storage-interface/spec/blob/master/spec.md
     """
-    # noqa # pylint: disable=too-many-locals,too-many-statements
+    # noqa # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     def CreateVolume(self, request, context):
         start_time = time.time()
         logging.debug(logf(
@@ -199,6 +199,9 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         ))
 
         update_free_size(hostvol, request.name, -pvsize)
+
+        if not hostvoltype:
+            hostvoltype = "unknown"
 
         send_analytics_tracker("pvc-%s" % hostvoltype, uid)
         return csi_pb2.CreateVolumeResponse(
