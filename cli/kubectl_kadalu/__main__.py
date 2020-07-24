@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 
 import storage_add
 import install
+import storage_list
 from version import VERSION
 
 
@@ -18,6 +19,7 @@ def get_args():
 
     install.set_args("install", subparsers)
     storage_add.set_args("storage-add", subparsers)
+    storage_list.set_args("storage-list", subparsers)
     version_set_args("version", subparsers)
 
     return parser.parse_args()
@@ -43,6 +45,9 @@ def main():
         elif args.mode == "storage-add":
             storage_add.validate(args)
             storage_add.run(args)
+        elif args.mode == "storage-list":
+            storage_list.validate(args)
+            storage_list.run(args)
         elif args.mode == "version":
             show_version()
     except KeyboardInterrupt:
