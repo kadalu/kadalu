@@ -4,12 +4,14 @@ kubectl -nkadalu delete StatefulSet kadalu-csi-provisioner
 kubectl -nkadalu delete ClusterRoleBinding kadalu-csi-provisioner
 kubectl -nkadalu delete ServiceAccount kadalu-csi-provisioner
 kubectl -nkadalu delete ClusterRole kadalu-csi-provisioner
-kubectl delete Role kadalu-csi-provisioner
-kubectl delete RoleBinding kadalu-csi-provisioner
+kubectl -nkadalu delete Role kadalu-csi-provisioner
+kubectl -nkadalu delete RoleBinding kadalu-csi-provisioner
+
 kubectl -nkadalu delete DaemonSet kadalu-csi-nodeplugin
 kubectl -nkadalu delete ClusterRoleBinding kadalu-csi-nodeplugin
 kubectl -nkadalu delete ClusterRole kadalu-csi-nodeplugin
 kubectl -nkadalu delete ServiceAccount kadalu-csi-nodeplugin
+
 kubectl delete CSIDriver kadalu
 kubectl get Service -nkadalu | awk '{print $1}' | xargs kubectl -nkadalu delete Service
 kubectl get StatefulSet -nkadalu | awk '{print $1}' | xargs kubectl -nkadalu delete StatefulSet
