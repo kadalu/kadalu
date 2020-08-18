@@ -142,6 +142,7 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: kadalu-csi-provisioner
+  namespace: {{ namespace }}
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -204,8 +205,8 @@ roleRef:
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  namespace: default
   name: kadalu-csi-provisioner
+  namespace: {{ namespace }}
 rules:
 # Only one of the following rules for endpoints or leases is required based on
 # what is set for `--leader-election-type`. Endpoints are deprecated in favor of Leases.

@@ -7,7 +7,7 @@ ARCH=`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`
 function wait_till_pods_start() {
     # give it some time
     cnt=0
-    local_timeout=60
+    local_timeout=200
     while true; do
 	cnt=$((cnt + 1))
 	sleep 2
