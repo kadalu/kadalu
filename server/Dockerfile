@@ -41,7 +41,7 @@ LABEL name="kadalu-server"
 LABEL Summary="KaDalu Server"
 LABEL vcs-type="git"
 LABEL vcs-url="https://github.com/kadalu/kadalu"
-LABEL vendor="org.kadalu.gluster"
+LABEL vendor="kadalu"
 LABEL version="${version}"
 
 ENTRYPOINT ["/kadalu/startup.sh", "/usr/bin/python3", "/kadalu/server.py"]

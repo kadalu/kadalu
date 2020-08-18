@@ -5,8 +5,8 @@ import csi_pb2
 import csi_pb2_grpc
 
 
-DRIVER_NAME = "org.kadalu.gluster"
-DRIVER_VERSION = "0.1.0"
+DRIVER_NAME = "kadalu"
+DRIVER_VERSION = "0.7.0"
 
 
 class IdentityServer(csi_pb2_grpc.IdentityServicer):

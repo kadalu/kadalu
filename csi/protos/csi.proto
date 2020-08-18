@@ -188,6 +188,7 @@ message PluginCapability {
       //   ControllerExpandVolume and NodeExpandVolume.
       OFFLINE = 2;
     }
+    Type type = 1;
   }
 
   oneof type {
@@ -289,7 +290,7 @@ message CreateVolumeRequest {
   // If specified, the new volume will be pre-populated with data from
   // this source. This field is OPTIONAL.
   VolumeContentSource volume_content_source = 6;
-  
+
   // Specifies where (regions, zones, racks, etc.) the provisioned
   // volume MUST be accessible from.
   // An SP SHALL advertise the requirements for topological
@@ -473,7 +474,7 @@ message Volume {
   // Example 2:
   //   accessible_topology =
   //     {"region": "R1", "zone": "Z2"},
-  //     {"region": "R1", "zone": "Z3"} 
+  //     {"region": "R1", "zone": "Z3"}
   // Indicates a volume accessible from both "zone" "Z2" and "zone" "Z3"
   // in the "region" "R1".
   repeated Topology accessible_topology = 5;
@@ -484,10 +485,10 @@ message TopologyRequirement {
   // accessible from.
   // This field is OPTIONAL. If TopologyRequirement is specified either
   // requisite or preferred or both MUST be specified.
-  // 
+  //
   // If requisite is specified, the provisioned volume MUST be
   // accessible from at least one of the requisite topologies.
-  // 
+  //
   // Given
   //   x = number of topologies provisioned volume is accessible from
   //   n = number of requisite topologies
@@ -543,7 +544,7 @@ message TopologyRequirement {
   //
   // This field is OPTIONAL. If TopologyRequirement is specified either
   // requisite or preferred or both MUST be specified.
-  // 
+  //
   // An SP MUST attempt to make the provisioned volume available using
   // the preferred topologies in order from first to last.
   //
@@ -558,7 +559,7 @@ message TopologyRequirement {
   // If the list of requisite topologies is specified and the SP is
   // unable to to make the provisioned volume available from any of the
   // requisite topologies it MUST fail the CreateVolume call.
-  // 
+  //
   // Example 1:
   // Given a volume should be accessible from a single zone, and
   // requisite =
@@ -799,8 +800,28 @@ message ListVolumesRequest {
 }
 
 message ListVolumesResponse {
+  message VolumeStatus{
+    // A list of all `node_id` of nodes that the volume in this entry
+    // is controller published on.
+    // This field is OPTIONAL. If it is not specified and the SP has
+    // the LIST_VOLUMES_PUBLISHED_NODES controller capability, the CO
+    // MAY assume the volume is not controller published to any nodes.
+    // If the field is not specified and the SP does not have the
+    // LIST_VOLUMES_PUBLISHED_NODES controller capability, the CO MUST
+    // not interpret this field.
+    // published_node_ids MAY include nodes not published to or
+    // reported by the SP. The CO MUST be resilient to that.
+    repeated string published_node_ids = 1;
+  }
+
   message Entry {
+    // This field is REQUIRED
     Volume volume = 1;
+
+    // This field is OPTIONAL. This field MUST be specified if the
+    // LIST_VOLUMES_PUBLISHED_NODES controller capability is
+    // supported.
+    VolumeStatus status = 2;
   }
 
   repeated Entry entries = 1;
@@ -883,6 +904,10 @@ message ControllerServiceCapability {
 
       // See VolumeExpansion for details.
       EXPAND_VOLUME = 9;
+
+      // Indicates the SP supports the
+      // ListVolumesResponse.entry.published_nodes field
+      LIST_VOLUMES_PUBLISHED_NODES = 10;
     }
 
     Type type = 1;
@@ -1008,6 +1033,11 @@ message ListSnapshotsRequest {
   // and will not block if the snapshot is being processed after
   // it is cut.
   string snapshot_id = 4;
+
+  // Secrets required by plugin to complete ListSnapshot request.
+  // This field is OPTIONAL. Refer to the `Secrets Requirements`
+  // section on how to use this field.
+  map<string, string> secrets = 5 [(csi_secret) = true];
 }
 
 message ListSnapshotsResponse {
@@ -1036,6 +1066,15 @@ message ControllerExpandVolumeRequest {
   // Secrets required by the plugin for expanding the volume.
   // This field is OPTIONAL.
   map<string, string> secrets = 3 [(csi_secret) = true];
+
+  // Volume capability describing how the CO intends to use this volume.
+  // This allows SP to determine if volume is being used as a block
+  // device or mounted file system. For example - if volume is
+  // being used as a block device - the SP MAY set
+  // node_expansion_required to false in ControllerExpandVolumeResponse
+  // to skip invocation of NodeExpandVolume on the node by the CO.
+  // This is an OPTIONAL field.
+  VolumeCapability volume_capability = 4;
 }
 
 message ControllerExpandVolumeResponse {
@@ -1183,6 +1222,13 @@ message NodeGetVolumeStatsRequest {
   // the process serving this request.
   // This is a REQUIRED field.
   string volume_path = 2;
+
+  // The path where the volume is staged, if the plugin has the
+  // STAGE_UNSTAGE_VOLUME capability, otherwise empty.
+  // If not empty, it MUST be an absolute path in the root
+  // filesystem of the process serving this request.
+  // This field is OPTIONAL.
+  string staging_target_path = 3;
 }
 
 message NodeGetVolumeStatsResponse {
@@ -1278,7 +1324,7 @@ message NodeGetInfoResponse {
   //
   // Example 1:
   //   accessible_topology =
-  //     {"region": "R1", "zone": "R2"}
+  //     {"region": "R1", "zone": "Z2"}
   // Indicates the node exists within the "region" "R1" and the "zone"
   // "Z2".
   Topology accessible_topology = 3;
@@ -1297,6 +1343,24 @@ message NodeExpandVolumeRequest {
   // plugin MAY expand the volume to its maximum capacity.
   // This field is OPTIONAL.
   CapacityRange capacity_range = 3;
+
+  // The path where the volume is staged, if the plugin has the
+  // STAGE_UNSTAGE_VOLUME capability, otherwise empty.
+  // If not empty, it MUST be an absolute path in the root
+  // filesystem of the process serving this request.
+  // This field is OPTIONAL.
+  string staging_target_path = 4;
+
+  // Volume capability describing how the CO intends to use this volume.
+  // This allows SP to determine if volume is being used as a block
+  // device or mounted file system. For example - if volume is being
+  // used as a block device the SP MAY choose to skip expanding the
+  // filesystem in NodeExpandVolume implementation but still perform
+  // rest of the housekeeping needed for expanding the volume. If
+  // volume_capability is omitted the SP MAY determine
+  // access_type from given volume_path for the volume and perform
+  // node expansion. This is an OPTIONAL field.
+  VolumeCapability volume_capability = 5;
 }
 
 message NodeExpandVolumeResponse {

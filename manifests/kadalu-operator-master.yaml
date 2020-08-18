@@ -9,23 +9,20 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: kadalu-operator-sa
+  name: kadalu-operator
   namespace: kadalu
-
 ---
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: kadalu-csi-nodeplugin-sa
+  name: kadalu-csi-nodeplugin
   namespace: kadalu
-
 ---
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: kadalu-csi-provisioner-sa
+  name: kadalu-csi-provisioner
   namespace: kadalu
-
 ---
 kind: ServiceAccount
 apiVersion: v1
@@ -55,6 +52,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: kadalu-operator
+  namespace: kadalu
 rules:
   - apiGroups: [""]
     resources:
@@ -69,15 +67,20 @@ rules:
       - serviceaccounts
       - clusterroles
       - clusterrolebindings
+      - roles
+      - rolebindings
     verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
   - apiGroups:
       - storage.k8s.io
     resources:
       - storageclasses
+      - volumeattachments
     verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
   - apiGroups:
       - rbac.authorization.k8s.io
     resources:
+      - roles
+      - rolebindings
       - clusterroles
       - clusterrolebindings
     verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
@@ -147,6 +150,9 @@ rules:
   - apiGroups: ["storage.k8s.io"]
     resources: ["csidrivers"]
     verbs: ["get", "create", "delete", "patch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "watch", "list", "delete", "update", "create"]
 
 ---
 kind: ClusterRoleBinding
@@ -155,7 +161,7 @@ metadata:
   name: kadalu-operator
 subjects:
   - kind: ServiceAccount
-    name: kadalu-operator-sa
+    name: kadalu-operator
     namespace: kadalu
 roleRef:
   kind: ClusterRole
@@ -182,7 +188,7 @@ spec:
       labels:
         name: kadalu
     spec:
-      serviceAccountName: kadalu-operator-sa
+      serviceAccountName: kadalu-operator
       containers:
         - name: kadalu-operator
           securityContext:

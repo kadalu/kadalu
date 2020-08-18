@@ -17,7 +17,7 @@ LABEL name="kadalu-tiebreaker"
 LABEL Summary="KaDalu's Gluster TieBreaker instance"
 LABEL vcs-type="git"
 LABEL vcs-url="https://github.com/kadalu/kadalu"
-LABEL vendor="org.kadalu.gluster"
+LABEL vendor="kadalu"
 LABEL version="${version}"
 
 ENTRYPOINT ["bash", "-c", "mkdir -p /mnt/brick/.glusterfs && glusterfsd -f /kadalu/thin-arbiter.vol -l /dev/stdout -N"]

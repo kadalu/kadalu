@@ -7,6 +7,7 @@ ARCH=`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`
 function wait_till_pods_start() {
     # give it some time
     cnt=0
+    local_timeout=200
     while true; do
 	cnt=$((cnt + 1))
 	sleep 2
@@ -15,9 +16,9 @@ function wait_till_pods_start() {
 	    echo "Successful after $cnt seconds"
 	    break
 	fi
-	if [[ $cnt -eq 200 ]]; then
+	if [[ $cnt -eq ${local_timeout} ]]; then
 	    kubectl get pods -o wide
-	    echo "giving up after 200 seconds"
+	    echo "giving up after ${local_timeout} seconds"
 	    fail=1
 	    break
 	fi
