@@ -14,13 +14,13 @@ metadata:
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: kadalu-csi-nodeplugin-sa
+  name: kadalu-csi-nodeplugin
   namespace: {{ namespace }}
 ---
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: kadalu-csi-provisioner-sa
+  name: kadalu-csi-provisioner
   namespace: {{ namespace }}
 ---
 kind: ServiceAccount
@@ -58,8 +58,8 @@ volumes: ['*']
 users:
   - system:serviceaccount:{{ namespace }}:kadalu-server-sa
   - system:serviceaccount:{{ namespace }}:kadalu-operator-sa
-  - system:serviceaccount:{{ namespace }}:kadalu-csi-provisioner-sa
-  - system:serviceaccount:{{ namespace }}:kadalu-csi-nodeplugin-sa
+  - system:serviceaccount:{{ namespace }}:kadalu-csi-provisioner
+  - system:serviceaccount:{{ namespace }}:kadalu-csi-nodeplugin
 
 {% endif %}
 ---
@@ -97,15 +97,19 @@ rules:
       - serviceaccounts
       - clusterroles
       - clusterrolebindings
+      - roles
     verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
   - apiGroups:
       - storage.k8s.io
     resources:
       - storageclasses
+      - volumeattachments
     verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
   - apiGroups:
       - rbac.authorization.k8s.io
     resources:
+      - roles
+      - rolebindings
       - clusterroles
       - clusterrolebindings
     verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]

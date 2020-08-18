@@ -11,21 +11,18 @@ kind: ServiceAccount
 metadata:
   name: kadalu-operator-sa
   namespace: kadalu
-
 ---
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: kadalu-csi-nodeplugin-sa
+  name: kadalu-csi-nodeplugin
   namespace: kadalu
-
 ---
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: kadalu-csi-provisioner-sa
+  name: kadalu-csi-provisioner
   namespace: kadalu
-
 ---
 kind: ServiceAccount
 apiVersion: v1
@@ -74,6 +71,7 @@ rules:
       - storage.k8s.io
     resources:
       - storageclasses
+      - volumeattachments
     verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
   - apiGroups:
       - rbac.authorization.k8s.io

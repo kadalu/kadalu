@@ -13,11 +13,11 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-nodeplugin
+  name: kadalu-csi-nodeplugin
   namespace: {{ namespace }}
 subjects:
   - kind: ServiceAccount
-    name: kadalu-csi-nodeplugin-sa
+    name: kadalu-csi-nodeplugin
     namespace: {{ namespace }}
 roleRef:
   kind: ClusterRole
@@ -27,27 +27,27 @@ roleRef:
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
-  name: csi-nodeplugin
+  name: kadalu-csi-nodeplugin
   namespace: {{ namespace }}
   labels:
     app.kubernetes.io/part-of: kadalu
     app.kubernetes.io/component: csi-driver
-    app.kubernetes.io/name: csi-nodeplugin
+    app.kubernetes.io/name: kadalu-csi-nodeplugin
 spec:
   selector:
     matchLabels:
       app.kubernetes.io/part-of: kadalu
       app.kubernetes.io/component: csi-driver
-      app.kubernetes.io/name: csi-nodeplugin
+      app.kubernetes.io/name: kadalu-csi-nodeplugin
   template:
     metadata:
       labels:
         app.kubernetes.io/part-of: kadalu
         app.kubernetes.io/component: csi-driver
-        app.kubernetes.io/name: csi-nodeplugin
+        app.kubernetes.io/name: kadalu-csi-nodeplugin
       namespace: {{ namespace }}
     spec:
-      serviceAccountName: kadalu-csi-nodeplugin-sa
+      serviceAccountName: kadalu-csi-nodeplugin
       containers:
         - name: csi-node-driver-registrar
           image: docker.io/raspbernetes/csi-node-driver-registrar:latest
@@ -141,7 +141,7 @@ spec:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: external-provisioner-runner
+  name: kadalu-csi-provisioner
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -190,64 +190,66 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-provisioner-role
+  name: kadalu-csi-provisioner
   namespace: {{ namespace }}
 subjects:
   - kind: ServiceAccount
-    name: kadalu-csi-provisioner-sa
+    name: kadalu-csi-provisioner
     namespace: {{ namespace }}
 roleRef:
   kind: ClusterRole
-  name: external-provisioner-runner
+  name: kadalu-csi-provisioner
   apiGroup: rbac.authorization.k8s.io
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   namespace: {{ namespace }}
-  name: external-provisioner-cfg
+  name: kadalu-csi-provisioner
 rules:
 # Only one of the following rules for endpoints or leases is required based on
 # what is set for `--leader-election-type`. Endpoints are deprecated in favor of Leases.
-- apiGroups: [""]
-  resources: ["endpoints"]
-  verbs: ["get", "watch", "list", "delete", "update", "create"]
-- apiGroups: ["coordination.k8s.io"]
-  resources: ["leases"]
-  verbs: ["get", "watch", "list", "delete", "update", "create"]
+  - apiGroups: [""]
+    resources: ["endpoints"]
+    verbs: ["get", "watch", "list", "delete", "update", "create"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "watch", "list", "delete", "update", "create"]
 
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-provisioner-role-cfg
+  name: kadalu-csi-provisioner
   namespace: {{ namespace }}
 subjects:
   - kind: ServiceAccount
-    name: kadalu-csi-provisioner-sa
+    name: kadalu-csi-provisioner
     namespace: {{ namespace }}
 roleRef:
   kind: Role
-  name: external-provisioner-cfg
+  namespace: {{ namespace }}
+  name: kadalu-csi-provisioner
   apiGroup: rbac.authorization.k8s.io
+
 ---
 kind: StatefulSet
 apiVersion: apps/v1
 metadata:
-  name: csi-provisioner
+  name: kadalu-csi-provisioner
   namespace: {{ namespace }}
   labels:
     app.kubernetes.io/part-of: kadalu
     app.kubernetes.io/component: csi-driver
-    app.kubernetes.io/name: csi-provisioner
+    app.kubernetes.io/name: kadalu-csi-provisioner
 spec:
-  serviceName: csi-provisioner
+  serviceName: kadalu-csi-provisioner
   replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/part-of: kadalu
       app.kubernetes.io/component: csi-driver
-      app.kubernetes.io/name: csi-provisioner
+      app.kubernetes.io/name: kadalu-csi-provisioner
   template:
     metadata:
       name: csi-provisioner
@@ -255,9 +257,9 @@ spec:
       labels:
         app.kubernetes.io/part-of: kadalu
         app.kubernetes.io/component: csi-driver
-        app.kubernetes.io/name: csi-provisioner
+        app.kubernetes.io/name: kadalu-csi-provisioner
     spec:
-      serviceAccountName: kadalu-csi-provisioner-sa
+      serviceAccountName: kadalu-csi-provisioner
       containers:
         - name: csi-provisioner
           image: docker.io/raspbernetes/csi-external-provisioner:latest

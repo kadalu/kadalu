@@ -11,21 +11,18 @@ kind: ServiceAccount
 metadata:
   name: kadalu-operator-sa
   namespace: kadalu
-
 ---
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: kadalu-csi-nodeplugin-sa
+  name: kadalu-csi-nodeplugin
   namespace: kadalu
-
 ---
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: kadalu-csi-provisioner-sa
+  name: kadalu-csi-provisioner
   namespace: kadalu
-
 ---
 kind: ServiceAccount
 apiVersion: v1
@@ -74,6 +71,7 @@ rules:
       - storage.k8s.io
     resources:
       - storageclasses
+      - volumeattachments
     verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
   - apiGroups:
       - rbac.authorization.k8s.io
@@ -188,7 +186,7 @@ spec:
           securityContext:
             capabilities: {}
             privileged: true
-          image: docker.io/kadalu/kadalu-operator:0.7.0
+          image: docker.io/kadalu/kadalu-operator:master
           imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
@@ -204,7 +202,7 @@ spec:
             - name: DOCKER_USER
               value: "kadalu"
             - name: KADALU_VERSION
-              value: "0.7.0"
+              value: "master"
             - name: KUBELET_DIR
               value: "/var/lib/kubelet"
             - name: K8S_DIST
