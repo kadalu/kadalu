@@ -8,7 +8,7 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: kadalu-operator-sa
+  name: kadalu-operator
   namespace: {{ namespace }}
 ---
 kind: ServiceAccount
@@ -57,7 +57,7 @@ supplementalGroups:
 volumes: ['*']
 users:
   - system:serviceaccount:{{ namespace }}:kadalu-server-sa
-  - system:serviceaccount:{{ namespace }}:kadalu-operator-sa
+  - system:serviceaccount:{{ namespace }}:kadalu-operator
   - system:serviceaccount:{{ namespace }}:kadalu-csi-provisioner
   - system:serviceaccount:{{ namespace }}:kadalu-csi-nodeplugin
 
@@ -187,7 +187,7 @@ metadata:
   name: kadalu-operator
 subjects:
   - kind: ServiceAccount
-    name: kadalu-operator-sa
+    name: kadalu-operator
     namespace: {{ namespace }}
 roleRef:
   kind: ClusterRole
@@ -214,7 +214,7 @@ spec:
       labels:
         name: kadalu
     spec:
-      serviceAccountName: kadalu-operator-sa
+      serviceAccountName: kadalu-operator
       containers:
         - name: kadalu-operator
           securityContext:
