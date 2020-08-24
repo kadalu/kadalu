@@ -1,46 +1,13 @@
 volume {{ volname }}-posix
     type storage/posix
-    option health-check-interval 30
-    option health-check-timeout 10
-    option update-link-count-parent off
-    option fips-mode-rchecksum off
-    option brick-gid -1
-    option force-create-mode 0000
-    option force-directory-mode 0000
     option directory {{ bricks[2]["brick_path"] }}
-    option reserve 1
-    option batch-fsync-mode reverse-fsync
-    option disable-landfill-purge off
-    option o-direct off
     option volume-id {{ volume_id }}
-    option gfid2path-separator :
-    option export-statfs-size on
-    option background-unlink off
-    option janitor-sleep-duration 10
-    option brick-uid -1
-    option max-hardlinks 100
-    option mandate-attribute off
-    option node-uuid-pathinfo off
-    option batch-fsync-delay-usec 0
-    option create-mask 0777
-    option create-directory-mask 0777
-    option ctime on
-    option linux-aio off
-    option gfid2path on
-    option shared-brick-count 1
 end-volume
 
 volume {{ volname }}-changelog
     type features/changelog
-    option fsync-interval 5
-    option capture-del-path on
     option changelog-brick {{ bricks[2]["brick_path"] }}
     option changelog-dir {{ bricks[2]["brick_path"] }}/.glusterfs/changelogs
-    option op-mode realtime
-    option encoding ascii
-    option rollover-time 15
-    option changelog off
-    option changelog-barrier-timeout 120
     subvolumes {{ volname }}-posix
 end-volume
 
@@ -53,42 +20,21 @@ end-volume
 
 volume {{ volname }}-access-control
     type features/access-control
-    option super-uid 0
     subvolumes {{ volname }}-bitrot-stub
 end-volume
 
 volume {{ volname }}-locks
     type features/locks
-    option trace off
-    option revocation-secs 0
-    option revocation-clear-all false
-    option revocation-max-blocked 0
-    option notify-contention no
-    option mandatory-locking off
-    option notify-contention-delay 5
-    option enforce-mandatory-lock off
-    option monkey-unlocking false
     subvolumes {{ volname }}-access-control
 end-volume
 
 volume {{ volname }}-upcall
     type features/upcall
-    option cache-invalidation off
-    option cache-invalidation-timeout 60
     subvolumes {{ volname }}-locks
 end-volume
 
 volume {{ volname }}-io-threads
     type performance/io-threads
-    option idle-time 120
-    option low-prio-threads 16
-    option enable-least-priority on
-    option normal-prio-threads 16
-    option least-prio-threads 1
-    option cleanup-disconnected-reqs off
-    option pass-through false
-    option thread-count 16
-    option high-prio-threads 16
     subvolumes {{ volname }}-upcall
 end-volume
 
@@ -110,65 +56,14 @@ end-volume
 
 volume {{ bricks[2]["brick_path"] }}
     type debug/io-stats
-    option ios-sample-buf-size 65535
-    option count-fop-hits off
-    option brick-log-level INFO
-    option brick-logger gluster-log
-    option client-log-flush-timeout 120
-    option brick-log-buf-size 5
-    option ios-dump-interval 0
-    option ios-sample-interval 0
-    option ios-dnscache-ttl-sec 86400
-    option client-logger gluster-log
-    option client-log-buf-size 5
-    option dump-fd-stats off
-    option ios-dump-format json
-    option log-buf-size 5
-    option latency-measurement off
-    option global-threading off
-    option client-log-level INFO
-    option client-log-format with-msg-id
-    option brick-log-format with-msg-id
-    option log-flush-timeout 120
     option unique-id /no/such/path
-    option sys-log-level CRITICAL
-    option brick-threads 16
-    option client-threads 16
-    option brick-log-flush-timeout 120
     subvolumes {{ volname }}-index
 end-volume
 
 volume {{ volname }}-server
     type protocol/server
-    option inode-lru-limit 16384
-    option gid-timeout 300
     option auth.addr.{{ bricks[2]["brick_path"] }}.allow *
-    option strict-auth-accept off
-    option root-squash off
-    option anongid 65534
-    option transport.socket.read-fail-log off
-    option transport-type tcp
-    option trace off
-    option manage-gids off
-    option non-blocking-io off
-    option transport.socket.own-thread off
     option auth.login.{{ bricks[2]["brick_path"] }}.ssl-allow *
-    option event-threads 2
-    option rpc.outstanding-rpc-limit 64
-    option transport.socket.keepalive-time 20
-    option statedump-path /var/run/gluster
-    option transport.socket.keepalive 1
-    option anonuid 65534
-    option transport.socket.ssl-enabled off
-    option transport.listen-backlog 1024
-    option all-squash off
-    option transport.socket.nodelay 1
-    option transport.tcp-user-timeout 42
-    option dynamic-auth on
     option auth-path {{ bricks[2]["brick_path"] }}
-    option transport.socket.keepalive-interval 2
-    option transport.socket.lowlat off
-    option rpc-auth-allow-insecure on
-    option transport.socket.keepalive-count 9
     subvolumes {{ bricks[2]["brick_path"] }}
 end-volume
