@@ -46,6 +46,7 @@ function get_pvc_and_check() {
     log_text=$2
     pod_count=$3
     time_limit=$4
+    expected_output=$5
 
     echo "Running sample test app ${log_text} yaml from repo "
     kubectl apply -f ${yaml_file}
@@ -55,7 +56,7 @@ function get_pvc_and_check() {
     while true; do
 	cnt=$((cnt + 1))
 	sleep 1
-	ret=$(kubectl get pods -o wide | grep 'Completed' | wc -l)
+	ret=$(kubectl get pods -o wide | grep ${expected_output} | wc -l)
 	if [[ $ret -eq ${pod_count} ]]; then
 	    echo "Successful after $cnt seconds"
 	    break
@@ -243,13 +244,13 @@ kadalu_operator)
 test_kadalu)
     date
 
-    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 191
+    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 191 "Completed"
 
-    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 191
+    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 191 "Completed"
 
     #get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 131
 
-    get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 1 131
+    get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 1 131  "Completed"
 
     cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
     sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
@@ -263,6 +264,10 @@ test_kadalu)
     echo "After modification"
 
     #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 191
+
+    #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 191  "Completed"
+
+    get_pvc_and_check examples/elastic-search-statefulset.yaml "StatefulSet" 3 191  "Running"
 
     # Log everything so we are sure if things are as expected
     for p in $(kubectl -n kadalu get pods -o name); do
@@ -284,7 +289,7 @@ test_kadalu)
     ;;
 
 cli_tests)
-    output=$(kubectl get nodes -o=name)    
+    output=$(kubectl get nodes -o=name)
     # output will be in format 'node/hostname'. We need 'hostname'
     HOSTNAME=$(basename $output)
     echo "Hostname is ${HOSTNAME}"
