@@ -1,7 +1,7 @@
 .PHONY: help build-grpc build-containers gen-manifest pylint prepare-release release
 
 DOCKER_USER?=kadalu
-KADALU_VERSION?=master
+KADALU_VERSION?=devel
 KADALU_LATEST?=latest
 
 help:
@@ -20,7 +20,7 @@ build-grpc:
 build-containers:
 	DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} bash build.sh
 
-SUFFIX?="-master"
+SUFFIX?="-devel"
 
 gen-manifest:
 	@echo "Generating manifest files, run the following commands"

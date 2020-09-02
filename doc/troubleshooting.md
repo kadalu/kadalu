@@ -32,7 +32,7 @@ If the log complains about ` error when creating "/kadalu/templates/csi-driver-o
 $ kubectl delete CSIDriver kadalu
 ```
 
-> **Note**: Use the [cleanup script](https://github.com/kadalu/kadalu/blob/master/extras/scripts/cleanup) to properly cleanup kadalu.
+> **Note**: Use the [cleanup script](https://github.com/kadalu/kadalu/blob/devel/extras/scripts/cleanup) to properly cleanup kadalu.
 
 ## Storage cannot be created - `Failed to create file system	 fstype=xfs device=/dev/md3`
 

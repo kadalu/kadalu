@@ -15,7 +15,7 @@ If the work you want to do is minor enhancement, or a bug fix, it is fine to ope
 
 ### Process of review
 
-Pull requests will be evaluated by the maintainers on a schedule and if deemed beneficial will be committed to the master. Pull requests should have a descriptive name and include an summary of all changes made in the pull request description. We use either 'Squash & Merge' or 'Rebase & Merge' policy most of the time.
+Pull requests will be evaluated by the maintainers on a schedule and if deemed beneficial will be committed to the 'devel'. Pull requests should have a descriptive name and include an summary of all changes made in the pull request description. We use either 'Squash & Merge' or 'Rebase & Merge' policy most of the time.
 
 All contributors retain the original copyright to their stuff, but by contributing to this project, you are agreeing to the [LICENSE](./LICENSE) of the project.
 

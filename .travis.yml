@@ -17,7 +17,7 @@ python:
 
 branches:
   only:
-    - master
+    - devel
 
 go: 1.12.x
 

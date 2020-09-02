@@ -1,4 +1,4 @@
-VERSION ?= "master"
+VERSION ?= "devel"
 PYTHON ?= python3
 PROGNAME = kubectl-kadalu
 

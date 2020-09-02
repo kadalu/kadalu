@@ -16,7 +16,7 @@ def set_args(name, subparsers):
     arg(
         "--version",
         help="Kadalu Version to Install [default: latest]",
-        choices=[VERSION, "master", "latest"],
+        choices=[VERSION, "devel", "latest"],
         default="latest"
     )
     arg(
@@ -41,7 +41,7 @@ def run(args):
     """ perform install subcommand """
     operator_file = args.local_yaml
     if not operator_file:
-        file_url = "https://raw.githubusercontent.com/kadalu/kadalu/master/manifests"
+        file_url = "https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests"
         version = ""
         insttype = ""
 

@@ -1,6 +1,6 @@
 # KaDalu
 
-[![TravisCI](https://travis-ci.com/kadalu/kadalu.svg?branch=master)](https://travis-ci.com/kadalu/kadalu)
+[![TravisCI](https://travis-ci.com/kadalu/kadalu.svg?branch=devel)](https://travis-ci.com/kadalu/kadalu)
 [![Operator Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg?label=DockerPulls%20Operator)](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg)
 [![Server Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg?label=DockerPulls%20Server)](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg)
 [![BuildX](https://github.com/kadalu/kadalu/workflows/buildx/badge.svg)](https://github.com/kadalu/kadalu/actions?query=workflow%3Abuildx)
@@ -22,7 +22,7 @@ See [Documentation](doc/)
 
 One is free to pronounce 'kaDalu' as they wish. Below is a sample of how we pronounce it!
 
-[<img src="https://raw.githubusercontent.com/kadalu/kadalu/master/extras/assets/speaker.svg" width="64"/>](https://raw.githubusercontent.com/kadalu/kadalu/master/extras/assets/kadalu_01.wav)
+[<img src="https://raw.githubusercontent.com/kadalu/kadalu/devel/extras/assets/speaker.svg" width="64"/>](https://raw.githubusercontent.com/kadalu/kadalu/devel/extras/assets/kadalu_01.wav)
 
 
 ## Talks and Blog posts
@@ -49,9 +49,9 @@ See [CONTRIBUTING](CONTRIBUTING.md)
 
 ## ARM support
 
-The release versions and 'latest' versions are not yet ARM ready! But we have an image for `linux/arm64`,`linux/arm/v7` platform support!
+The release versions and 'latest' versions are not yet ARM ready! But we have an image for `linux/arm64` platform support!
 
-Start the operator with `kubectl create -f https://raw.githubusercontent.com/kadalu/kadalu/master/manifests/kadalu-operator-master.yaml` to get started! Once we have few users confirming it works, will tag it in a release!
+Start the operator with `kubectl create -f https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests/kadalu-operator-devel.yaml` to get started! Once we have few users confirming it works, will tag it in a release!
 
 
 ## NOTE
