@@ -249,7 +249,7 @@ test_kadalu)
 
     get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 1 131
 
-    get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 191
+    #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 191
 
     # Log everything so we are sure if things are as expected
     for p in $(kubectl -n kadalu get pods -o name); do

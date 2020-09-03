@@ -149,7 +149,7 @@ rules:
     verbs: ["get", "list", "watch", "create", "delete"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["volumeattachments"]
-    verbs: ["get", "list", "watch", "update", "patch"]
+    verbs: ["get", "list", "watch", "update", "patch", "create"]
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
     verbs: ["get", "list", "watch", "update"]
@@ -186,6 +186,9 @@ rules:
   - apiGroups: ["csi.storage.k8s.io"]
     resources: ["csidrivers"]
     verbs: ["create", "delete"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["volumeattachments/status"]
+    verbs: ["get", "watch", "patch"]
 
 ---
 kind: ClusterRoleBinding
@@ -195,8 +198,8 @@ metadata:
   namespace: {{ namespace }}
 subjects:
   - kind: ServiceAccount
-    name: kadalu-csi-provisioner
     namespace: {{ namespace }}
+    name: kadalu-csi-provisioner
 roleRef:
   kind: ClusterRole
   name: kadalu-csi-provisioner
