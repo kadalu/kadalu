@@ -75,6 +75,7 @@ rules:
     resources:
       - storageclasses
       - volumeattachments
+      - volumeattachments/status
     verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
   - apiGroups:
       - rbac.authorization.k8s.io
