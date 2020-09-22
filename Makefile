@@ -28,7 +28,7 @@ gen-manifest:
 	@mkdir -p manifests
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator${SUFFIX}.yaml
-	@echo "kubectl create -f manifests/kadalu-operator${SUFFIX}.yaml"
+	@echo "kubectl apply -f manifests/kadalu-operator${SUFFIX}.yaml"
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		K8S_DIST=openshift                                   \
 		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-openshift${SUFFIX}.yaml
@@ -48,7 +48,7 @@ gen-manifest:
 	@echo "In the case of MicroK8s, deploy Kadalu Operator by running "
 	@echo "the following command"
 	@echo
-	@echo "kubectl create -f manifests/kadalu-operator-microk8s${SUFFIX}.yaml"
+	@echo "kubectl apply -f manifests/kadalu-operator-microk8s${SUFFIX}.yaml"
 
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		K8S_DIST=rke                                    \
@@ -57,7 +57,7 @@ gen-manifest:
 	@echo "In the case of Rancher (RKE), deploy Kadalu Operator by running "
 	@echo "the following command"
 	@echo
-	@echo "kubectl create -f manifests/kadalu-operator-rke${SUFFIX}.yaml"
+	@echo "kubectl apply -f manifests/kadalu-operator-rke${SUFFIX}.yaml"
 
 pylint:
 	@cp lib/kadalulib.py csi/

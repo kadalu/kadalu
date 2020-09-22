@@ -112,7 +112,7 @@ spec:
 
 Please edit 'gluster_host' and 'gluster_volname' parameters in Storage Class.
 
-Then run `kubectl create -f ./external-gluster-as-pv.yaml`
+Then run `kubectl apply -f ./external-gluster-as-pv.yaml`
 
 Note that in this mode, there would be as many 'StorageClass' as number of PVs, but
 that is not avoidable at present because we can't pass user driven input from PV claim

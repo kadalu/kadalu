@@ -79,7 +79,7 @@ spec:
 Create PVC using,
 
 ```console
-$ kubectl create -f sample-pvc.yaml
+$ kubectl apply -f sample-pvc.yaml
 persistentvolumeclaim/pv1 created
 ```
 
@@ -118,6 +118,6 @@ spec:
 ```
 
 ```console
-$ kubectl create -f sample-app.yaml
+$ kubectl apply -f sample-app.yaml
 pod1 created
 ```
