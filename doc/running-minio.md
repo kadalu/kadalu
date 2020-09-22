@@ -25,7 +25,7 @@ spec:
 Now deploy the Minio by running,
 
 ```console
-$ kubectl create -f minio-deployment.yaml
+$ kubectl apply -f minio-deployment.yaml
 persistentvolumeclaim/minio-pv-claim created
 deployment.extensions/minio-deployment created
 service/minio-service created

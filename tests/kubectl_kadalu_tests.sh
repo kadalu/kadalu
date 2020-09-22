@@ -21,7 +21,7 @@ function test_install() {
 
 function test_storage_add() {
     sed -i -e "s/DISK/${DISK}/g" tests/get-minikube-pvc.yaml
-    kubectl create -f tests/get-minikube-pvc.yaml
+    kubectl apply -f tests/get-minikube-pvc.yaml
 
     sleep 1
     cli/build/kubectl-kadalu storage-add test-volume3 --script-mode --type Replica3 --device ${HOSTNAME}:/mnt/${DISK}/file3.1 --path ${HOSTNAME}:/mnt/${DISK}/dir3.2 --pvc local-pvc || return 1

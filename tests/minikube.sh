@@ -48,7 +48,7 @@ function get_pvc_and_check() {
     time_limit=$4
 
     echo "Running sample test app ${log_text} yaml from repo "
-    kubectl create -f ${yaml_file}
+    kubectl apply -f ${yaml_file}
 
     cnt=0
     result=0
@@ -216,7 +216,7 @@ kadalu_operator)
 
     # pick the operator file from repo
     sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator-devel.yaml
-    kubectl create -f manifests/kadalu-operator-devel.yaml
+    kubectl apply -f manifests/kadalu-operator-devel.yaml
 
     sleep 1
     # Start storage
@@ -230,10 +230,10 @@ kadalu_operator)
 
     # Prepare PVC also as a storage
     sed -i -e "s/DISK/${DISK}/g" tests/get-minikube-pvc.yaml
-    kubectl create -f tests/get-minikube-pvc.yaml
+    kubectl apply -f tests/get-minikube-pvc.yaml
 
     sleep 1
-    kubectl create -f /tmp/kadalu-storage.yaml
+    kubectl apply -f /tmp/kadalu-storage.yaml
 
     wait_till_pods_start
     ;;

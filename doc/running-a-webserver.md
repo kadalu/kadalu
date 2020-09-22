@@ -19,7 +19,7 @@ spec:
 ```
 
 ```console
-$ kubectl create -f webserver-pvc.yaml
+$ kubectl apply -f webserver-pvc.yaml
 persistentvolumeclaim/webapp-pv created
 ```
 
@@ -57,7 +57,7 @@ spec:
 ```
 
 ```console
-$ kubectl create -f webserver-app.yaml
+$ kubectl apply -f webserver-app.yaml
 pod/webapp created
 ```
 

@@ -20,4 +20,4 @@
 
    For example,
 
-        kubectl create -f https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests/kadalu-operator-0.7.0.yaml
+        kubectl apply -f https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests/kadalu-operator-0.7.0.yaml

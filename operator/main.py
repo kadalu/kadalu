@@ -456,6 +456,7 @@ def deploy_csi_pods(core_v1_client):
     template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
              docker_user=docker_user, k8s_dist=K8S_DIST,
              kubelet_dir=KUBELET_DIR)
+
     execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
     logging.info(logf("Deployed CSI Pods", manifest=filename))
 
@@ -472,6 +473,7 @@ def deploy_config_map(core_v1_client):
                 "Found existing configmap. Updating",
                 name=item.metadata.name
             ))
+
             # Don't overwrite UID info.
             configmap_data = core_v1_client.read_namespaced_config_map(
                 KADALU_CONFIG_MAP, NAMESPACE)
@@ -485,6 +487,7 @@ def deploy_config_map(core_v1_client):
              namespace=NAMESPACE,
              kadalu_version=VERSION,
              uid=uid)
+
     execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
     logging.info(logf("Deployed ConfigMap", manifest=filename))
     return uid
