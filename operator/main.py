@@ -30,6 +30,7 @@ VOLUME_TYPE_REPLICA_1 = "Replica1"
 VOLUME_TYPE_REPLICA_2 = "Replica2"
 VOLUME_TYPE_REPLICA_3 = "Replica3"
 
+CREATE_CMD = "apply"
 
 def template(filename, **kwargs):
     """Substitute the template with provided fields"""
@@ -278,7 +279,7 @@ def deploy_server_pods(obj):
 
         filename = os.path.join(MANIFESTS_DIR, "server.yaml")
         template(filename, **template_args)
-        execute(KUBECTL_CMD, "create", "-f", filename)
+        execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
         logging.info(logf("Deployed Server pod",
                           volname=volname,
                           manifest=filename,
@@ -313,7 +314,7 @@ def handle_external_storage_addition(core_v1_client, obj):
 
     filename = os.path.join(MANIFESTS_DIR, "external-storageclass.yaml")
     template(filename, **data)
-    execute(KUBECTL_CMD, "create", "-f", filename)
+    execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
     logging.info(logf("Deployed External StorageClass", volname=volname, manifest=filename))
 
 
@@ -370,7 +371,7 @@ def handle_added(core_v1_client, obj):
 
     filename = os.path.join(MANIFESTS_DIR, "services.yaml")
     template(filename, namespace=NAMESPACE, volname=volname)
-    execute(KUBECTL_CMD, "create", "-f", filename)
+    execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
     logging.info(logf("Deployed Service", volname=volname, manifest=filename))
 
 
@@ -432,13 +433,11 @@ def deploy_csi_pods(core_v1_client):
     Look for CSI pods, if any one CSI pod found then
     that means it is deployed
     """
-    create_cmd = "create"
     pods = core_v1_client.list_namespaced_pod(
         NAMESPACE)
     for pod in pods.items:
         if pod.metadata.name.startswith(CSI_POD_PREFIX):
             logging.info("Updating already deployed CSI pods")
-            create_cmd = "apply"
 
     # Deploy CSI Pods
     api_instance = client.VersionApi().get_code()
@@ -446,18 +445,18 @@ def deploy_csi_pods(core_v1_client):
        api_instance.minor >= "14":
         filename = os.path.join(MANIFESTS_DIR, "csi-driver-object.yaml")
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-        execute(KUBECTL_CMD, create_cmd, "-f", filename)
+        execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
     else:
         filename = os.path.join(MANIFESTS_DIR, "csi-driver-crd.yaml")
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-        execute(KUBECTL_CMD, create_cmd, "-f", filename)
+        execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
 
     filename = os.path.join(MANIFESTS_DIR, "csi.yaml")
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
     template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
              docker_user=docker_user, k8s_dist=K8S_DIST,
              kubelet_dir=KUBELET_DIR)
-    execute(KUBECTL_CMD, create_cmd, "-f", filename)
+    execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
     logging.info(logf("Deployed CSI Pods", manifest=filename))
 
 
@@ -466,7 +465,6 @@ def deploy_config_map(core_v1_client):
 
     configmaps = core_v1_client.list_namespaced_config_map(
         NAMESPACE)
-    create_cmd = "create"
     uid = uuid.uuid4()
     for item in configmaps.items:
         if item.metadata.name == KADALU_CONFIG_MAP:
@@ -474,8 +472,6 @@ def deploy_config_map(core_v1_client):
                 "Found existing configmap. Updating",
                 name=item.metadata.name
             ))
-
-            create_cmd = "apply"
             # Don't overwrite UID info.
             configmap_data = core_v1_client.read_namespaced_config_map(
                 KADALU_CONFIG_MAP, NAMESPACE)
@@ -489,7 +485,7 @@ def deploy_config_map(core_v1_client):
              namespace=NAMESPACE,
              kadalu_version=VERSION,
              uid=uid)
-    execute(KUBECTL_CMD, create_cmd, "-f", filename)
+    execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
     logging.info(logf("Deployed ConfigMap", manifest=filename))
     return uid
 
@@ -516,7 +512,7 @@ def deploy_storage_class():
 
         # Deploy Storage Class
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-        execute(KUBECTL_CMD, "create", "-f", filename)
+        execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
 
 
