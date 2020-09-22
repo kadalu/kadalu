@@ -9,12 +9,35 @@
 
 ### Setup
 
-Install Kadalu kubectl plugin using,
+Download the latest release of Kadalu Kubectl plugin using,
 
-```console
-$ sudo pip3 install kubectl-kadalu
 ```
-Note: need `sudo` for installing a binary in `/usr/local/bin`
+curl -LO https://github.com/kadalu/kadalu/releases/download/0.7.1/kubectl-kadalu
+```
+
+Make the kubectl binary executable.
+
+```
+chmod +x ./kubectl-kadalu
+```
+
+Move the binary in to your PATH.
+
+```
+sudo mv ./kubectl-kadalu /usr/local/bin/kubectl-kadalu
+```
+
+Note: In the case of Openshift,
+
+```
+sudo mv ./kubectl-kadalu /usr/local/bin/oc-kadalu
+```
+
+Test to ensure the version you installed is up-to-date
+
+```
+$ kubectl-kadalu version
+```
 
 Deploy KaDalu Operator using,
 
