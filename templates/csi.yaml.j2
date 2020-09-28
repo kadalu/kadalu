@@ -50,7 +50,7 @@ spec:
       serviceAccountName: kadalu-csi-nodeplugin
       containers:
         - name: csi-node-driver-registrar
-          image: docker.io/raspbernetes/csi-node-driver-registrar:latest
+          image: docker.io/raspbernetes/csi-node-driver-registrar:2.0.1
           args:
             - "--v=5"
             - "--csi-address=$(ADDRESS)"
@@ -265,7 +265,7 @@ spec:
       serviceAccountName: kadalu-csi-provisioner
       containers:
         - name: csi-provisioner
-          image: docker.io/raspbernetes/csi-external-provisioner:latest
+          image: docker.io/raspbernetes/csi-external-provisioner:2.0.2
           args:
             - "--csi-address=$(ADDRESS)"
             - "--timeout=3m"
@@ -280,7 +280,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-attacher
-          image: docker.io/raspbernetes/csi-external-attacher:latest
+          image: docker.io/raspbernetes/csi-external-attacher:3.0.0
           args:
             - "--v=5"
             - "--csi-address=$(ADDRESS)"
