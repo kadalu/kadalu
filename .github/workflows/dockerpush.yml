@@ -6,15 +6,17 @@ on:
     tags:
       - "*"
 
+env:
+  kadalu_version: $(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+
+
 jobs:
   # Run tests.
   # See also https://docs.docker.com/docker-hub/builds/automated-testing/
-  push-to-docker:
+  push-to-pypi-store:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Log into registry
-        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
       - name: Set up Python
         uses: actions/setup-python@v1
         with:
@@ -23,4 +25,43 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          KADALU_VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') TWINE_PASSWORD=${{ secrets.TWINE_PASSWORD }} make release
+          KADALU_VERSION=${{ env.kadalu_version }} TWINE_PASSWORD=${{ secrets.TWINE_PASSWORD }} make release
+
+  multi-arch-build-for-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USER }} --password-stdin
+      -
+        name: Set up Docker Buildx
+        if: success()
+        id: buildx
+        uses: crazy-max/ghaction-docker-buildx@v1
+        with:
+          buildx-version: latest
+          qemu-version: latest
+      -
+        name: Run Buildx
+        if: success()
+        run: |
+          KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
+            --platform linux/arm64,linux/amd64 \
+            --tag docker.io/kadalu/kadalu-base:latest \
+            --output "type=image,name=docker.io/kadalu/kadalu-base,push=false" \
+            --file operator/Dockerfile.base .
+          KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
+            --platform linux/arm64,linux/amd64 \
+            --tag docker.io/kadalu/kadalu-csi:${{ env.kadalu_version }} \
+            --output "type=image,name=docker.io/kadalu/kadalu-csi,push=true" \
+            --file csi/Dockerfile .
+          KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
+            --platform linux/arm64,linux/amd64 \
+            --tag docker.io/kadalu/kadalu-operator:${{ env.kadalu_version }} \
+            --output "type=image,name=docker.io/kadalu/kadalu-operator,push=true" \
+            --file operator/Dockerfile .
+          KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
+            --platform linux/arm64,linux/amd64 \
+            --tag docker.io/kadalu/kadalu-server:${{ env.kadalu_version }} \
+            --output "type=image,name=docker.io/kadalu/kadalu-server,push=true" \
+            --file server/Dockerfile .
