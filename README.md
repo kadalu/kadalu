@@ -52,9 +52,3 @@ See [CONTRIBUTING](CONTRIBUTING.md)
 The release versions and 'latest' versions are not yet ARM ready! But we have an image for `linux/arm64` platform support!
 
 Start the operator with `kubectl apply -f https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests/kadalu-operator-devel.yaml` to get started! Once we have few users confirming it works, will tag it in a release!
-
-
-## NOTE
-
-We are tracking the number of downloads based on 'docker pull' stats, and also
-through google analytics. [This Commit](https://github.com/kadalu/kadalu/commit/cbc83fd751bf0221e22b61bd6ebad4af40e38275) gives detail of what is added to code w.r.to tracking.

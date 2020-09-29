@@ -4,11 +4,9 @@ import subprocess
 import logging
 import sys
 import os
-from datetime import datetime
 import time
 import sqlite3
 
-import requests
 import xxhash
 
 CREATE_TABLE_1 = """CREATE TABLE IF NOT EXISTS summary (
@@ -159,25 +157,14 @@ def logging_setup():
 def send_analytics_tracker(name, uid=None):
     """Send setup events to Google analytics"""
 
-    if KADALU_VERSION == "canary":
-        return
+    # This function is not required anymore as we expect
+    # users to report usage through github issues, or by
+    # giving a 'star'.
+    # Only thing we learnt from this is, External, Replica3
+    # and Replica1 are preferred in that order (So far,
+    # as of Sept 2020)
 
-    ga_id = "UA-144588868-1" # Static string
-    reqheader = {'user-agent': 'Kadalu-App', 'accept': '*/*'}
-    url = "https://www.google-analytics.com/collect?v=1&t=pageview"
-    track_page = "http://kadalu.org/kadalu-%s-%s" % (
-        name, KADALU_VERSION)
-    track_title = "Kadalu %s" % name
-
-    if not uid:
-        uid = datetime.now().timestamp()
-    track_url = "%s&dl=%s&dt=%s&tid=%s&cid=%s" % (url, track_page, track_title, ga_id, uid)
-
-    try:
-        requests.get(track_url, headers=reqheader)
-    except:   # noqa # pylint: disable=bare-except
-        pass
-
+    return (name, uid)
 
 class SizeAccounting:
     """
