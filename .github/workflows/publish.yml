@@ -16,13 +16,14 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: '3.x'
-    - name: Generate Manifests
-      run: |
-          KADALU_VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') make prepare-release-manifests
     - name: Build kubectl-kadalu
       run: |
           python -m pip install --upgrade pip
+          pip install -r requirements.txt
           KADALU_VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') make cli-build
+    - name: Generate Manifests
+      run: |
+          KADALU_VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') make prepare-release-manifests
     - name: Upload Manifest files
       uses: svenstaro/upload-release-action@v2
       with:
