@@ -193,8 +193,8 @@ def fetch_status(storages, args):
                  "select count(pvname), sum(size), min(size), "
                  "avg(size), max(size) from pv_stats")
 
-        cmd = [
-            args.kubectl_cmd, "exec", "-it",
+        cmd = utils.kubectl_cmd(args) + [
+            "exec", "-it",
             storage.storage_units[0].podname,
             "-c", "glusterfsd", "-nkadalu", "sqlite3",
             dbpath,
@@ -226,7 +226,7 @@ def fetch_status(storages, args):
 
 def run(args):
     """Shows List of Storages"""
-    cmd = [args.kubectl_cmd, "get", "configmap",
+    cmd = utils.kubectl_cmd(args) + ["get", "configmap",
            "kadalu-info", "-nkadalu", "-ojson"]
 
     try:

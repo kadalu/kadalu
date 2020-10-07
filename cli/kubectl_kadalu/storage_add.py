@@ -137,7 +137,7 @@ def get_kube_nodes(args):
     if args.dry_run:
         return []
 
-    cmd = [args.kubectl_cmd, "get", "nodes", "-ojson"]
+    cmd = utils.kubectl_cmd(args) + ["get", "nodes", "-ojson"]
     try:
         resp = utils.execute(cmd)
         data = json.loads(resp.stdout)
@@ -252,7 +252,7 @@ def run(args):
         with os.fdopen(config, 'w') as tmp:
             tmp.write(yaml_content)
 
-        cmd = [args.kubectl_cmd, "create", "-f", tempfile_path]
+        cmd = utils.kubectl_cmd(args) + ["create", "-f", tempfile_path]
         resp = utils.execute(cmd)
         print("Storage add request sent successfully")
         print(resp.stdout)
