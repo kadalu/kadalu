@@ -54,7 +54,7 @@ def run(args):
         operator_file = "%s/kadalu-operator%s%s.yaml" % (file_url, insttype, version)
 
     try:
-        cmd = [args.kubectl_cmd, "apply", "-f", operator_file]
+        cmd = utils.kubectl_cmd(args) + ["apply", "-f", operator_file]
         print("Executing '%s'" % " ".join(cmd))
         if args.dry_run:
             return

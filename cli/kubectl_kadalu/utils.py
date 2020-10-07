@@ -69,3 +69,11 @@ def kubectl_cmd_help(cmd):
     print("Use `--kubectl-cmd` option if kubectl is installed "
           "in custom path", file=sys.stderr)
     sys.exit(1)
+
+
+def kubectl_cmd(args):
+    """k3s embeds kubectl into the k3s binary itself and
+    provides kubectl as subcommand. For example `k3s kubectl`.
+    Split the given command to support these types.
+    """
+    return args.kubectl_cmd.split()
