@@ -48,7 +48,7 @@ jobs:
           KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
             --platform linux/arm64,linux/amd64 \
             --tag docker.io/kadalu/kadalu-base:latest \
-            --output "type=image,name=docker.io/kadalu/kadalu-base,push=false" \
+            --output "type=image,name=docker.io/kadalu/kadalu-base,push=true" \
             --file operator/Dockerfile.base .
           KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
             --platform linux/arm64,linux/amd64 \
