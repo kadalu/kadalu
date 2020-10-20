@@ -196,7 +196,7 @@ def fetch_status(storages, args):
         cmd = utils.kubectl_cmd(args) + [
             "exec", "-it",
             storage.storage_units[0].podname,
-            "-c", "glusterfsd", "-nkadalu", "sqlite3",
+            "-c", "glusterfsd", "-nkadalu", "--", "sqlite3",
             dbpath,
             query
         ]
