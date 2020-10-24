@@ -6,7 +6,8 @@ RUN curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s h
 RUN chmod +x /usr/bin/kubectl
 
 # Install Python GRPC library and copy all CSI related files
-RUN python3 -m pip install kubernetes
+RUN python3 -m pip install kubernetes==11.0.0
+
 RUN mkdir -p /kadalu/manifests
 
 COPY templates/services.yaml.j2      /kadalu/templates/services.yaml.j2
