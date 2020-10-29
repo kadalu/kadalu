@@ -85,9 +85,11 @@ spec:
             - name: gluster-cgroup
               mountPath: "/sys/fs/cgroup"
               readOnly: true
+{%- if pvc_name == "" %}
             - name: gluster-kmods
               mountPath: "/usr/lib/modules"
               readOnly: true
+{%- endif %}
             - name: glusterfsd-volfilesdir
               mountPath: "/var/lib/gluster"
             - name: glusterfsd-mountdir
@@ -178,9 +180,11 @@ spec:
         - name: gluster-cgroup
           hostPath:
             path: "/sys/fs/cgroup"
+{%- if pvc_name == "" %}
         - name: gluster-kmods
           hostPath:
             path: "/usr/lib/modules"
+{%- endif %}
         - name: glusterfsd-volfilesdir
           configMap:
             name: "kadalu-info"
