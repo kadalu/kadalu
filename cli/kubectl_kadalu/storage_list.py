@@ -226,8 +226,7 @@ def fetch_status(storages, args):
 
 def run(args):
     """Shows List of Storages"""
-    cmd = utils.kubectl_cmd(args) + ["get", "configmap",
-           "kadalu-info", "-nkadalu", "-ojson"]
+    cmd = utils.kubectl_cmd(args) + ["get", "configmap", "kadalu-info", "-nkadalu", "-ojson"]
 
     try:
         resp = utils.execute(cmd)
