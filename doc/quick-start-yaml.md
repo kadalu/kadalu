@@ -1,53 +1,26 @@
-# Quick Start
+# Quick Start with yaml files
 
-> >  **NOTE:** This document is written with the focus to have a single document which can fit both new-comers to k8s ecosystem, and also those who know the system. If you are well versed with k8s yaml files, and can manage using 'kubectl' directly, you can use kadalu without python3 dependency, directly using yaml files. Check [this document](./quick-start-yaml.md) for more details.
-
-
-Download the latest release of Kadalu Kubectl plugin using,
+## Start kadalu operator 
 
 ```
-curl -LO https://github.com/kadalu/kadalu/releases/download/0.7.1/kubectl-kadalu
+kubectl apply -f https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests/kadalu-operator.yaml
 ```
 
-Make the kubectl binary executable.
+You have different flavors of operator yaml files available. Mainly for kubernetes (default), openshift, RKE, Microk8s. Find the relevant file from [here](https://github.com/kadalu/kadalu/tree/devel/manifests). Just remember to use the raw file as argument to `kubectl`.
 
-```
-chmod +x ./kubectl-kadalu
-```
+**Note**: Openshift may have some Security Context Constraints, which can be applied only by admins, Run `oc login -u system:admin` to login as admin.
 
-Move the binary in to your PATH.
 
-```
-sudo mv ./kubectl-kadalu /usr/local/bin/kubectl-kadalu
-```
-
-Note: In the case of Openshift,
-
-```
-sudo mv ./kubectl-kadalu /usr/local/bin/oc-kadalu
-```
-
-Test to ensure the version you installed is up-to-date
-
-```
-$ kubectl-kadalu version
-```
-
-Deploy KaDalu Operator using,
-
-```console
-$ kubectl kadalu install
-```
-
-In the case of OpenShift, deploy Kadalu Operator using,
-
-```console
-$ oc kadalu install --type=openshift
-```
-
-**Note**: Security Context Constraints can be applied only by admins, Run `oc login -u system:admin` to login as admin
+## Prepare and start storage exports
 
 Identify the devices available from nodes and run the following command to add storage to Kadalu.
+
+```console
+$ kubectl get nodes
+kube1 # <-- known your hostname, which needs to be given in storage config below.
+...
+...
+```
 
 NOTE: if your host is running RHEL/CentOS 7.x series or Ubuntu/Debian older than 18.04, you may need to do below tasks before adding storage to kadalu.
 
@@ -57,13 +30,35 @@ sudo wipefs -a -t dos -f /dev/sdc
 sudo mkfs.xfs /dev/sdc
 ```
 
-Once the device is ready, add it to kadalu pool.
+Once the device is ready, inform the kadalu operator that it can be used as storage.
 
-```console
-$ kubectl kadalu storage-add storage-pool-1 \
-    --device kube1:/dev/sdc
+
+```yaml
+# File: sample-storage-config.yaml
+---
+apiVersion: kadalu-operator.gluster/v1alpha1
+kind: KadaluVolume
+metadata:
+  # This will be used as name of PV Hosting Volume
+  name: storage-pool-1
+spec:
+  type: Replica1
+  storage:
+    - node: kube1
+      device: /dev/sdc
+  options: {}
 ```
 
+```console
+$ kubectl apply -f sample-storage-config.yaml
+```
+
+Other than `device`, kadalu also supports `path` and `pvc` as **storage** options.
+
+kadalu supports `Replica1`, `Replica2` and `Replica3` type. This maps to glusterfs volume replication feature. It also support `External` as a type, where gluster volume may be managed externally, and kadalu is used to provide only CSI access.
+
+
+## Check status
 
 Operator will start the storage export pods as required. And, in 2 steps, your storage system is up and running.
 
