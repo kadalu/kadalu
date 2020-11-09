@@ -12,6 +12,8 @@ kadalu storage config takes one of the node IP/hostname, and gluster volume name
 to use it as the storage for PVs. The PVs would be provided as subdirectories -
 this is similar to how a PV is created in kadalu native way.
 
+In order for resources.requests.storage requests to be honored please read [the server documentation](../server/README.md).
+
 The best example for this is, what we use in our CI. Checkout this
 sample yaml file
 
