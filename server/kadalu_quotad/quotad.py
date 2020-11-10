@@ -27,13 +27,15 @@ except ImportError:
 #
 CONFIG_FILE = "/var/lib/glusterd/kadalu.info"
 
+PROJECT_MOD = 4294967296 # XFS project number is 32bit unsigned
 
 def set_quota(rootdir, subdir_path, quota_value):
     """
     Set Quota for given subdir path. Get project
-    ID from directory inode
+    ID from directory inode. XFS can have 64 bit inodes
+    so strip it to 32 bit and hope not to clash.
     """
-    ino = os.lstat(subdir_path).st_ino
+    ino = os.lstat(subdir_path).st_ino % PROJECT_MOD
     execute("xfs_quota",
             "-x", "-c",
             'project -s -p %s %d' % (subdir_path, ino),
@@ -69,7 +71,7 @@ def handle_quota(quota_report, brick_path, volname, pvtype):
     volhash = get_volname_hash(volname)
     volpath = get_volume_path(pvtype, volhash, volname)
     subdir_path = os.path.join(brick_path, volpath)
-    projid = "#%d" % os.lstat(subdir_path).st_ino
+    projid = "#%d" % (os.lstat(subdir_path).st_ino % PROJECT_MOD)
     limit_hard = 0
     for line in quota_report:
         if line.startswith(projid):
