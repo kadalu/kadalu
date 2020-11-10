@@ -8,6 +8,7 @@ import uuid
 import json
 import logging
 import re
+import socket
 
 from jinja2 import Template
 from kubernetes import client, config, watch
@@ -66,6 +67,21 @@ def bricks_validation(bricks):
     return ret
 
 
+def is_host_reachable(host, port):
+    """Check if glusterd is reachable in the given node"""
+    timeout = 5
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+    try:
+        sock.connect((host, int(port)))
+        sock.shutdown(socket.SHUT_RDWR)
+        return True
+    except socket.error as msg:
+        logging.error(logf("Failed to open socket connection", error=msg))
+        return False
+    finally:
+        sock.close()
+
 def validate_ext_details(obj):
     """Validate external Volume details"""
     clusterdata = obj["spec"].get("details", None)
@@ -78,14 +94,24 @@ def validate_ext_details(obj):
         logging.error(logf("Multiple External Cluster details given."))
         return False
 
+    ghost = None
+    gport = 24007
     for cluster in clusterdata:
         if cluster.get('gluster_host', None):
             valid += 1
+            ghost = cluster.get('gluster_host', None)
         if cluster.get('gluster_volname', None):
             valid += 1
+        if cluster.get('gluster_port', None):
+            gport = cluster.get('gluster_port', 24007)
 
     if valid != 2:
         logging.error(logf("No 'host' and 'volname' details provided."))
+        return False
+
+    if not is_host_reachable(ghost, gport):
+        logging.error(logf("gluster server not reachable: on %s:%d" %
+                           (ghost, gport)))
         return False
 
     logging.debug(logf("External Storage %s successfully validated" % \
