@@ -6,7 +6,8 @@ RUN rpm -qa | grep gluster | tee /gluster-rpm-versions.txt
 COPY lib/kadalulib.py        /kadalu/kadalulib.py
 COPY server/server.py        /kadalu/server.py
 COPY server/glusterfsd.py    /kadalu/glusterfsd.py
-COPY server/kadalu_quotad/quotad.py   /kadalu/quotad.py
+COPY server/kadalu_quotad/quotad.py       /kadalu/quotad.py
+COPY server/kadalu_quotad/glusterutils.py /kadalu/glusterutils.py
 COPY server/shd.py           /kadalu/shd.py
 COPY server/mount-glustervol /usr/bin/mount-glustervol
 COPY lib/startup.sh          /kadalu/startup.sh
