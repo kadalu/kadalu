@@ -139,8 +139,10 @@ def start():
                 config_data = json.loads(conf_file.read().strip())
                 for brick in config_data.get('bricks', None):
                     crawl(brick)
+        except json.decoder.JSONDecodeError as jex:
+            print("Decoding "+CONFIG_FILE+" failed: "+str(jex))
         except:    # noqa # pylint: disable=bare-except
-            # Ignore all errors
+            # Ignore all other errors
             pass
 
         time.sleep(2)
