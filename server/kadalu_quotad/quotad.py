@@ -20,7 +20,7 @@ except ImportError:
 #    "bricks": [
 #      "/data/brick1",
 #      "/data/brick2"
-#    ],
+#    ]
 # }
 # We are using a json file, so the same file may get more parameters
 # for other tools
