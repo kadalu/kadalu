@@ -189,7 +189,7 @@ up)
 	minikube ssh "sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file{1,2.1,2.2,3.1}; sudo mkdir -p /mnt/${DISK}/{dir3.2,pvc}"
     else
 	sudo mkdir -p /mnt/${DISK}
-	sudo truncate -s 4g /mnt/${DISK}/file{1,2.1,2.2,3.1}
+	sudo truncate -s 2g /mnt/${DISK}/file{1,2.1,2.2,3.1}
 	sudo mkdir -p /mnt/${DISK}/dir3.2
 	sudo mkdir -p /mnt/${DISK}/pvc
     fi
@@ -243,6 +243,12 @@ test_kadalu)
 
     get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 191
 
+    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 191
+
+    # Test for pv delete 
+    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 191
+    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 191
+    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 191
     get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 191
 
     #get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 131
