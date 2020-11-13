@@ -4,6 +4,7 @@
 #To prevent Py2 to interpreting print(val) as a tuple.
 from __future__ import print_function
 
+import json
 import utils
 from version import VERSION
 
@@ -39,6 +40,27 @@ def validate(_args):
 
 def run(args):
     """ perform install subcommand """
+
+    # Check if kadalu operator is present already.
+    try:
+        cmd = utils.kubectl_cmd(args) + ["get", "deployments", "-nkadalu", "-ojson"]
+        resp = utils.execute(cmd)
+        data = json.loads(resp.stdout)
+        items = data["items"]
+
+        if items:
+            operator = items[0]["metadata"].get("name")
+            namespace = items[0]["metadata"].get("namespace")
+
+            if operator is not None and namespace is not None:
+                print("Kadalu operator already installed")
+                return
+
+    except utils.CommandError as err:
+        utils.command_error(cmd, err.stderr)
+    except FileNotFoundError:
+        utils.kubectl_cmd_help(args.kubectl_cmd)
+
     operator_file = args.local_yaml
     if not operator_file:
         file_url = "https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests"
