@@ -42,7 +42,7 @@ jobs:
   include:
     - name: pylint tests
       script:
-        - pip install requests xxhash grpcio pyxattr kubernetes
+        - pip install requests xxhash grpcio pyxattr kubernetes glustercli
         - make pylint || travis_terminate 1;
     - name: kadalu with kube 1.15.0
       script:

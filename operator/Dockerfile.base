@@ -10,7 +10,7 @@ RUN yum clean all -y
 RUN rm -rf /var/cache/yum
 
 # Install Python GRPC library and copy all CSI related files
-RUN python3 -m pip install jinja2 requests datetime xxhash
+RUN python3 -m pip install jinja2 requests datetime xxhash glustercli
 
 RUN mkdir -p /kadalu/
 

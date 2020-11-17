@@ -63,7 +63,7 @@ pylint:
 	@cp lib/kadalulib.py csi/
 	@cp lib/kadalulib.py server/
 	@cp lib/kadalulib.py operator/
-	@cp server/kadalu_quotad/quotad.py server/
+	@cp server/kadalu_quotad/quotad.py server/kadalu_quotad/glusterutils.py server/
 	@pylint --disable=W0511 -s n lib/kadalulib.py
 	@pylint --disable=W0511 -s n server/glusterfsd.py
 	@pylint --disable=W0511 -s n server/quotad.py
@@ -80,6 +80,7 @@ pylint:
 	@rm server/kadalulib.py
 	@rm operator/kadalulib.py
 	@rm server/quotad.py
+	@rm server/glusterutils.py
 	@cd cli && make gen-version
 	@cd cli/kubectl_kadalu && pylint --disable W0511 *.py
 

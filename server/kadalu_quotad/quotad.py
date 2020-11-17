@@ -5,6 +5,10 @@ import os
 import time
 import json
 import logging
+try:
+    from .glusterutils import get_automatic_bricks
+except ImportError:
+    from glusterutils import get_automatic_bricks
 
 try:
     from .kadalulib import execute, logf, CommandException, \
@@ -26,8 +30,8 @@ except ImportError:
 # for other tools
 #
 CONFIG_FILE = "/var/lib/glusterd/kadalu.info"
-
 PROJECT_MOD = 4294967296 # XFS project number is 32bit unsigned
+
 
 def set_quota(rootdir, subdir_path, quota_value):
     """
@@ -64,6 +68,7 @@ def get_quota_report(rootdir):
                            ret=err.ret))
 
     return []
+
 
 def handle_quota(quota_report, brick_path, volname, pvtype):
     """Sets Quota if info file is available"""
@@ -130,10 +135,21 @@ def start():
     Start Quota Manager
     """
     first_time = True
+    automatic_bricks = []
+    automatic_pass = 0
     while True:
         brick_path = os.environ.get("BRICK_PATH", None)
         if brick_path is not None:
-            crawl(brick_path)
+            if brick_path.lower() == 'auto':
+                # Getting the bricks is expensive, do it roughly
+                # once a minute
+                if automatic_pass % 30 == 0:
+                    automatic_bricks = get_automatic_bricks()
+                automatic_pass += 1
+                for brick in automatic_bricks:
+                    crawl(brick)
+            else:
+                crawl(brick_path)
         try:
             with open(CONFIG_FILE) as conf_file:
                 config_data = json.loads(conf_file.read().strip())
