@@ -186,11 +186,12 @@ up)
     if [[ "${VM_DRIVER}" != "none" ]]; then
 	wait_for_ssh
 	# shellcheck disable=SC2086
-	minikube ssh "sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file{1,2.1,2.2,3.1}; sudo mkdir -p /mnt/${DISK}/{dir3.2,pvc}"
+	minikube ssh "sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file{1,2.1,2.2,3.1}; sudo mkdir -p /mnt/${DISK}/{dir3.2,dir3.2_modified,pvc}"
     else
 	sudo mkdir -p /mnt/${DISK}
 	sudo truncate -s 4g /mnt/${DISK}/file{1,2.1,2.2,3.1}
 	sudo mkdir -p /mnt/${DISK}/dir3.2
+	sudo mkdir -p /mnt/${DISK}/dir3.2_modified
 	sudo mkdir -p /mnt/${DISK}/pvc
     fi
 
@@ -248,6 +249,17 @@ test_kadalu)
     #get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 131
 
     get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 1 131
+
+    cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
+    sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
+    sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
+    sed -i -e "s/dir3.2/dir3.2_modified/g" /tmp/kadalu-storage.yaml
+    kubectl apply -f /tmp/kadalu-storage.yaml
+
+    sleep 5;
+    wait_till_pods_start
+
+    echo "After modification"
 
     #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 191
 

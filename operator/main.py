@@ -30,6 +30,7 @@ VALID_HOSTING_VOLUME_TYPES = ["Replica1", "Replica2", "Replica3", "External"]
 VOLUME_TYPE_REPLICA_1 = "Replica1"
 VOLUME_TYPE_REPLICA_2 = "Replica2"
 VOLUME_TYPE_REPLICA_3 = "Replica3"
+VOLUME_TYPE_EXTERNAL = "External"
 
 CREATE_CMD = "apply"
 
@@ -137,7 +138,7 @@ def validate_volume_request(obj):
                            provided_type=voltype))
         return False
 
-    if voltype == "External":
+    if voltype == VOLUME_TYPE_EXTERNAL:
         return validate_ext_details(obj)
 
     bricks = obj["spec"].get("storage", [])
@@ -207,11 +208,13 @@ def update_config_map(core_v1_client, obj):
     """
     volname = obj["metadata"]["name"]
     voltype = obj["spec"]["type"]
+    volume_id = obj["spec"]["volume_id"]
+
     data = {
         "namespace": NAMESPACE,
         "kadalu_version": VERSION,
         "volname": volname,
-        "volume_id": obj["spec"]["volume_id"],
+        "volume_id": volume_id,
         "type": voltype,
         "bricks": [],
         "options": obj["spec"].get("options", {})
@@ -320,7 +323,7 @@ def handle_external_storage_addition(core_v1_client, obj):
     data = {
         "volname": volname,
         "volume_id": obj["spec"]["volume_id"],
-        "type": "External",
+        "type": VOLUME_TYPE_EXTERNAL,
         "kadalu-format": True,
         "gluster_host": details["gluster_host"],
         "gluster_volname": details["gluster_volname"],
@@ -384,7 +387,7 @@ def handle_added(core_v1_client, obj):
     obj["spec"]["volume_id"] = str(uuid.uuid1())
 
     voltype = obj["spec"]["type"]
-    if voltype == "External":
+    if voltype == VOLUME_TYPE_EXTERNAL:
         handle_external_storage_addition(core_v1_client, obj)
         return
 
@@ -401,16 +404,68 @@ def handle_added(core_v1_client, obj):
     logging.info(logf("Deployed Service", volname=volname, manifest=filename))
 
 
-def handle_modified():
+def handle_modified(core_v1_client, obj):
     """
     Handle when Volume option is updated or Volume
     state is changed to maintenance
     """
-    # TODO: Handle Volume option change
     # TODO: Handle Volume maintenance mode
-    logging.warning(logf(
-        "MODIFIED handle called, but not implemented"
-    ))
+
+    volname = obj["metadata"]["name"]
+
+    voltype = obj["spec"]["type"]
+    if voltype == VOLUME_TYPE_EXTERNAL:
+        # Modification of 'External' volume type is not supported
+        logging.info(logf(
+            "Modification of 'External' volume type is not supported",
+            storagename=volname
+        ))
+        return
+
+    # It doesn't make sense to support Replica1 also in this operation.
+    if voltype == VOLUME_TYPE_REPLICA_1:
+        # Modification of 'External' volume type is not supported
+        logging.info(logf(
+            "Modification of '%s' volume type is not supported" % VOLUME_TYPE_REPLICA_1,
+            storagename=volname
+        ))
+        return
+
+    if not validate_volume_request(obj):
+        logging.debug(logf(
+            "validation of volume request failed",
+            yaml=obj
+        ))
+        return
+
+    configmap_data = core_v1_client.read_namespaced_config_map(
+        KADALU_CONFIG_MAP, NAMESPACE)
+
+    if not configmap_data.data.get("%s.info" % volname, None):
+        # Volume doesn't exists
+        logging.error(logf(
+            "Volume config not found",
+            storagename=volname
+        ))
+        return
+
+    # Volume ID (uuid) is already generated, re-use
+    cfgmap = json.loads(configmap_data.data[volname + ".info"])
+    # Get volume-id from config map
+    obj["spec"]["volume_id"] = cfgmap["volume_id"]
+
+    # Set Node ID for each storage device from configmap
+    for idx, _ in enumerate(obj["spec"]["storage"]):
+        obj["spec"]["storage"][idx]["node_id"] = cfgmap["bricks"][idx]["node_id"]
+
+    # Add new entry in the existing config map
+    update_config_map(core_v1_client, obj)
+    deploy_server_pods(obj)
+
+    filename = os.path.join(MANIFESTS_DIR, "services.yaml")
+    template(filename, namespace=NAMESPACE, volname=volname)
+    execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+    logging.info(logf("Deployed Service", volname=volname, manifest=filename))
 
 
 def handle_deleted():
@@ -449,7 +504,7 @@ def crd_watch(core_v1_client, k8s_client):
         if operation == "ADDED":
             handle_added(core_v1_client, obj)
         elif operation == "MODIFIED":
-            handle_modified()
+            handle_modified(core_v1_client, obj)
         elif operation == "DELETED":
             handle_deleted()
 
