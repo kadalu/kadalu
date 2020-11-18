@@ -17,7 +17,7 @@ help:
 build-grpc:
 	python3 -m grpc_tools.protoc -I./csi/protos --python_out=csi --grpc_python_out=csi ./csi/protos/csi.proto
 
-build-containers:
+build-containers: cli-build
 	DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} bash build.sh
 
 SUFFIX?="-devel"

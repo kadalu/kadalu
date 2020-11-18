@@ -23,6 +23,7 @@ COPY templates/storageclass-kadalu.replica3.yaml.j2  /kadalu/templates/storagecl
 COPY templates/external-storageclass.yaml.j2  /kadalu/templates/external-storageclass.yaml.j2
 COPY lib/kadalulib.py                /kadalu/kadalulib.py
 COPY operator/main.py                /kadalu/
+COPY cli/build/kubectl-kadalu        /usr/bin/kubectl-kadalu
 COPY lib/startup.sh                  /kadalu/startup.sh
 
 RUN chmod +x /kadalu/startup.sh
