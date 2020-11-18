@@ -11,7 +11,10 @@ setup(
     version=version(),
     packages=["kadalu_quotad"],
     include_package_data=True,
-    install_requires=["glustercli", "requests", "xxhash"],
+    install_requires=["requests", "xxhash"],
+    extras_require={
+        "gluster": ["glustercli"]
+    },
     entry_points={
         "console_scripts": [
             "kadalu-quotad = kadalu_quotad.quotad:start"

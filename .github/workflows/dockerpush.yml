@@ -41,6 +41,15 @@ jobs:
         with:
           buildx-version: latest
           qemu-version: latest
+      - name: Set up Python (for cli-build)
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.x'
+      - name: Get the CLI build (kubectl-kadalu)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          KADALU_VERSION=${{ env.kadalu_version }} make cli-build
       -
         name: Run Buildx
         if: success()
