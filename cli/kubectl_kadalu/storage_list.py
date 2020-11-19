@@ -8,8 +8,10 @@ import sys
 import utils
 
 
+# noqa # pylint: disable=useless-object-inheritance
 # noqa # pylint: disable=too-few-public-methods
-class StorageUnit:
+# noqa # pylint: disable=bad-option-value
+class StorageUnit(object):
     """Structure for Brick/Storage unit"""
     def __init__(self):
         self.kube_host = None
@@ -18,10 +20,8 @@ class StorageUnit:
         self.device = None
         self.pvc = None
 
-
-# noqa # pylint: disable=too-few-public-methods
 # noqa # pylint: disable=too-many-instance-attributes
-class Storage:
+class Storage(object):
     """Structure for Storage"""
     def __init__(self):
         self.storage_name = None
@@ -146,7 +146,7 @@ def detailed_output(storages, args):
 
 def summary_output(storages, args):
     """Print the Summary"""
-    if len(storages) > 0:
+    if storages:
         print()
         if args.status:
             print("%-15s  %-10s  %-20s  %10s  %15s  %15s  %15s" % (

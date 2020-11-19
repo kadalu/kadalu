@@ -33,7 +33,7 @@ TIEBREAKER_TMPL = """  tiebreaker:
     port: ${port}
 """
 
-
+# noqa #pylint: disable=len-as-condition
 def to_storage_yaml(data):
     """Convert Python dict to yaml format"""
     yaml = Template(YAML_TEMPLATE).substitute(name=data["metadata"]["name"],
