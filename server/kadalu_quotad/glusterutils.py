@@ -2,13 +2,17 @@
 Utilities for reading information from gluster for 'external' quotad
 """
 import os
-from glustercli.cli import volume
+import importlib
+try:
+    from glustercli.cli import volume
+except ImportError:
+    volume = None
+    pass
 
 KADALU_PATHS = {'info', 'subvol'}
 UUID_FILE = "/var/lib/glusterd/glusterd.info"
 
 myuuid = None
-
 
 def get_node_id():
     """
@@ -35,6 +39,9 @@ def get_automatic_bricks():
     Returns array of paths to gluster bricks hosted on _this_ server
     that appear to contain kadalu data and are therefore worth crawling
     """
+    if not volume:
+        return []
+
     local_uuid = get_node_id()
     found_bricks = []
     for vol in volume.vollist():
