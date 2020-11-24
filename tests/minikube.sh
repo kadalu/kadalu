@@ -261,7 +261,7 @@ test_kadalu)
 
     echo "After modification"
 
-    #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 191
+    get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 191
 
     # Log everything so we are sure if things are as expected
     for p in $(kubectl -n kadalu get pods -o name); do
