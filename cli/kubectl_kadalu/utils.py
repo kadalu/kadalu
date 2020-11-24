@@ -1,7 +1,7 @@
 """
 Utility methods for the CLI tool
 """
-
+from __future__ import print_function
 import subprocess
 import sys
 
@@ -16,7 +16,6 @@ class CmdResponse(object):
         self.returncode = returncode
         self.stdout = out
         self.stderr = err
-
 
 class CommandError(Exception):
     """ Class for handling exceptions """
