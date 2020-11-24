@@ -1,4 +1,4 @@
-FROM docker.io/fedora:31
+FROM docker.io/fedora:33
 
 RUN yum update -y
 RUN yum -y install procps-ng xfsprogs net-tools telnet wget e2fsprogs python3-pip sqlite
