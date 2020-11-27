@@ -13,8 +13,9 @@ import socket
 from jinja2 import Template
 from kubernetes import client, config, watch
 
-from kadalulib import execute, logging_setup, logf, send_analytics_tracker
-
+from kadalulib import execute as lib_execute, logging_setup, logf, send_analytics_tracker
+from storage_list import list_storages
+from utils import execute as utils_execute, CommandError
 
 NAMESPACE = os.environ.get("KADALU_NAMESPACE", "kadalu")
 VERSION = os.environ.get("KADALU_VERSION", "latest")
@@ -33,6 +34,7 @@ VOLUME_TYPE_REPLICA_3 = "Replica3"
 VOLUME_TYPE_EXTERNAL = "External"
 
 CREATE_CMD = "apply"
+DELETE_CMD = "delete"
 
 def template(filename, **kwargs):
     """Substitute the template with provided fields"""
@@ -308,7 +310,7 @@ def deploy_server_pods(obj):
 
         filename = os.path.join(MANIFESTS_DIR, "server.yaml")
         template(filename, **template_args)
-        execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+        lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
         logging.info(logf("Deployed Server pod",
                           volname=volname,
                           manifest=filename,
@@ -343,7 +345,7 @@ def handle_external_storage_addition(core_v1_client, obj):
 
     filename = os.path.join(MANIFESTS_DIR, "external-storageclass.yaml")
     template(filename, **data)
-    execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+    lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
     logging.info(logf("Deployed External StorageClass", volname=volname, manifest=filename))
 
 
@@ -400,7 +402,7 @@ def handle_added(core_v1_client, obj):
 
     filename = os.path.join(MANIFESTS_DIR, "services.yaml")
     template(filename, namespace=NAMESPACE, volname=volname)
-    execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+    lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
     logging.info(logf("Deployed Service", volname=volname, manifest=filename))
 
 
@@ -464,21 +466,190 @@ def handle_modified(core_v1_client, obj):
 
     filename = os.path.join(MANIFESTS_DIR, "services.yaml")
     template(filename, namespace=NAMESPACE, volname=volname)
-    execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+    lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
     logging.info(logf("Deployed Service", volname=volname, manifest=filename))
 
 
-def handle_deleted():
+def handle_deleted(core_v1_client, obj):
     """
     If number of pvs provisioned from that volume
     is zero - Delete the respective server pods
     If number of pvs is not zero, wait or periodically
     check for num_pvs. Delete Server pods only when pvs becomes zero.
     """
-    # TODO
+
+    volname = obj["metadata"]["name"]
+
     logging.warning(logf(
-        "DELETED handle called, but not implemented"
+        "Delete requested",
+        volname=volname
     ))
+
+    storages = get_storages()
+
+    for storage in storages:
+
+        if storage.storage_name != volname:
+            continue
+
+        get_num_pvs(storage)
+
+        if storage.pv_count != 0:
+
+            logging.warning(logf(
+                "Storage delete failed. Storage is not empty",
+                number_of_pvs=storage.pv_count,
+                storage=volname
+            ))
+
+            # TODO : Implement is_num_pv_zero()
+            # Periodically check if pv count is 0 or not
+
+        elif storage.pv_count == 0:
+
+            delete_config_map(core_v1_client, obj)
+            delete_server_pods(storage, obj)
+
+            filename = os.path.join(MANIFESTS_DIR, "services.yaml")
+            template(filename, namespace=NAMESPACE, volname=volname)
+            lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
+            logging.info(logf(
+                "Deleted Service",
+                volname=volname,
+                manifest=filename
+            ))
+
+            break
+
+
+def get_storages():
+    """
+    Parse list of storages from configmap in
+    JSON input and set set those values to StorageUnit variables
+    """
+
+    cmd = [
+        "kubectl", "get", "configmap",
+        "kadalu-info", "-nkadalu", "-ojson"
+    ]
+    try:
+        resp = utils_execute(cmd)
+        #list_storages does not make use of use 'args' thus pass None
+        storages = list_storages(resp.stdout, None)
+    except CommandError as msg:
+        logging.error(logf(
+            "Failed to get Kadalu ConfigMap",
+            error=msg
+        ))
+
+    return storages
+
+
+def get_num_pvs(storage):
+    """
+    Get PV count for all listed storages
+    and set count value to pv_count in Storage
+    """
+
+    dbpath = "/bricks/" + storage.storage_name + "/data/brick/stat.db"
+    query = ("select count(pvname) from pv_stats;")
+    cmd = ["kubectl", "exec", "-i",
+            storage.storage_units[0].podname,
+            "-c", "glusterfsd", "-nkadalu", "--", "sqlite3",
+            dbpath,
+            query
+    ]
+
+    try:
+        resp = utils_execute(cmd)
+        parts = resp.stdout.strip().split("\n")
+        storage.pv_count = int(parts[0].strip())
+
+    except CommandError as msg:
+        logging.error(logf(
+            "Failed to get size details of the "
+            "storage \"%s\"" % storage.storage_name,
+            error=msg
+        ))
+
+
+def delete_config_map(core_v1_client, obj):
+    """
+    Volinfo of existing Volume is generated and ConfigMap is deleted
+    """
+
+    volname = obj["metadata"]["name"]
+
+    # Add new entry in the existing config map
+    configmap_data = core_v1_client.read_namespaced_config_map(
+        KADALU_CONFIG_MAP, NAMESPACE)
+
+    volinfo_file = "%s.info" % volname
+    del configmap_data.data[volinfo_file]
+
+    core_v1_client.patch_namespaced_config_map(
+        KADALU_CONFIG_MAP, NAMESPACE, configmap_data)
+    logging.info(logf(
+        "Deleted configmap",
+        name=KADALU_CONFIG_MAP,
+        volname=volname
+    ))
+
+
+def delete_server_pods(storage, obj):
+    """
+    Delete server pods depending on type of Hosting
+    Volume and other options specified
+    """
+
+    # Only volname is available in obj after deletion of configmap
+    # Get other data directly from storage and storage_unit
+    volname = obj["metadata"]["name"]
+    voltype = storage.storage_type
+    volumeid = storage.storage_id
+
+    docker_user = os.environ.get("DOCKER_USER", "kadalu")
+
+    shd_required = False
+    if voltype in (VOLUME_TYPE_REPLICA_3, VOLUME_TYPE_REPLICA_2):
+        shd_required = True
+
+    template_args = {
+        "namespace": NAMESPACE,
+        "kadalu_version": VERSION,
+        "docker_user": docker_user,
+        "volname": volname,
+        "voltype": voltype,
+        "volume_id": volumeid,
+        "shd_required": shd_required
+    }
+
+    # Brick info from storage_list.storage_unit
+    for idx, storage_unit in enumerate(storage.storage_units):
+        template_args["host_brick_path"] = storage_unit.path
+        template_args["kube_hostname"] = storage_unit.kube_host
+        template_args["serverpod_name"] = get_brick_hostname(
+            volname,
+            idx,
+            suffix=False
+        )
+        template_args["brick_path"] = "/bricks/%s/data/brick" % volname
+        template_args["brick_index"] = idx
+        template_args["brick_device"] = storage_unit.device
+        template_args["pvc_name"] = storage_unit.pvc
+        template_args["brick_device_dir"] = storage_unit.brick_device_dir
+        template_args["brick_node_id"] = storage_unit.node_id
+        template_args["k8s_dist"] = K8S_DIST
+
+        filename = os.path.join(MANIFESTS_DIR, "server.yaml")
+        template(filename, **template_args)
+        lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
+        logging.info(logf(
+            "Deleted Server pod",
+            volname=volname,
+            manifest=filename,
+            node=storage_unit.node
+        ))
 
 
 def crd_watch(core_v1_client, k8s_client):
@@ -506,7 +677,7 @@ def crd_watch(core_v1_client, k8s_client):
         elif operation == "MODIFIED":
             handle_modified(core_v1_client, obj)
         elif operation == "DELETED":
-            handle_deleted()
+            handle_deleted(core_v1_client, obj)
 
 
 def deploy_csi_pods(core_v1_client):
@@ -526,11 +697,11 @@ def deploy_csi_pods(core_v1_client):
        api_instance.minor >= "14":
         filename = os.path.join(MANIFESTS_DIR, "csi-driver-object.yaml")
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-        execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+        lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
     else:
         filename = os.path.join(MANIFESTS_DIR, "csi-driver-crd.yaml")
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-        execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+        lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
 
     filename = os.path.join(MANIFESTS_DIR, "csi.yaml")
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
@@ -538,7 +709,7 @@ def deploy_csi_pods(core_v1_client):
              docker_user=docker_user, k8s_dist=K8S_DIST,
              kubelet_dir=KUBELET_DIR)
 
-    execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+    lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
     logging.info(logf("Deployed CSI Pods", manifest=filename))
 
 
@@ -569,7 +740,7 @@ def deploy_config_map(core_v1_client):
              kadalu_version=VERSION,
              uid=uid)
 
-    execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+    lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
     logging.info(logf("Deployed ConfigMap", manifest=filename))
     return uid
 
@@ -596,7 +767,7 @@ def deploy_storage_class():
 
         # Deploy Storage Class
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-        execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+        lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
 
 

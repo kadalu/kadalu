@@ -10,21 +10,23 @@ RUN python3 -m pip install kubernetes==11.0.0
 
 RUN mkdir -p /kadalu/manifests
 
-COPY templates/services.yaml.j2      /kadalu/templates/services.yaml.j2
-COPY templates/server.yaml.j2        /kadalu/templates/server.yaml.j2
-COPY templates/csi.yaml.j2           /kadalu/templates/csi.yaml.j2
-COPY templates/csi-driver-crd.yaml.j2  /kadalu/templates/csi-driver-crd.yaml.j2
-COPY templates/csi-driver-object.yaml.j2  /kadalu/templates/csi-driver-object.yaml.j2
-COPY templates/configmap.yaml.j2     /kadalu/templates/configmap.yaml.j2
+COPY templates/services.yaml.j2             /kadalu/templates/services.yaml.j2
+COPY templates/server.yaml.j2               /kadalu/templates/server.yaml.j2
+COPY templates/csi.yaml.j2                  /kadalu/templates/csi.yaml.j2
+COPY templates/csi-driver-crd.yaml.j2       /kadalu/templates/csi-driver-crd.yaml.j2
+COPY templates/csi-driver-object.yaml.j2    /kadalu/templates/csi-driver-object.yaml.j2
+COPY templates/configmap.yaml.j2            /kadalu/templates/configmap.yaml.j2
 COPY templates/storageclass-kadalu.yaml.j2  /kadalu/templates/storageclass-kadalu.yaml.j2
 COPY templates/storageclass-kadalu.replica1.yaml.j2  /kadalu/templates/storageclass-kadalu.replica1.yaml.j2
 COPY templates/storageclass-kadalu.replica2.yaml.j2  /kadalu/templates/storageclass-kadalu.replica2.yaml.j2
 COPY templates/storageclass-kadalu.replica3.yaml.j2  /kadalu/templates/storageclass-kadalu.replica3.yaml.j2
 COPY templates/external-storageclass.yaml.j2  /kadalu/templates/external-storageclass.yaml.j2
-COPY lib/kadalulib.py                /kadalu/kadalulib.py
-COPY operator/main.py                /kadalu/
-COPY cli/build/kubectl-kadalu        /usr/bin/kubectl-kadalu
-COPY lib/startup.sh                  /kadalu/startup.sh
+COPY lib/kadalulib.py                    /kadalu/kadalulib.py
+COPY cli/kubectl_kadalu/storage_list.py  /kadalu/storage_list.py
+COPY cli/kubectl_kadalu/utils.py         /kadalu/utils.py
+COPY operator/main.py                    /kadalu/
+COPY cli/build/kubectl-kadalu            /usr/bin/kubectl-kadalu
+COPY lib/startup.sh                      /kadalu/startup.sh
 
 RUN chmod +x /kadalu/startup.sh
 
