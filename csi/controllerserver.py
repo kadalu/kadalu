@@ -111,7 +111,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                                 "gvolname": ext_volume['g_volname'],
                                 "gserver": ext_volume['g_host'],
                                 "fstype": "xfs",
-                                "options": ext_volume['options'],
+                                "options": ext_volume['g_options'],
                             }
                         }
                     )
