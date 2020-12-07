@@ -19,6 +19,7 @@ kubectl get storageclass | grep kadalu | awk '{print $1}' | xargs kubectl delete
 
 # Operator
 kubectl delete -nkadalu CustomResourceDefinition kadalustorages.kadalu-operator.storage
+kubectl delete -nkadalu ClusterRole pod-exec
 kubectl delete -nkadalu ClusterRole kadalu-operator
 kubectl delete -nkadalu ServiceAccount kadalu-operator
 kubectl delete -nkadalu ClusterRoleBinding kadalu-operator

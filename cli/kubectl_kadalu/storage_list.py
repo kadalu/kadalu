@@ -7,7 +7,7 @@ import sys
 
 import utils
 
-
+# noqa # pylint: disable=too-many-instance-attributes
 # noqa # pylint: disable=useless-object-inheritance
 # noqa # pylint: disable=too-few-public-methods
 # noqa # pylint: disable=bad-option-value
@@ -19,8 +19,10 @@ class StorageUnit(object):
         self.path = None
         self.device = None
         self.pvc = None
+        self.node = None
+        self.node_id = None
+        self.brick_device_dir = None
 
-# noqa # pylint: disable=too-many-instance-attributes
 class Storage(object):
     """Structure for Storage"""
     def __init__(self):
@@ -76,6 +78,9 @@ def list_storages(cmd_out, _args):
                 storage_unit.path = brick["host_brick_path"]
                 storage_unit.device = brick["brick_device"]
                 storage_unit.pvc = brick["pvc_name"]
+                storage_unit.node = brick["node"]
+                storage_unit.node_id = brick["node_id"]
+                storage_unit.brick_device_dir = brick["brick_device_dir"]
                 storage_unit.podname = brick["node"].replace(
                     "." + storage.storage_name, "")
                 storage.storage_units.append(storage_unit)

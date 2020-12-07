@@ -63,6 +63,8 @@ pylint:
 	@cp lib/kadalulib.py csi/
 	@cp lib/kadalulib.py server/
 	@cp lib/kadalulib.py operator/
+	@cp cli/kubectl_kadalu/utils.py operator/
+	@cp cli/kubectl_kadalu/storage_list.py operator/
 	@cp server/kadalu_quotad/quotad.py server/kadalu_quotad/glusterutils.py server/
 	@pylint --disable=W0511 -s n lib/kadalulib.py
 	@pylint --disable=W0511 -s n server/glusterfsd.py
@@ -76,9 +78,13 @@ pylint:
 	@pylint --disable=W0511 -s n csi/volumeutils.py
 	@pylint --disable=W0511 -s n operator/main.py
 	@pylint --disable=W0511 -s n extras/scripts/gen_manifest.py
+	@pylint --disable=R0902 -s n cli/kubectl_kadalu/storage_list.py
+	@pylint --disable=R0902 -s n cli/kubectl_kadalu/utils.py
 	@rm csi/kadalulib.py
 	@rm server/kadalulib.py
 	@rm operator/kadalulib.py
+	@rm operator/utils.py
+	@rm operator/storage_list.py
 	@rm server/quotad.py
 	@rm server/glusterutils.py
 	@cd cli && make gen-version

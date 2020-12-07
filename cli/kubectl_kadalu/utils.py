@@ -7,6 +7,7 @@ import sys
 
 KUBECTL_CMD = "kubectl"
 
+# noqa # pylint: disable=too-many-instance-attributes
 # noqa # pylint: disable=useless-object-inheritance
 # noqa # pylint: disable=too-few-public-methods
 # noqa # pylint: disable=bad-option-value

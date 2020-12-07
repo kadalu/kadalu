@@ -60,7 +60,6 @@ users:
   - system:serviceaccount:{{ namespace }}:kadalu-operator
   - system:serviceaccount:{{ namespace }}:kadalu-csi-provisioner
   - system:serviceaccount:{{ namespace }}:kadalu-csi-nodeplugin
-
 {% endif %}
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
@@ -77,6 +76,20 @@ spec:
     singular: kadalustorage
   scope: Namespaced
   version: v1alpha1
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  namespace: {{ namespace }}
+  name: pod-exec
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
+- apiGroups: [""]
+  resources: ["pods", "pods/exec"]
+  verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -194,6 +207,9 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: kadalu-operator
+    namespace: {{ namespace }}
+  - kind: ServiceAccount
+    name: pod-exec
     namespace: {{ namespace }}
 roleRef:
   kind: ClusterRole
