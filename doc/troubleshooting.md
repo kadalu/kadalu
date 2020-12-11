@@ -20,7 +20,7 @@ Traceback (most recent call last):
   File "/kadalu/main.py", line 458, in main
     deploy_csi_pods(core_v1_client)
   File "/kadalu/main.py", line 394, in deploy_csi_pods
-    execute(KUBECTL_CMD, "create", "-f", filename)
+    execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
   File "/kadalu/kadalulib.py", line 60, in execute
     raise CommandException(proc.returncode, out.strip(), err.strip())
 kadalulib.CommandException: [1] b'' b'Error from server (AlreadyExists): error when creating "/kadalu/templates/csi-driver-object.yaml": csidrivers.storage.k8s.io "kadalu" already exists'

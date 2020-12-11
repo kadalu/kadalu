@@ -252,7 +252,7 @@ def run(args):
         with os.fdopen(config, 'w') as tmp:
             tmp.write(yaml_content)
 
-        cmd = utils.kubectl_cmd(args) + ["create", "-f", tempfile_path]
+        cmd = utils.kubectl_cmd(args) + ["apply", "-f", tempfile_path]
         resp = utils.execute(cmd)
         print("Storage add request sent successfully")
         print(resp.stdout)
