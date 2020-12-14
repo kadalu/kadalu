@@ -19,7 +19,7 @@ go: 1.12.x
 env:
   global:
     - KADALU_VERSION=canary
-    - GOLANGCI_VERSION=v1.17.0
+    - GOLANGCI_VERSION=v1.19.0
     - TEST_COVERAGE=stdout
     - GO_METALINTER_THREADS=1
     - GO_COVER_DIR=_output
@@ -41,7 +41,21 @@ jobs:
         - make pylint || travis_terminate 1;
     - name: kadalu with kube 1.20.0
       script:
+        - sudo apt-get install -y containerd.io=1.2.13-2 docker-ce=5:19.03.11~3-0~ubuntu-$(lsb_release -cs) docker-ce-cli=5:19.03.11~3-0~ubuntu-$(lsb_release -cs)
         - sudo apt-get install -y conntrack
+#       - cat <<EOF | sudo tee /etc/docker/daemon.json
+# {
+#   "exec-opts": ["native.cgroupdriver=systemd"],
+#   "log-driver": "json-file",
+#   "log-opts": {
+#     "max-size": "100m"
+#   },
+#   "storage-driver": "overlay2"
+# }
+# EOF
+        - sudo mkdir -p /etc/systemd/system/docker.service.d
+        - sudo systemctl daemon-reload
+        - sudo systemctl restart docker
         - make build-containers || travis_terminate 1;
         - make gen-manifest || travis_terminate 1;
         - tests/setup.sh v1.20.0 || travis_terminate 1;
@@ -50,7 +64,11 @@ jobs:
         - tests/cleanup.sh v1.20.0 || travis_terminate 1;
     - name: kadalu with kube 1.19.2
       script:
+        - sudo apt-get install -y containerd.io=1.2.13-2 docker-ce=5:19.03.11~3-0~ubuntu-$(lsb_release -cs) docker-ce-cli=5:19.03.11~3-0~ubuntu-$(lsb_release -cs)
         - sudo apt-get install -y conntrack
+        - sudo mkdir -p /etc/systemd/system/docker.service.d
+        - sudo systemctl daemon-reload
+        - sudo systemctl restart docker
         - make build-containers || travis_terminate 1;
         - make gen-manifest || travis_terminate 1;
         - tests/setup.sh v1.19.2 || travis_terminate 1;
