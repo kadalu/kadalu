@@ -3,11 +3,6 @@
 sudo: true
 dist: bionic
 
-addons:
-  apt:
-    packages:
-      - realpath
-
 services:
   - docker
 
