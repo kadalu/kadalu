@@ -11,6 +11,8 @@ RUN python3 -m pip install grpcio googleapis-common-protos
 
 RUN mkdir -p /kadalu/volfiles /kadalu/templates
 
+RUN mkdir -p /var/log/glusterfs /var/run/gluster
+
 COPY lib/kadalulib.py          /kadalu/
 COPY csi/controllerserver.py   /kadalu/
 COPY csi/csi_pb2_grpc.py       /kadalu/

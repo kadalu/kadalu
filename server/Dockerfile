@@ -17,6 +17,8 @@ COPY server/stop-server.sh   /kadalu/stop-server.sh
 
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
 
+RUN mkdir -p /var/run/gluster /var/log/glusterfs
+
 # Copy Volfile templates
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/
 COPY templates/Replica2.client.vol.j2 /kadalu/templates/
