@@ -14,7 +14,6 @@ from jinja2 import Template
 from kubernetes import client, config, watch
 
 from kadalulib import execute as lib_execute, logging_setup, logf, send_analytics_tracker
-from storage_list import list_storages
 from utils import execute as utils_execute, CommandError
 
 NAMESPACE = os.environ.get("KADALU_NAMESPACE", "kadalu")
@@ -480,81 +479,78 @@ def handle_deleted(core_v1_client, obj):
 
     volname = obj["metadata"]["name"]
 
+    storage_info_data = get_configmap_data(volname)
+
     logging.warning(logf(
         "Delete requested",
         volname=volname
     ))
 
-    storages = get_storages()
+    pv_count = get_num_pvs(storage_info_data)
 
-    for storage in storages:
+    if pv_count != 0:
 
-        if storage.storage_name != volname:
-            continue
-
-        get_num_pvs(storage)
-
-        if storage.pv_count != 0:
-
-            logging.warning(logf(
-                "Storage delete failed. Storage is not empty",
-                number_of_pvs=storage.pv_count,
-                storage=volname
-            ))
-
-            # TODO : Implement is_num_pv_zero()
-            # Periodically check if pv count is 0 or not
-
-        elif storage.pv_count == 0:
-
-            delete_config_map(core_v1_client, obj)
-            delete_server_pods(storage, obj)
-
-            filename = os.path.join(MANIFESTS_DIR, "services.yaml")
-            template(filename, namespace=NAMESPACE, volname=volname)
-            lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
-            logging.info(logf(
-                "Deleted Service",
-                volname=volname,
-                manifest=filename
-            ))
-
-            break
-
-
-def get_storages():
-    """
-    Parse list of storages from configmap in
-    JSON input and set set those values to StorageUnit variables
-    """
-
-    cmd = [
-        "kubectl", "get", "configmap",
-        "kadalu-info", "-nkadalu", "-ojson"
-    ]
-    try:
-        resp = utils_execute(cmd)
-        #list_storages does not make use of use 'args' thus pass None
-        storages = list_storages(resp.stdout, None)
-    except CommandError as msg:
         logging.error(logf(
-            "Failed to get Kadalu ConfigMap",
-            error=msg
+            "Storage delete failed. Storage is not empty",
+            number_of_pvs=pv_count,
+            storage=volname
         ))
 
-    return storages
+    elif pv_count == 0:
+
+        delete_server_pods(storage_info_data, obj)
+        delete_config_map(core_v1_client, obj)
+
+        filename = os.path.join(MANIFESTS_DIR, "services.yaml")
+        template(filename, namespace=NAMESPACE, volname=volname)
+        lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
+        logging.info(logf(
+            "Deleted Service",
+            volname=volname,
+            manifest=filename
+        ))
 
 
-def get_num_pvs(storage):
+def get_configmap_data(volname):
     """
-    Get PV count for all listed storages
-    and set count value to pv_count in Storage
+    Get storage info data from kadalu configmap
     """
 
-    dbpath = "/bricks/" + storage.storage_name + "/data/brick/stat.db"
+    cmd = ["kubectl", "get", "configmap", "kadalu-info", "-nkadalu", "-ojson"]
+
+    try:
+        resp = utils_execute(cmd)
+        config_data = json.loads(resp.stdout)
+
+        data = config_data['data']
+        storage_name = "%s.info" % volname
+        storage_info_data = data[storage_name]
+
+        # Return data in 'dict' format
+        return json.loads(storage_info_data)
+
+    except CommandError as err:
+        logging.error(logf(
+            "Failed to get details from configmap",
+            error=err
+        ))
+
+
+def get_num_pvs(storage_info_data):
+    """
+    Get number of PVs provisioned from
+    volume requested for deletion
+    through configmap.
+    """
+
+    volname = storage_info_data['volname']
+    bricks = storage_info_data['bricks']
+
+    dbpath = "/bricks/" + volname + "/data/brick/stat.db"
     query = ("select count(pvname) from pv_stats;")
+
     cmd = ["kubectl", "exec", "-i",
-            storage.storage_units[0].podname,
+            bricks[0]['node'].replace("." + volname, ""),
             "-c", "glusterfsd", "-nkadalu", "--", "sqlite3",
             dbpath,
             query
@@ -563,50 +559,29 @@ def get_num_pvs(storage):
     try:
         resp = utils_execute(cmd)
         parts = resp.stdout.strip().split("\n")
-        storage.pv_count = int(parts[0].strip())
+        pv_count = int(parts[0].strip())
+
+        return pv_count
 
     except CommandError as msg:
         logging.error(logf(
             "Failed to get size details of the "
-            "storage \"%s\"" % storage.storage_name,
+            "storage \"%s\"" % volname,
             error=msg
         ))
+        # Set default as 0
+        return 0
 
 
-def delete_config_map(core_v1_client, obj):
-    """
-    Volinfo of existing Volume is generated and ConfigMap is deleted
-    """
-
-    volname = obj["metadata"]["name"]
-
-    # Add new entry in the existing config map
-    configmap_data = core_v1_client.read_namespaced_config_map(
-        KADALU_CONFIG_MAP, NAMESPACE)
-
-    volinfo_file = "%s.info" % volname
-    del configmap_data.data[volinfo_file]
-
-    core_v1_client.patch_namespaced_config_map(
-        KADALU_CONFIG_MAP, NAMESPACE, configmap_data)
-    logging.info(logf(
-        "Deleted configmap",
-        name=KADALU_CONFIG_MAP,
-        volname=volname
-    ))
-
-
-def delete_server_pods(storage, obj):
+def delete_server_pods(storage_info_data, obj):
     """
     Delete server pods depending on type of Hosting
     Volume and other options specified
     """
 
-    # Only volname is available in obj after deletion of configmap
-    # Get other data directly from storage and storage_unit
     volname = obj["metadata"]["name"]
-    voltype = storage.storage_type
-    volumeid = storage.storage_id
+    voltype = storage_info_data['type']
+    volumeid = storage_info_data['volume_id']
 
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
 
@@ -624,10 +599,14 @@ def delete_server_pods(storage, obj):
         "shd_required": shd_required
     }
 
-    # Brick info from storage_list.storage_unit
-    for idx, storage_unit in enumerate(storage.storage_units):
-        template_args["host_brick_path"] = storage_unit.path
-        template_args["kube_hostname"] = storage_unit.kube_host
+    bricks = storage_info_data['bricks']
+
+    # Traverse all bricks from configmap
+    for brick in bricks:
+
+        idx = brick['brick_index']
+        template_args["host_brick_path"] = brick['host_brick_path']
+        template_args["kube_hostname"] = brick['kube_hostname']
         template_args["serverpod_name"] = get_brick_hostname(
             volname,
             idx,
@@ -635,10 +614,10 @@ def delete_server_pods(storage, obj):
         )
         template_args["brick_path"] = "/bricks/%s/data/brick" % volname
         template_args["brick_index"] = idx
-        template_args["brick_device"] = storage_unit.device
-        template_args["pvc_name"] = storage_unit.pvc
-        template_args["brick_device_dir"] = storage_unit.brick_device_dir
-        template_args["brick_node_id"] = storage_unit.node_id
+        template_args["brick_device"] = brick['brick_device']
+        template_args["pvc_name"] = brick['pvc_name']
+        template_args["brick_device_dir"] = brick['brick_device_dir']
+        template_args["brick_node_id"] = brick['node_id']
         template_args["k8s_dist"] = K8S_DIST
 
         filename = os.path.join(MANIFESTS_DIR, "server.yaml")
@@ -648,8 +627,31 @@ def delete_server_pods(storage, obj):
             "Deleted Server pod",
             volname=volname,
             manifest=filename,
-            node=storage_unit.node
+            node=brick['node']
         ))
+
+
+def delete_config_map(core_v1_client, obj):
+    """
+    Volinfo of existing Volume is generated and ConfigMap is deleted
+    """
+
+    volname = obj["metadata"]["name"]
+
+    # Add new entry in the existing config map
+    configmap_data = core_v1_client.read_namespaced_config_map(
+        KADALU_CONFIG_MAP, NAMESPACE)
+
+    volinfo_file = "%s.info" % volname
+    configmap_data.data[volinfo_file] = None
+
+    core_v1_client.patch_namespaced_config_map(
+        KADALU_CONFIG_MAP, NAMESPACE, configmap_data)
+    logging.info(logf(
+        "Deleted configmap",
+        name=KADALU_CONFIG_MAP,
+        volname=volname
+    ))
 
 
 def crd_watch(core_v1_client, k8s_client):
