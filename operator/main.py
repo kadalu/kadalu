@@ -114,7 +114,10 @@ def validate_ext_details(obj):
     if not is_host_reachable(ghost, gport):
         logging.error(logf("gluster server not reachable: on %s:%d" %
                            (ghost, gport)))
-        return False
+        #  Noticed that there may be glitches in n/w during this time.
+        #  Not good to fail the validation, instead, just log here, so
+        #  we are aware this is a possible reason.
+        #return False
 
     logging.debug(logf("External Storage %s successfully validated" % \
                        obj["metadata"].get("name", "<unknown>")))
