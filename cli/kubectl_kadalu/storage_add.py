@@ -2,6 +2,9 @@
 'storage-add ' sub command
 """
 
+# noqa # pylint: disable=duplicate-code
+# noqa # pylint: disable=too-many-branches
+
 #To prevent Py2 to interpreting print(val) as a tuple.
 from __future__ import print_function
 
@@ -14,7 +17,6 @@ import utils
 from storage_yaml import to_storage_yaml
 
 
-# noqa # pylint: disable=too-many-branches
 def set_args(name, subparsers):
     """ add arguments, and their options """
     parser = subparsers.add_parser(name)
