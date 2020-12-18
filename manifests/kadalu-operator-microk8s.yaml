@@ -51,6 +51,20 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  namespace: kadalu
+  name: pod-exec
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
+- apiGroups: [""]
+  resources: ["pods", "pods/exec"]
+  verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
   name: kadalu-operator
   namespace: kadalu
 rules:
@@ -163,6 +177,9 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: kadalu-operator
+    namespace: kadalu
+  - kind: ServiceAccount
+    name: pod-exec
     namespace: kadalu
 roleRef:
   kind: ClusterRole
