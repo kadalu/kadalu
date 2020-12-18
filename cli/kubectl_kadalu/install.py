@@ -68,12 +68,13 @@ def run(args):
         insttype = ""
 
         if args.version and args.version != "latest":
+            file_url="https://github.com/kadalu/kadalu/releases/download/%s" % args.version
             version = "-%s" % args.version
 
-            if args.type and args.type == "openshift":
-                insttype = "-openshift"
+        if args.type and args.type != "kubernetes":
+                insttype = "-%s" % args.type
 
-        operator_file = "%s/kadalu-operator%s%s.yaml" % (file_url, insttype, version)
+        operator_file = "%s/kadalu-operator%s.yaml" % (file_url, insttype)
 
     try:
         cmd = utils.kubectl_cmd(args) + ["apply", "-f", operator_file]

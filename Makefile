@@ -20,18 +20,16 @@ build-grpc:
 build-containers: cli-build
 	DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} bash build.sh
 
-SUFFIX?="-devel"
-
 gen-manifest:
 	@echo "Generating manifest files, run the following commands"
 	@echo
 	@mkdir -p manifests
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
-		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator${SUFFIX}.yaml
-	@echo "kubectl apply -f manifests/kadalu-operator${SUFFIX}.yaml"
+		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator.yaml
+	@echo "kubectl apply -f manifests/kadalu-operator.yaml"
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		K8S_DIST=openshift                                   \
-		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-openshift${SUFFIX}.yaml
+		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-openshift.yaml
 	@echo
 	@echo "In the case of OpenShift, deploy Kadalu Operator by running "
 	@echo "the following command"
@@ -39,25 +37,25 @@ gen-manifest:
 	@echo "Note: Security Context Constraints can be applied only by admins, "
 	@echo 'Run `oc login -u system:admin` to login as admin'
 	@echo
-	@echo "oc create -f manifests/kadalu-operator-openshift${SUFFIX}.yaml"
+	@echo "oc create -f manifests/kadalu-operator-openshift.yaml"
 
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		K8S_DIST=microk8s                                    \
-		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-microk8s${SUFFIX}.yaml
+		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-microk8s.yaml
 	@echo
 	@echo "In the case of MicroK8s, deploy Kadalu Operator by running "
 	@echo "the following command"
 	@echo
-	@echo "kubectl apply -f manifests/kadalu-operator-microk8s${SUFFIX}.yaml"
+	@echo "kubectl apply -f manifests/kadalu-operator-microk8s.yaml"
 
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		K8S_DIST=rke                                    \
-		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-rke${SUFFIX}.yaml
+		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-rke.yaml
 	@echo
 	@echo "In the case of Rancher (RKE), deploy Kadalu Operator by running "
 	@echo "the following command"
 	@echo
-	@echo "kubectl apply -f manifests/kadalu-operator-rke${SUFFIX}.yaml"
+	@echo "kubectl apply -f manifests/kadalu-operator-rke.yaml"
 
 pylint:
 	@cp lib/kadalulib.py csi/
@@ -93,12 +91,8 @@ prepare-release-manifests:
 	@echo "KADALU_VERSION can't be latest for release"
 else
 prepare-release-manifests:
-	# For each k8s distribution(specific version)
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
-		SUFFIX="-${KADALU_VERSION}" $(MAKE) gen-manifest
-	# File names without version suffix
-	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
-		SUFFIX= $(MAKE) gen-manifest
+		$(MAKE) gen-manifest
 	@echo "Generated manifest file. Version: ${KADALU_VERSION}"
 endif
 
