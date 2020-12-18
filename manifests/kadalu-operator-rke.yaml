@@ -213,6 +213,6 @@ spec:
             - name: KADALU_VERSION
               value: "devel"
             - name: KUBELET_DIR
-              value: "/opt/rke/var/lib/kubelet"
+              value: "/var/lib/kubelet"
             - name: K8S_DIST
               value: "rke"
