@@ -216,8 +216,8 @@ kadalu_operator)
     echo "Starting the kadalu Operator"
 
     # pick the operator file from repo
-    sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator-devel.yaml
-    kubectl apply -f manifests/kadalu-operator-devel.yaml
+    sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator.yaml
+    kubectl apply -f manifests/kadalu-operator.yaml
 
     sleep 1
     # Start storage

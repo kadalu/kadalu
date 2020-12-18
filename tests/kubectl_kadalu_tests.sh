@@ -13,10 +13,10 @@ function install_cli_package() {
 }
 
 function test_install() {
-    sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator-devel.yaml
+    sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator.yaml
 
     echo "Installing Operator through CLI"
-    cli/build/kubectl-kadalu install --local-yaml manifests/kadalu-operator-devel.yaml || return 1
+    cli/build/kubectl-kadalu install --local-yaml manifests/kadalu-operator.yaml || return 1
 }
 
 function test_storage_add() {

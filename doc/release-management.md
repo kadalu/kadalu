@@ -1,5 +1,16 @@
 # Release management
 
+## From github UI
+
+This is the approach kadalu team is using for release. This can be done by
+just creating a 'Release' in UI. It will trigger the script from github
+actions, and it will create all relevant scripts in the corresponding
+folder in github.
+
+Check the [Release URL here](https://github.com/kadalu/kadalu/releases)
+
+## From the Makefile
+
 1. Update CHANGELOG.md file with the list of changes and link
 2. Run `make release` to generate Operator manifest file and build
    Containers for a specific version(and latest). Built Containers
