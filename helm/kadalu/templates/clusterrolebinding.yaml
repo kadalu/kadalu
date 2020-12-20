@@ -1,0 +1,16 @@
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kadalu-operator
+subjects:
+  - kind: ServiceAccount
+    name: kadalu-operator
+    namespace: {{ .Release.Namespace }}
+  - kind: ServiceAccount
+    name: pod-exec
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: kadalu-operator
+  apiGroup: rbac.authorization.k8s.io

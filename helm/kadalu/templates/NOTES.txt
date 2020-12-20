@@ -1,0 +1,10 @@
+The Kadalu Operator has been installed. Check its status by running:
+  kubectl --namespace {{ .Release.Namespace }} get pods
+
+Visit https://kadalu.io/docs/k8s-storage/latest for instructions on how to add storage and create PVs out of it.
+
+Important Notes:
+- You can add storage pools with different types using 'KadaluStorage' type.
+- The helm chart includes all the RBAC required to create kadalu.io CRD.
+
+

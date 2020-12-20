@@ -1,0 +1,8 @@
+apiVersion: v2
+name: kadalu
+icon: https://kadalu.io/static/css/logo.png
+description: kadalu.io Storage Operator and CSI for k8s (with glusterfs)
+type: application
+version: 0.1.3
+
+appVersion: 0.7.3

@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: operator
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/part-of: kadalu
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/name: operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: kadalu
+  template:
+    metadata:
+      labels:
+        name: kadalu
+    spec:
+      serviceAccountName: kadalu-operator
+      containers:
+        - name: kadalu-operator
+          securityContext:
+            capabilities: {}
+            privileged: true
+          image: docker.io/kadalu/kadalu-operator:devel
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "kadalu-operator"
+            - name: DOCKER_USER
+              value: "kadalu"
+            - name: KADALU_VERSION
+              value: "devel"
+            - name: KADALU_NAMESPCE
+              value: {{ .Release.Namespace }}
+            - name: KUBELET_DIR
+              value: "/var/lib/kubelet"
+            - name: K8S_DIST
+              value: "kubernetes"
