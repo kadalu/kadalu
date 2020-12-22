@@ -1,8 +1,6 @@
 name: Run on every PR
 
-on:
-  pull_request:
-    - devel
+on: pull_request
 
 jobs:
   pylint:
