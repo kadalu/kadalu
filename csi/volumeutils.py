@@ -524,6 +524,9 @@ def volume_list(voltype=None):
 
 def mount_volume(pvpath, mountpoint, pvtype, fstype=None):
     """Mount a Volume"""
+    # Need this after kube 1.20.0
+    makedirs(mountpoint)
+
     if pvtype == PV_TYPE_VIRTBLOCK:
         fstype = "xfs" if fstype is None else fstype
         execute(MOUNT_CMD, "-t", fstype, pvpath, mountpoint)
