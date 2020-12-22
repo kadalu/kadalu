@@ -1,0 +1,24 @@
+name: Run on every PR
+
+on:
+  pull_request:
+    - devel
+
+jobs:
+  pylint:
+    name: Run pylint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.x'
+    - name: Install dependencies pylint
+      run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pylint glustercli
+    - name: Run pylint
+      run: make pylint
+

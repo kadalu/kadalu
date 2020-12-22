@@ -40,23 +40,11 @@ before_script:
 
 jobs:
   include:
-    - name: pylint tests
-      script:
-        - pip install requests xxhash grpcio pyxattr kubernetes glustercli
-        - make pylint || travis_terminate 1;
-    - name: kadalu with kube 1.15.0
-      script:
-        - make build-containers || travis_terminate 1;
-        - make gen-manifest || travis_terminate 1;
-        - tests/setup.sh v1.15.0 || travis_terminate 1;
-          ## Pass CLI as an argument, so we can test CLI
-        - tests/travis-test.sh v1.15.0 cli || travis_terminate 1;
-        - tests/cleanup.sh v1.15.0 || travis_terminate 1;
-    - name: kadalu with kube 1.19.0
+    - name: kadalu with kube 1.20.0
       script:
         - sudo apt install -y conntrack
         - make build-containers || travis_terminate 1;
         - make gen-manifest || travis_terminate 1;
-        - tests/setup.sh v1.19.0 || travis_terminate 1;
-        - tests/travis-test.sh v1.19.0 || travis_terminate 1;
-        - tests/cleanup.sh v1.19.0 || travis_terminate 1;
+        - tests/setup.sh v1.20.0 || travis_terminate 1;
+        - tests/travis-test.sh v1.20.0 || travis_terminate 1;
+        - tests/cleanup.sh v1.20.0 || travis_terminate 1;

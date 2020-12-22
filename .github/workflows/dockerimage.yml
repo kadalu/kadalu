@@ -34,6 +34,7 @@ jobs:
       -
         name: Run Buildx
         if: success()
+        time_minutes: 144
         run: |
           KADALU_VERSION=devel docker buildx build \
             --platform linux/arm64,linux/amd64 \
