@@ -553,11 +553,10 @@ def get_num_pvs(storage_info_data):
     query = ("select count(pvname) from pv_stats;")
 
     cmd = ["kubectl", "exec", "-i",
-            bricks[0]['node'].replace("." + volname, ""),
-            "-c", "glusterfsd", "-nkadalu", "--", "sqlite3",
-            dbpath,
-            query
-    ]
+           bricks[0]['node'].replace("." + volname, ""),
+           "-c", "glusterfsd", "-nkadalu", "--", "sqlite3",
+           dbpath,
+           query]
 
     try:
         resp = utils_execute(cmd)
