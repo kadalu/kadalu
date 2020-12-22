@@ -64,15 +64,13 @@ def run(args):
     operator_file = args.local_yaml
     if not operator_file:
         file_url = "https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests"
-        version = ""
         insttype = ""
 
         if args.version and args.version != "latest":
-            file_url="https://github.com/kadalu/kadalu/releases/download/%s" % args.version
-            version = "-%s" % args.version
+            file_url = "https://github.com/kadalu/kadalu/releases/download/%s" % args.version
 
         if args.type and args.type != "kubernetes":
-                insttype = "-%s" % args.type
+            insttype = "-%s" % args.type
 
         operator_file = "%s/kadalu-operator%s.yaml" % (file_url, insttype)
 
