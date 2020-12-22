@@ -69,7 +69,7 @@ def list_storages(cmd_out, _args):
             storage.storage_id = storage_raw["volume_id"]
             storage.storage_type = storage_raw["type"]
 
-            for brick in storage_raw["bricks"]:
+            for brick in storage_raw.get(["bricks"], []):
                 storage_unit = StorageUnit()
                 storage_unit.kube_host = brick["kube_hostname"]
                 storage_unit.path = brick["host_brick_path"]
