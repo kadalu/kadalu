@@ -207,10 +207,13 @@ def fetch_status(storages, args):
             # num_pvs|used_size|min_pv_size|avg_pv_size|max_pv_size
             pv_stats_parts = parts[1].strip().split("|")
             storage.pv_count = int(pv_stats_parts[0])
-            storage.used_size_bytes = float(pv_stats_parts[1])
-            storage.min_pv_size = float(pv_stats_parts[2])
-            storage.avg_pv_size = float(pv_stats_parts[3])
-            storage.max_pv_size = float(pv_stats_parts[4])
+
+            if storage.pv_count:
+                storage.used_size_bytes = float(pv_stats_parts[1])
+                storage.min_pv_size = float(pv_stats_parts[2])
+                storage.avg_pv_size = float(pv_stats_parts[3])
+                storage.max_pv_size = float(pv_stats_parts[4])
+
         except utils.CommandError as err:
             print("Failed to get size details of the "
                   "storage \"%s\"" % storage.storage_name,
