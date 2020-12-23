@@ -3,14 +3,15 @@ FROM ubuntu:20.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV GRPC_PYTHON_BUILD_EXT_COMPILER_JOBS 8
 
-RUN apt-get update && apt-get install --no-install-recommends --yes python3 && \
-    apt-get install -y xfsprogs net-tools telnet wget e2fsprogs python3-pip sqlite && \
-    apt-get install -y gcc python3-dev && \
-    apt-get install -y glusterfs-client && \
+RUN apt-get update -yq && \
+    apt-get install --no-install-recommends -y python3.8 xfsprogs \
+    net-tools telnet wget e2fsprogs python3-pip sqlite gcc python3-dev \
+    glusterfs-client && \
+    python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools && \
-    python3 -m pip install jinja2 requests datetime xxhash && \
-    python3 -m pip install grpcio googleapis-common-protos && \
-    apt-get autoremove --purge -y gcc && \
+    python3 -m pip install jinja2 requests datetime xxhash \
+    grpcio googleapis-common-protos && \
+    apt-get autoremove --purge -y gcc build-essential python3-dev python3-pip && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 

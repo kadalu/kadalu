@@ -1,15 +1,15 @@
 FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install --no-install-recommends --yes python3 && \
-    apt-get install -y xfsprogs net-tools telnet wget e2fsprogs python3-pip sqlite && \
-    apt-get install -y gcc python3-dev && \
+RUN apt-get update -yq && \
+    apt-get install --no-install-recommends -y python3.8 xfsprogs \
+    net-tools telnet wget e2fsprogs python3-pip sqlite gcc python3-dev \
+    python3-pyxattr glusterfs-server && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools && \
     python3 -m pip install jinja2 requests datetime xxhash && \
-    apt-get install -y python3-pyxattr glusterfs-server && \
     (python3 -m pip install glustercli || true && echo "External storage Quota feature may not work") && \
-    apt-get autoremove --purge -y gcc && \
+    apt-get autoremove --purge -y gcc build-essential python3-pip python3-dev && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 

@@ -3,17 +3,14 @@ FROM ubuntu:20.04
 # Always have the latest stable kubectl
 
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install --no-install-recommends --yes python3 && \
-    apt-get install -y xfsprogs net-tools telnet wget e2fsprogs python3-pip sqlite && \
-    apt-get install -y gcc python3-dev && \
+RUN apt-get update -yq && \
+    apt-get install -y --no-install-recommends python3.8 curl xfsprogs net-tools telnet wget e2fsprogs python3-pip sqlite && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools && \
-    python3 -m pip install jinja2 requests datetime xxhash && \
-    apt-get install -y curl && \
+    python3 -m pip install kubernetes==11.0.0 jinja2 requests datetime xxhash && \
     curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`/kubectl -o /usr/bin/kubectl && \
     chmod +x /usr/bin/kubectl && \
-    python3 -m pip install kubernetes==11.0.0 && \
-    apt-get autoremove --purge -y gcc && \
+    apt-get autoremove --purge -y gcc python3-dev build-essential python3-pip curl && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
