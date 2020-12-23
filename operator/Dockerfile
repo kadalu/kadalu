@@ -1,14 +1,21 @@
-FROM kadalu/kadalu-base:latest
+FROM ubuntu:20.04
 
 # Always have the latest stable kubectl
 
-RUN apt-get install -y curl
-RUN curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`/kubectl -o /usr/bin/kubectl
-
-RUN chmod +x /usr/bin/kubectl
-
-# Install Python GRPC library and copy all CSI related files
-RUN python3 -m pip install kubernetes==11.0.0
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install --no-install-recommends --yes python3 && \
+    apt-get install -y xfsprogs net-tools telnet wget e2fsprogs python3-pip sqlite && \
+    apt-get install -y gcc python3-dev && \
+    python3 -m pip install --upgrade pip && \
+    python3 -m pip install --upgrade setuptools && \
+    python3 -m pip install jinja2 requests datetime xxhash && \
+    apt-get install -y curl && \
+    curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`/kubectl -o /usr/bin/kubectl && \
+    chmod +x /usr/bin/kubectl && \
+    python3 -m pip install kubernetes==11.0.0 && \
+    apt-get autoremove --purge -y gcc python3-dev && \
+    apt-get -y clean && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /kadalu/manifests
 

@@ -1,9 +1,20 @@
-FROM kadalu/kadalu-base:latest
+FROM ubuntu:20.04
 
-RUN apt-get install -y python3-pyxattr glusterfs-server
-RUN apt list --installed | grep -v WARNING | grep gluster | tee /gluster-rpm-versions.txt
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install --no-install-recommends --yes python3 && \
+    apt-get install -y xfsprogs net-tools telnet wget e2fsprogs python3-pip sqlite && \
+    apt-get install -y gcc python3-dev && \
+    python3 -m pip install --upgrade pip && \
+    python3 -m pip install --upgrade setuptools && \
+    python3 -m pip install jinja2 requests datetime xxhash && \
+apt-get install -y python3-pyxattr glusterfs-server && \
+    (python3 -m pip install glustercli || true && echo "External storage Quota feature may not work") && \
+    apt-get autoremove --purge -y gcc python3-dev && \
+    apt-get -y clean && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install glustercli || true && echo "External storage Quota feature may not work"
+RUN mkdir -p /kadalu/templates /kadalu/volfiles
+RUN mkdir -p /var/run/gluster /var/log/glusterfs
 
 COPY lib/kadalulib.py        /kadalu/kadalulib.py
 COPY server/server.py        /kadalu/server.py
@@ -14,10 +25,6 @@ COPY server/shd.py           /kadalu/shd.py
 COPY server/mount-glustervol /usr/bin/mount-glustervol
 COPY lib/startup.sh          /kadalu/startup.sh
 COPY server/stop-server.sh   /kadalu/stop-server.sh
-
-RUN mkdir -p /kadalu/templates /kadalu/volfiles
-
-RUN mkdir -p /var/run/gluster /var/log/glusterfs
 
 # Copy Volfile templates
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/

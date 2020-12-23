@@ -57,21 +57,30 @@ jobs:
         run: |
           KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
             --platform linux/arm64,linux/amd64 \
-            --tag docker.io/kadalu/kadalu-base:latest \
-            --output "type=image,name=docker.io/kadalu/kadalu-base,push=true" \
-            --file operator/Dockerfile.base .
-          KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
-            --platform linux/arm64,linux/amd64 \
             --tag docker.io/kadalu/kadalu-csi:${{ env.kadalu_version }} \
+            --build-arg version=${{ env.kadalu_version }} --build-arg builddate=`date +%Y-%m-%d-%H:%M` \
             --output "type=image,name=docker.io/kadalu/kadalu-csi,push=true" \
             --file csi/Dockerfile .
           KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
             --platform linux/arm64,linux/amd64 \
             --tag docker.io/kadalu/kadalu-operator:${{ env.kadalu_version }} \
+            --build-arg version=${{ env.kadalu_version }} --build-arg builddate=`date +%Y-%m-%d-%H:%M` \
             --output "type=image,name=docker.io/kadalu/kadalu-operator,push=true" \
             --file operator/Dockerfile .
           KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
             --platform linux/arm64,linux/amd64 \
             --tag docker.io/kadalu/kadalu-server:${{ env.kadalu_version }} \
+            --build-arg version=${{ env.kadalu_version }} --build-arg builddate=`date +%Y-%m-%d-%H:%M` \
             --output "type=image,name=docker.io/kadalu/kadalu-server,push=true" \
             --file server/Dockerfile .
+      -
+        name: Update 'latest' tag in registry
+        if: success()
+        timeout-minutes: 5
+        run: |
+           docker tag docker.io/kadalu/kadalu-operator:${{ env.kadalu_version }} docker.io/kadalu/kadalu-operator:latest
+           docker tag docker.io/kadalu/kadalu-server:${{ env.kadalu_version }} docker.io/kadalu/kadalu-server:latest
+           docker tag docker.io/kadalu/kadalu-csi:${{ env.kadalu_version }} docker.io/kadalu/kadalu-csi:latest
+           docker push docker.io/kadalu/kadalu-operator:latest
+           docker push docker.io/kadalu/kadalu-server:latest
+           docker push docker.io/kadalu/kadalu-csi:latest

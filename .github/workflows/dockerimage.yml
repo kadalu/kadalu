@@ -36,23 +36,32 @@ jobs:
         if: success()
         timeout-minutes: 144
         run: |
-          KADALU_VERSION=devel docker buildx build \
+          KADALU_VERSION=${{ github.sha }} docker buildx build \
             --platform linux/arm64,linux/amd64 \
-            --tag docker.io/kadalu/kadalu-base:latest \
-            --output "type=image,name=docker.io/kadalu/kadalu-base,push=false" \
-            --file operator/Dockerfile.base .
-          KADALU_VERSION=devel docker buildx build \
-            --platform linux/arm64,linux/amd64 \
-            --tag docker.io/kadalu/kadalu-csi:devel \
+            --tag docker.io/kadalu/kadalu-csi:${{ github.sha }} \
+            --build-arg version=${{ env.kadalu_version }} --build-arg builddate=`date +%Y-%m-%d-%H:%M` \
             --output "type=image,name=docker.io/kadalu/kadalu-csi,push=true" \
             --file csi/Dockerfile .
-          KADALU_VERSION=devel docker buildx build \
+          KADALU_VERSION=${{ github.sha }} docker buildx build \
             --platform linux/arm64,linux/amd64 \
-            --tag docker.io/kadalu/kadalu-operator:devel \
+            --tag docker.io/kadalu/kadalu-operator:${{ github.sha }} \
+            --build-arg version=${{ env.kadalu_version }} --build-arg builddate=`date +%Y-%m-%d-%H:%M` \
             --output "type=image,name=docker.io/kadalu/kadalu-operator,push=true" \
             --file operator/Dockerfile .
-          KADALU_VERSION=devel docker buildx build \
+          KADALU_VERSION=${{ github.sha }} docker buildx build \
             --platform linux/arm64,linux/amd64 \
-            --tag docker.io/kadalu/kadalu-server:devel \
+            --tag docker.io/kadalu/kadalu-server:${{ github.sha }} \
+            --build-arg version=${{ env.kadalu_version }} --build-arg builddate=`date +%Y-%m-%d-%H:%M` \
             --output "type=image,name=docker.io/kadalu/kadalu-server,push=true" \
             --file server/Dockerfile .
+      -
+        name: Update 'devel' tag in registry
+        if: success()
+        timeout-minutes: 5
+        run: |
+           docker tag docker.io/kadalu/kadalu-operator:${{ github.sha }} docker.io/kadalu/kadalu-operator:devel
+           docker tag docker.io/kadalu/kadalu-server:${{ github.sha }} docker.io/kadalu/kadalu-server:devel
+           docker tag docker.io/kadalu/kadalu-csi:${{ github.sha }} docker.io/kadalu/kadalu-csi:devel
+           docker push docker.io/kadalu/kadalu-operator:devel
+           docker push docker.io/kadalu/kadalu-server:devel
+           docker push docker.io/kadalu/kadalu-csi:devel

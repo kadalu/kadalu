@@ -1,14 +1,19 @@
-FROM kadalu/kadalu-base:latest
+FROM ubuntu:20.04
 
-RUN apt-get install -y glusterfs-client
-
-# Suggested in one of the issues to speed up pip install
+ENV DEBIAN_FRONTEND=noninteractive
 ENV GRPC_PYTHON_BUILD_EXT_COMPILER_JOBS 8
 
-RUN python3 -m pip install grpcio googleapis-common-protos
+RUN apt-get update && apt-get install --no-install-recommends --yes python3 && \
+    apt-get install -y xfsprogs net-tools telnet wget e2fsprogs python3-pip sqlite && \
+    apt-get install -y gcc python3-dev && \
+    apt-get install -y glusterfs-client && \
+    python3 -m pip install --upgrade setuptools && \
+    python3 -m pip install grpcio==1.34.0 googleapis-common-protos && \
+    apt-get autoremove --purge -y gcc python3-dev && \
+    apt-get -y clean && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /kadalu/volfiles /kadalu/templates
-
 RUN mkdir -p /var/log/glusterfs /var/run/gluster
 
 COPY lib/kadalulib.py          /kadalu/
