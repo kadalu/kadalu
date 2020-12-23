@@ -5,15 +5,19 @@
 [![Server Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg?label=DockerPulls%20Server)](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg)
 [![BuildX](https://github.com/kadalu/kadalu/workflows/buildx/badge.svg)](https://github.com/kadalu/kadalu/actions?query=workflow%3Abuildx)
 
+## What is Kadalu ?
 
-# Documentation
+[Kadalu](https://kadalu.io) is a project which started as an idea to make glusterfs's deployment and management simpler in kubernetes. The project contains operator to deploy CSI pods, and gluster storage nodes. All of gluster management is done natively in kubernetes without glusterfs's `glusterd` and `gluster` CLI tools.
+
+Try it in few minutes to understand more!
+
+## Documentation
 
 Start with our [Quick Start Guide](doc/quick-start.md). More documentation is at [`doc/` folder](doc/).
 
 If you made some errors in setup, and want to start fresh, check this [cleanup script](extras/scripts/cleanup), and run it to remove kadalu namespace completely.
 
 Links to blogs and news updates are provided in [our website](https://kadalu.io).
-
 
 ## Talks and Blog posts
 
@@ -42,10 +46,11 @@ If you are interested in financial donation to the project, or to the developers
 
 ## Platform supports
 
-We support x86_64 (amd64) by default, and from release 0.7.0 onwards arm64 is also supported.
+We support x86_64 (amd64) by default (all releases, `devel` and `latest` tags), and in release 0.7.0, 0.7.1 and 0.7.2 tags arm64 is also supported. If you want to try arm64 in latest form try below command to start the operator
 
-For any other platforms, we need users to confirm it works by building images locally. Once it works, we can include it in our automated scripts.
+`kubectl apply -f https://raw.githubusercontent.com/kadalu/kadalu/arm/manifests/kadalu-operator.yaml`
 
+For any other platforms, we need users to confirm it works by building images locally. Once it works, we can include it in our automated scripts. You can confirm the build by command `make release` after checkout of the repository in the respective platform.
 
 ## How to pronounce kadalu ?
 
