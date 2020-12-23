@@ -3,12 +3,12 @@
 set -e -o pipefail
 
 DOCKER_USER="${DOCKER_USER:-kadalu}"
-KADALU_VERSION="${KADALU_VERSION:-latest}"
+KADALU_VERSION="${KADALU_VERSION}"
 
 RUNTIME_CMD=${RUNTIME_CMD:-docker}
 build="build"
 if [[ "${RUNTIME_CMD}" == "buildah" ]]; then
-	build="bud"
+        build="bud"
 fi
 
 # This sets the version variable to (hopefully) a semver compatible string. We
@@ -42,24 +42,25 @@ build_args+=(--build-arg "builddate=$BUILDDATE")
 echo "=== $RUNTIME_CMD version ==="
 $RUNTIME_CMD version
 
-IMAGE_NAME=glusterfsd
-DOCKERFILE=glusterfsd.Dockerfile
-
 function build_container()
 {
     IMAGE_NAME=$1
     DOCKERFILE=$2
-    VERSION=$3
+    VER=$3
     $RUNTIME_CMD $build \
-                 -t "${DOCKER_USER}/${IMAGE_NAME}:${VERSION}" \
+                 -t "${DOCKER_USER}/${IMAGE_NAME}:${VER}" \
                  "${build_args[@]}" \
                  --network host \
                  -f "$DOCKERFILE" \
-                 . ||
-        exit 1
+                 . || exit 1
 }
 
-build_container "kadalu-base" "operator/Dockerfile.base" "latest"
+if [ "x${KADALU_VERSION}" = "x" ]; then
+    KADALU_VERSION=${VERSION}
+fi
+
+echo "Building images kadalu-\$service:${VERSION}";
+
 build_container "kadalu-server" "server/Dockerfile" ${KADALU_VERSION}
 build_container "kadalu-csi" "csi/Dockerfile" ${KADALU_VERSION}
 build_container "kadalu-operator" "operator/Dockerfile" ${KADALU_VERSION}
