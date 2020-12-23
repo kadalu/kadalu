@@ -61,6 +61,17 @@ $ kubectl kadalu storage-add storage-pool-3 \
     --pvc azure-disk-1
 ```
 
+### Remove Storage
+
+> Note:
+> To remove the storage delete all pvc's provisioned from that storage/volume.
+
+Remove storage by specifying the storage name to be deleted,
+
+```
+$ kubectl kadalu storage-remove storage-pool-1
+```
+
 ## Contributing
 
 1. Fork it (<https://github.com/kadalu/kadalu/fork>)
