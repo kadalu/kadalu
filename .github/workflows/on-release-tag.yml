@@ -60,7 +60,7 @@ jobs:
         with:
           context: .
           file: csi/Dockerfile
-          platforms: linux/arm64,linux/amd64
+          platforms: linux/amd64
           push: true
           tags: |
             docker.io/kadalu/kadalu-csi:${{ env.kadalu_version }}
@@ -77,7 +77,7 @@ jobs:
         with:
           context: .
           file: operator/Dockerfile
-          platforms: linux/arm64,linux/amd64
+          platforms: linux/amd64
           push: true
           tags: |
             docker.io/kadalu/kadalu-operator:${{ env.kadalu_version }}
@@ -94,7 +94,7 @@ jobs:
         with:
           context: .
           file: server/Dockerfile
-          platforms: linux/arm64,linux/amd64
+          platforms: linux/amd64
           push: true
           tags: |
             docker.io/kadalu/kadalu-server:${{ env.kadalu_version }}
