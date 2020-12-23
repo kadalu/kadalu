@@ -126,10 +126,10 @@ function install_minikube() {
 	version=${version[2]}
 	if [[ "${version}" != "${MINIKUBE_VERSION}" ]]; then
 	    echo "installed minikube version ${version} is not matching requested version ${MINIKUBE_VERSION}"
-	    exit 1
+	    #exit 1
 	fi
 	echo "minikube already installed with ${version}"
-	return
+	return 0
     fi
 
     echo "Installing minikube. Version: ${MINIKUBE_VERSION}"
@@ -142,10 +142,10 @@ function install_kubectl() {
 	version=$(kubectl version --client | grep "${KUBE_VERSION}")
 	if [[ "x${version}" != "x" ]]; then
 	    echo "kubectl already installed with ${KUBE_VERSION}"
-	    return
+	    return 0
 	fi
 	echo "installed kubectl version ${version} is not matching requested version ${KUBE_VERSION}"
-	exit 1
+	#exit 1
     fi
     # Download kubectl, which is a requirement for using minikube.
     echo "Installing kubectl. Version: ${KUBE_VERSION}"
@@ -153,10 +153,10 @@ function install_kubectl() {
 }
 
 # configure minikube
-MINIKUBE_VERSION=${MINIKUBE_VERSION:-"latest"}
-KUBE_VERSION=${KUBE_VERSION:-"v1.16.0"}
+MINIKUBE_VERSION=${MINIKUBE_VERSION:-"v1.15.1"}
+KUBE_VERSION=${KUBE_VERSION:-"v1.20.0"}
 MEMORY=${MEMORY:-"3000"}
-VM_DRIVER=${VM_DRIVER:-"virtualbox"}
+VM_DRIVER=${VM_DRIVER:-"none"}
 #configure image repo
 KADALU_IMAGE_REPO=${KADALU_IMAGE_REPO:-"docker.io/kadalu"}
 K8S_IMAGE_REPO=${K8S_IMAGE_REPO:-"quay.io/k8scsi"}
@@ -172,11 +172,12 @@ fi
 
 case "${1:-}" in
 up)
-    install_minikube
+    echo "here"
+    install_minikube || echo "failure"
     #if driver  is 'none' install kubectl with KUBE_VERSION
     if [[ "${VM_DRIVER}" == "none" ]]; then
 	mkdir -p "$HOME"/.kube "$HOME"/.minikube
-	install_kubectl
+	install_kubectl || echo "failure to install kubectl"
     fi
 
     echo "starting minikube with kubeadm bootstrapper"

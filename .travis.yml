@@ -1,48 +1,30 @@
 ---
 # need for docker build
 sudo: true
-dist: xenial
-
-addons:
-  apt:
-    packages:
-      - realpath
+dist: focal
 
 services:
   - docker
-
-language: python
-python:
-  - "3.7"
 
 branches:
   only:
     - devel
 
-go: 1.12.x
-
 env:
   global:
     - KADALU_VERSION=canary
-    - GOLANGCI_VERSION=v1.17.0
     - TEST_COVERAGE=stdout
-    - GO_METALINTER_THREADS=1
-    - GO_COVER_DIR=_output
     - VM_DRIVER=none
     - CHANGE_MINIKUBE_NONE_USER=true
     - KUBECONFIG=$HOME/.kube/config
-
-install:
-  - pip install pylint jinja2
-
-before_script:
-  - pylint --version
 
 jobs:
   include:
     - name: kadalu with kube 1.20.0
       script:
-        - sudo apt install -y conntrack
+        - sudo apt-get install -y containerd.io docker-ce docker-ce-cli
+        - sudo apt-get install -y conntrack
+        - sudo systemctl restart docker
         - make build-containers || travis_terminate 1;
         - make gen-manifest || travis_terminate 1;
         - tests/setup.sh v1.20.0 || travis_terminate 1;
