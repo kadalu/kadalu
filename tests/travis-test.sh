@@ -5,7 +5,7 @@ set -e
 # against different kuberentes version
 export KUBE_VERSION=$1
 
-cli_test="no"
+cli_test="yes"
 if [ "$#" -ge 2 -a "$2" == "cli" ]; then
     cli_test="yes"
 fi
