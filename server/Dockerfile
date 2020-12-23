@@ -7,9 +7,9 @@ RUN apt-get update && apt-get install --no-install-recommends --yes python3 && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools && \
     python3 -m pip install jinja2 requests datetime xxhash && \
-apt-get install -y python3-pyxattr glusterfs-server && \
+    apt-get install -y python3-pyxattr glusterfs-server && \
     (python3 -m pip install glustercli || true && echo "External storage Quota feature may not work") && \
-    apt-get autoremove --purge -y gcc python3-dev && \
+    apt-get autoremove --purge -y gcc && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 

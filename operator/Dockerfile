@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install --no-install-recommends --yes python3 && \
     curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`/kubectl -o /usr/bin/kubectl && \
     chmod +x /usr/bin/kubectl && \
     python3 -m pip install kubernetes==11.0.0 && \
-    apt-get autoremove --purge -y gcc python3-dev && \
+    apt-get autoremove --purge -y gcc && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 

@@ -8,8 +8,9 @@ RUN apt-get update && apt-get install --no-install-recommends --yes python3 && \
     apt-get install -y gcc python3-dev && \
     apt-get install -y glusterfs-client && \
     python3 -m pip install --upgrade setuptools && \
-    python3 -m pip install grpcio==1.34.0 googleapis-common-protos && \
-    apt-get autoremove --purge -y gcc python3-dev && \
+    python3 -m pip install jinja2 requests datetime xxhash && \
+    python3 -m pip install grpcio googleapis-common-protos && \
+    apt-get autoremove --purge -y gcc && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 

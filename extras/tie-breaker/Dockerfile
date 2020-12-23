@@ -1,10 +1,9 @@
 # Use base from operator/Dockerfile.base
-FROM kadalu/kadalu-base
+FROM ubuntu:20.04
+
+RUN apt-get install -y glusterfs-thin-arbiter
 
 RUN mkdir -p /mnt/brick/.glusterfs
-
-RUN yum install -y glusterfs-thin-arbiter
-
 COPY thin-arbiter.vol /kadalu/
 
 ARG version="(unknown)"
