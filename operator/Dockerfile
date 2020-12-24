@@ -4,7 +4,7 @@ FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends python3.8 curl xfsprogs net-tools telnet wget e2fsprogs python3-pip sqlite && \
+    apt-get install -y --no-install-recommends python3.8 curl xfsprogs net-tools telnet wget e2fsprogs python3-pip sqlite build-essential python3-dev && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools && \
     python3 -m pip install kubernetes==11.0.0 jinja2 requests datetime xxhash && \
