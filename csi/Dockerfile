@@ -5,13 +5,13 @@ ENV GRPC_PYTHON_BUILD_EXT_COMPILER_JOBS 8
 
 RUN apt-get update -yq && \
     apt-get install --no-install-recommends -y python3.8 xfsprogs \
-    net-tools telnet wget e2fsprogs python3-pip sqlite gcc python3-dev \
-    glusterfs-client build-essential && \
+    net-tools telnet wget e2fsprogs python3-pip sqlite python3-dev \
+    glusterfs-client build-essential gcc g++ && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools && \
     python3 -m pip install jinja2 requests datetime xxhash \
     grpcio googleapis-common-protos && \
-    apt-get autoremove --purge -y gcc build-essential python3-dev python3-pip && \
+    apt-get autoremove --purge -y gcc g++ build-essential python3-dev python3-pip && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
