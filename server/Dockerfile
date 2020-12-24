@@ -4,12 +4,13 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
     apt-get install --no-install-recommends -y python3.8 xfsprogs \
     net-tools telnet wget e2fsprogs python3-pip sqlite gcc python3-dev \
-    python3-pyxattr glusterfs-server && \
+    python3-pyxattr glusterfs-server libffi-dev libssl-dev \
+    build-essential && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools && \
     python3 -m pip install jinja2 requests datetime xxhash && \
     (python3 -m pip install glustercli || true && echo "External storage Quota feature may not work") && \
-    apt-get autoremove --purge -y gcc build-essential python3-pip python3-dev && \
+    apt-get autoremove --purge -y gcc build-essential python3-pip python3-dev libffi-dev libssl-dev build-essential && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 

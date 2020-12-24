@@ -6,7 +6,7 @@ ENV GRPC_PYTHON_BUILD_EXT_COMPILER_JOBS 8
 RUN apt-get update -yq && \
     apt-get install --no-install-recommends -y python3.8 xfsprogs \
     net-tools telnet wget e2fsprogs python3-pip sqlite gcc python3-dev \
-    glusterfs-client && \
+    glusterfs-client build-essential && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools && \
     python3 -m pip install jinja2 requests datetime xxhash \
