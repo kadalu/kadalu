@@ -4,6 +4,7 @@
 fail=0
 
 ARCH=`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`
+
 function wait_till_pods_start() {
     # give it some time
     cnt=0
@@ -41,6 +42,7 @@ function wait_till_pods_start() {
 	exit 1
     fi
 }
+
 function get_pvc_and_check() {
     yaml_file=$1
     log_text=$2
@@ -284,11 +286,11 @@ test_kadalu)
     ;;
 
 cli_tests)
-    output=$(kubectl get nodes -o=name)    
+    output=$(kubectl get nodes -o=name)
     # output will be in format 'node/hostname'. We need 'hostname'
     HOSTNAME=$(basename $output)
     echo "Hostname is ${HOSTNAME}"
-    bash tests/kubectl_kadalu_tests.sh "$DISK" "${HOSTNAME}"
+    bash tests/kubectl_kadalu_tests.sh "${DISK}" "${HOSTNAME}"
     wait_till_pods_start
     ;;
 
@@ -305,6 +307,7 @@ Available Commands:
   copy-image       copy kadalu-operator docker image
   kadalu_operator  start kadalu operator
   test_kadalu      test kadalu storage
+  cli_tests        test kubectl-kadalu cli
 " >&2
     ;;
 esac

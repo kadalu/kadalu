@@ -43,10 +43,38 @@ function test_storage_add() {
     cli/build/kubectl-kadalu storage-add ext-config --script-mode --external gluster1.kadalu.io:/kadalu || return 1
 }
 
+function test_storage_list() {
+
+    #sed -i -e "s/DISK/${DISK}/g" tests/get-minikube-pvc.yaml
+
+    #test_install
+    #test_storage_add
+
+
+    #kubectl get configmap -nkadalu
+
+    # Apply PVCs
+    #kubectl apply -f tests/get-minikube-pvc.yaml
+    #sleep 1
+
+    # Test with default option
+    cli/build/kubectl-kadalu storage-list --script-mode
+
+    # Test with status option
+    cli/build/kubectl-kadalu storage-list --script-mode --status
+
+    # Test with detail option
+    cli/build/kubectl-kadalu storage-list --script-mode --detail
+
+    # Test with status and detail options
+    cli/build/kubectl-kadalu storage-list --script-mode --status --detail
+}
+
 function main() {
     install_cli_package || (echo "install failed" && exit 1)
     test_install || (echo "CLI operator install failed" && exit 1)
     test_storage_add || (echo "Storage add commands failed" && exit 1)
+    test_storage_list || (echo "Storage list commands failed" && exit 1)
 }
 
 main "$@"
