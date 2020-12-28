@@ -32,7 +32,8 @@ VOLUME_TYPE_REPLICA_2 = "Replica2"
 VOLUME_TYPE_REPLICA_3 = "Replica3"
 VOLUME_TYPE_EXTERNAL = "External"
 
-CREATE_CMD = "apply"
+CREATE_CMD = "create"
+APPLY_CMD = "apply"
 DELETE_CMD = "delete"
 
 def template(filename, **kwargs):
@@ -206,6 +207,72 @@ def get_brick_hostname(volname, idx, suffix=True):
     return hostname
 
 
+def upgrade_storage_pods(core_v1_client):
+    """
+    Upgrade the Storage pods after operator pod upgrade
+    """
+    # Add new entry in the existing config map
+    configmap_data = core_v1_client.read_namespaced_config_map(
+        KADALU_CONFIG_MAP, NAMESPACE)
+
+    for key in configmap_data.data:
+        if ".info" not in key:
+            continue
+
+        volname = key.replace('.info', '')
+        data = json.loads(configmap_data.data[key])
+
+        logging.info(logf("config map", volname=volname, data=data))
+        if data['type'] == VOLUME_TYPE_EXTERNAL:
+            # nothing to be done for upgrade, say we are good.
+            logging.debug(logf(
+                "volume type external, nothing to upgrade",
+                volname=volname,
+                data=data))
+            continue
+
+        if data['type'] == VOLUME_TYPE_REPLICA_1:
+            # No promise of high availability, upgrade
+            logging.debug(logf(
+                "volume type Replica1, calling upgrade",
+                volname=volname,
+                data=data))
+            # TODO: call upgrade
+
+        # Replica 2 and Replica 3 needs to check for self-heal
+        # count 0 before going ahead with upgrade.
+
+        # glfsheal volname --file-path=/template/file info-summary
+        obj = {}
+        obj["metadata"] = {}
+        obj["spec"] = {}
+        obj["metadata"]["name"] = volname
+        obj["spec"]["type"] = data['type']
+        obj["spec"]["volume_id"] = data["volume_id"]
+        obj["spec"]["storage"] = []
+
+        # Need this loop so below array can be constructed in the proper order
+        for val in data["bricks"]:
+            obj["spec"]["storage"].append({})
+
+        # Set Node ID for each storage device from configmap
+        for val in data["bricks"]:
+            idx = val["brick_index"]
+
+            obj["spec"]["storage"][idx]["node_id"] = val["node_id"]
+            obj["spec"]["storage"][idx]["path"] = val["host_brick_path"]
+            obj["spec"]["storage"][idx]["node"] = val["kube_hostname"]
+            obj["spec"]["storage"][idx]["device"] = val["brick_device"]
+            obj["spec"]["storage"][idx]["pvc"] = val["pvc_name"]
+
+        if data['type'] == VOLUME_TYPE_REPLICA_2:
+            if "tie-breaker.kadalu.io" not in data['tiebreaker']['node']:
+                obj["spec"]["tiebreaker"] = data['tiebreaker']
+
+        # TODO: call upgrade_pods_with_heal_check() here
+        deploy_server_pods(obj)
+
+
 def update_config_map(core_v1_client, obj):
     """
     Volinfo of new hosting Volume is generated and updated to ConfigMap
@@ -312,7 +379,7 @@ def deploy_server_pods(obj):
 
         filename = os.path.join(MANIFESTS_DIR, "server.yaml")
         template(filename, **template_args)
-        lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+        lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed Server pod",
                           volname=volname,
                           manifest=filename,
@@ -347,7 +414,7 @@ def handle_external_storage_addition(core_v1_client, obj):
 
     filename = os.path.join(MANIFESTS_DIR, "external-storageclass.yaml")
     template(filename, **data)
-    lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+    lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
     logging.info(logf("Deployed External StorageClass", volname=volname, manifest=filename))
 
 
@@ -404,7 +471,7 @@ def handle_added(core_v1_client, obj):
 
     filename = os.path.join(MANIFESTS_DIR, "services.yaml")
     template(filename, namespace=NAMESPACE, volname=volname)
-    lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+    lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
     logging.info(logf("Deployed Service", volname=volname, manifest=filename))
 
 
@@ -468,7 +535,7 @@ def handle_modified(core_v1_client, obj):
 
     filename = os.path.join(MANIFESTS_DIR, "services.yaml")
     template(filename, namespace=NAMESPACE, volname=volname)
-    lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+    lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
     logging.info(logf("Deployed Service", volname=volname, manifest=filename))
 
 
@@ -701,11 +768,11 @@ def deploy_csi_pods(core_v1_client):
        api_instance.minor >= "14":
         filename = os.path.join(MANIFESTS_DIR, "csi-driver-object.yaml")
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-        lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+        lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
     else:
         filename = os.path.join(MANIFESTS_DIR, "csi-driver-crd.yaml")
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-        lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+        lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
 
     filename = os.path.join(MANIFESTS_DIR, "csi.yaml")
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
@@ -713,7 +780,7 @@ def deploy_csi_pods(core_v1_client):
              docker_user=docker_user, k8s_dist=K8S_DIST,
              kubelet_dir=KUBELET_DIR)
 
-    lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+    lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
     logging.info(logf("Deployed CSI Pods", manifest=filename))
 
 
@@ -723,6 +790,7 @@ def deploy_config_map(core_v1_client):
     configmaps = core_v1_client.list_namespaced_config_map(
         NAMESPACE)
     uid = uuid.uuid4()
+    upgrade = False
     for item in configmaps.items:
         if item.metadata.name == KADALU_CONFIG_MAP:
             logging.info(logf(
@@ -735,6 +803,7 @@ def deploy_config_map(core_v1_client):
                 KADALU_CONFIG_MAP, NAMESPACE)
             if configmap_data.data.get("uid", None):
                 uid = configmap_data.data["uid"]
+                upgrade = True
             # Keep the config details required to be preserved.
 
     # Deploy Config map
@@ -744,9 +813,10 @@ def deploy_config_map(core_v1_client):
              kadalu_version=VERSION,
              uid=uid)
 
-    lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
-    logging.info(logf("Deployed ConfigMap", manifest=filename))
-    return uid
+    if not upgrade:
+        lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+    logging.info(logf("ConfigMap Deployed", manifest=filename, uid=uid, upgrade=upgrade))
+    return uid, upgrade
 
 
 def deploy_storage_class():
@@ -771,7 +841,7 @@ def deploy_storage_class():
 
         # Deploy Storage Class
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-        lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+        lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
 
 
@@ -788,13 +858,17 @@ def main():
     k8s_client = client.ApiClient()
 
     # ConfigMap
-    uid = deploy_config_map(core_v1_client)
+    uid, upgrade = deploy_config_map(core_v1_client)
 
     # CSI Pods
     deploy_csi_pods(core_v1_client)
 
     # Storage Class
     deploy_storage_class()
+
+    if upgrade:
+        logging.info(logf("Upgrading to ", version=VERSION))
+        upgrade_storage_pods(core_v1_client)
 
     # Send Analytics Tracker
     # The information from this analytics is available for
