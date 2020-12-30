@@ -26,11 +26,20 @@ class IdentityServer(csi_pb2_grpc.IdentityServicer):
         capability_type = getattr(
             csi_pb2.PluginCapability.Service, "Type").Value
 
+        # using getattr to avoid Pylint error
+        volume_expansion_type = getattr(
+            csi_pb2.PluginCapability.VolumeExpansion, "Type").Value
+
         return csi_pb2.GetPluginCapabilitiesResponse(
             capabilities=[
                 {
                     "service": {
                         "type": capability_type("CONTROLLER_SERVICE")
+                    }
+                },
+                {
+                    "volume_expansion": {
+                        "type": volume_expansion_type("ONLINE")
                     }
                 }
             ]

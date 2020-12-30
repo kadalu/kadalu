@@ -138,6 +138,38 @@ spec:
 
 ## Deploy CSI Provisioner
 ---
+# External Resizer
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-resizer-role
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims/status"]
+    verbs: ["update", "patch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["create", "get", "list", "watch", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/exec"]
+    verbs: ["create", "get", "list", "watch", "update", "patch"]
+
+---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -146,13 +178,16 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
-    verbs: ["get", "list", "watch", "create", "delete"]
+    verbs: ["get", "list", "watch", "create", "delete", "patch"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["volumeattachments"]
     verbs: ["get", "list", "watch", "update", "patch", "create"]
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
-    verbs: ["get", "list", "watch", "update"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims/status"]
+    verbs: ["get", "list", "watch", "update", "patch"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["storageclasses"]
     verbs: ["get", "list", "watch"]
@@ -194,6 +229,20 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
+  name: csi-resizer-binding
+subjects:
+  - kind: ServiceAccount
+    name: kadalu-csi-provisioner
+    namespace: {{ namespace }}
+roleRef:
+  kind: ClusterRole
+  name: csi-resizer-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
   name: kadalu-csi-provisioner
   namespace: {{ namespace }}
 subjects:
@@ -204,6 +253,7 @@ roleRef:
   kind: ClusterRole
   name: kadalu-csi-provisioner
   apiGroup: rbac.authorization.k8s.io
+
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
@@ -219,6 +269,23 @@ rules:
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "watch", "list", "delete", "update", "create"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["create", "get", "list", "watch", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods", "pods/exec"]
+    verbs: ["create", "get", "list", "watch", "update", "patch"]
+
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  namespace: {{ namespace }}
+  name: external-resizer-cfg
+rules:
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "watch", "list", "delete", "update", "create"]
 
 ---
 kind: RoleBinding
@@ -233,6 +300,21 @@ subjects:
 roleRef:
   kind: Role
   name: kadalu-csi-provisioner
+  apiGroup: rbac.authorization.k8s.io
+
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-resizer-role-cfg
+  namespace: {{ namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: kadalu-csi-provisioner
+    namespace: {{ namespace }}
+roleRef:
+  kind: Role
+  name: external-resizer-cfg
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -328,6 +410,21 @@ spec:
           volumeMounts:
             - name: varlog
               mountPath: "/var/log/gluster"
+        - name: csi-resizer
+          image: k8s.gcr.io/sig-storage/csi-resizer:v1.0.1
+          args:
+            - "--csi-address=$(ADDRESS)"
+            - "--timeout=3m"
+          env:
+            - name: ADDRESS
+              value: /var/lib/csi/sockets/pluginproxy/csi.sock
+            - name: KADALU_VERSION
+              value: "{{ kadalu_version }}"
+            - name: K8S_DIST
+              value: "{{ k8s_dist }}"
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/csi/sockets/pluginproxy/
       volumes:
         - name: socket-dir
           emptyDir:

@@ -93,9 +93,17 @@ def handle_quota(quota_report, brick_path, volname, pvtype):
         data = {}
         with open(pvinfo_file_path) as pvinfo_file:
             data = json.loads(pvinfo_file.read().strip())
-
+            logging.info(logf(
+                "data from pvinfo_file is",
+                file=pvinfo_file,
+                data=data
+            ))
             try:
                 set_quota(os.path.dirname(brick_path), subdir_path, data["size"])
+                logging.info(logf(
+                    "Quota set for size",
+                    size=data["size"]
+                ))
             except CommandException as err:
                 logging.error(logf("Failed to set Quota",
                                    err=err.err,

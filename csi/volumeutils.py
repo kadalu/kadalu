@@ -206,6 +206,37 @@ def update_free_size(hostvol, pvname, sizechange):
                 acc.update_pv_record(pvname, -sizechange)
 
 
+def is_hosting_volume_free(hostvol, expansion_requested_pvsize):
+    """CHeck if host volume is free to expand volume"""
+
+    mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
+    with statfile_lock:
+
+        # Stat done before `os.path.exists` to prevent ignoring
+        # file not exists even in case of ENOTCONN
+        mntdir_stat = retry_errors(os.statvfs, [mntdir], [ENOTCONN])
+        with SizeAccounting(hvol, mntdir) as acc:
+            acc.update_summary(mntdir_stat.f_bavail * mntdir_stat.f_bsize)
+            pv_stats = acc.get_stats()
+            reserved_size = pv_stats["free_size_bytes"] * RESERVED_SIZE_PERCENTAGE/100
+
+        logging.debug(logf(
+            "pv stats",
+            hostvol=hvol,
+            total_size_bytes=pv_stats["total_size_bytes"],
+            used_size_bytes=pv_stats["used_size_bytes"],
+            free_size_bytes=pv_stats["free_size_bytes"],
+            number_of_pvs=pv_stats["number_of_pvs"],
+            required_size=required_size,
+            reserved_size=reserved_size
+        ))
+
+        if expansion_requested_pvsize < (pv_stats["free_size_bytes"] - reserved_size):
+            return True
+        else:
+            return False
+
+
 def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
     """Mount each hosting volume to find available space"""
     for volume in pv_hosting_volumes:
@@ -384,6 +415,161 @@ def create_subdir_volume(hostvol_mnt, volname, size):
     )
 
 
+def update_subdir_volume(hostvol_mnt, volname, expansion_requested_pvsize):
+    """Update sub directory Volume"""
+
+    volhash = get_volname_hash(volname)
+    volpath = get_volume_path(PV_TYPE_SUBVOL, volhash, volname)
+    logging.debug(logf(
+        "Volume hash",
+        volhash=volhash
+    ))
+
+    # Check for mount availability before updating subdir volume
+    retry_errors(os.statvfs, [hostvol_mnt], [ENOTCONN])
+
+    # Create a subdir
+    makedirs(os.path.join(hostvol_mnt, volpath))
+    logging.debug(logf(
+        "Updated PV directory",
+        pvdir=volpath
+    ))
+
+    # Write info file so that Brick's quotad sidecar
+    # container picks it up.
+    update_pv_metadata(hostvol_mnt, volpath, expansion_requested_pvsize)
+
+    # Wait for quota set
+    # TODO: Handle Timeout
+    pvsize_buffer = expansion_requested_pvsize * 0.05  # 5%
+    pvsize_min = (expansion_requested_pvsize - pvsize_buffer)
+    pvsize_max = (expansion_requested_pvsize + pvsize_buffer)
+    logging.debug(logf(
+        "Watching df of pv directory",
+        pvdir=volpath,
+        pvsize_buffer=pvsize_buffer,
+    ))
+
+    count = 0
+    while True:
+        count += 1
+        pvstat = retry_errors(os.statvfs, [os.path.join(hostvol_mnt, volpath)], [ENOTCONN])
+        volsize = pvstat.f_blocks * pvstat.f_bsize
+        if pvsize_min < volsize < pvsize_max:
+            logging.debug(logf(
+                "Matching df output, Quota update set successful",
+                volsize=volsize,
+                pvsize=expansion_requested_pvsize,
+                num_tries=count
+            ))
+            break
+
+        if count >= 6:
+            logging.warning(logf(
+                "Waited for some time, Quota update set failed, continuing.",
+                volsize=volsize,
+                pvsize=expansion_requested_pvsize,
+                num_tries=count
+            ))
+            break
+
+        time.sleep(1)
+
+    return Volume(
+        volname=volname,
+        voltype=PV_TYPE_SUBVOL,
+        volhash=volhash,
+        hostvol=os.path.basename(hostvol_mnt),
+        size=expansion_requested_pvsize,
+        volpath=volpath,
+    )
+
+
+def update_virtblock_volume(hostvol_mnt, volname, expansion_requested_pvsize):
+    """Update virtual block volume"""
+
+    volhash = get_volname_hash(volname)
+    volpath = get_volume_path(PV_TYPE_VIRTBLOCK, volhash, volname)
+    volpath_full = os.path.join(hostvol_mnt, volpath)
+    logging.debug(logf(
+        "Volume hash",
+        volhash=volhash
+    ))
+
+    # Check for mount availability before updating virtblock volume
+    retry_errors(os.statvfs, [hostvol_mnt], [ENOTCONN])
+
+    # Update the file with required size
+    makedirs(os.path.dirname(volpath_full))
+    logging.debug(logf(
+        "Updated virtblock directory",
+        path=os.path.dirname(volpath)
+    ))
+
+    volpath_fd = os.open(volpath_full, os.O_CREAT | os.O_RDWR)
+    os.close(volpath_fd)
+
+    execute("truncate", "-s", expansion_requested_pvsize, volpath_full)
+    logging.debug(logf(
+        "Truncated file to required size",
+        path=volpath,
+        size=expansion_requested_pvsize
+    ))
+
+    # TODO: Multiple FS support based on volume_capability mount option
+    execute(MKFS_XFS_CMD, volpath_full)
+    logging.debug(logf(
+        "Created Filesystem",
+        path=volpath,
+        command=MKFS_XFS_CMD
+    ))
+
+    update_pv_metadata(hostvol_mnt, volpath, expansion_requested_pvsize)
+    return Volume(
+        volname=volname,
+        voltype=PV_TYPE_VIRTBLOCK,
+        volhash=volhash,
+        hostvol=os.path.basename(hostvol_mnt),
+        size=expansion_requested_pvsize,
+        volpath=volpath,
+    )
+
+
+def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize):
+    """Update PV metadata in info file"""
+
+    # Create info dir if not exists
+    info_file_path = os.path.join(hostvol_mnt, "info", pvpath)
+    info_file_dir = os.path.dirname(info_file_path)
+
+    retry_errors(makedirs, [info_file_dir], [ENOTCONN])
+    logging.debug(logf(
+        "Updated metadata directory",
+        metadata_dir=info_file_dir
+    ))
+
+    # Update existing PV contents
+    info_file = open(info_file_path + ".json", "r")
+    data = json.load(info_file)
+    # Close the file and cursor comes back to beginning of the file
+    # Alternatively can use seek(0)
+    info_file.close()
+
+    # Update PV contents
+    data["size"] = expansion_requested_pvsize
+    data["path_prefix"] = os.path.dirname(pvpath)
+
+    # Save back the changes
+    info_file = open(info_file_path + ".json", "w+")
+    info_file.write(json.dumps(data))
+    info_file.close
+
+    logging.debug(logf(
+        "Metadata updated",
+        metadata_file=info_file_path
+    ))
+
+
 def delete_volume(volname):
     """Delete virtual block, sub directory volume, or External"""
     vol = search_volume(volname)
@@ -547,6 +733,12 @@ def unmount_volume(mountpoint):
     """Unmount a Volume"""
     if os.path.ismount(mountpoint):
         execute(UNMOUNT_CMD, "-l", mountpoint)
+
+
+def expand_volume(mountpoint):
+    """Expand a Volume"""
+    if os.path.ismount(mountpoint):
+        execute("xfs_growfs", "-d", mountpoint)
 
 
 def generate_client_volfile(volname):

@@ -14,7 +14,10 @@ from volumeutils import mount_and_select_hosting_volume, \
     create_virtblock_volume, create_subdir_volume, delete_volume, \
     get_pv_hosting_volumes, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, \
     HOSTVOL_MOUNTDIR, check_external_volume, \
-    update_free_size, unmount_glusterfs
+    update_free_size, unmount_glusterfs, \
+    update_subdir_volume, update_virtblock_volume, \
+    search_volume, expand_volume, \
+    is_hosting_volume_free
 from kadalulib import logf, send_analytics_tracker
 
 VOLINFO_DIR = "/var/lib/gluster"
@@ -26,6 +29,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
     volume mount and PV creation.
     Ref:https://github.com/container-storage-interface/spec/blob/master/spec.md
     """
+
     # noqa # pylint: disable=too-many-locals,too-many-statements,too-many-branches
     def CreateVolume(self, request, context):
         start_time = time.time()
@@ -255,6 +259,94 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                     "rpc": {
                         "type": capability_type("LIST_VOLUMES")
                     }
+                },
+                {
+                    "rpc": {
+                        "type": capability_type("EXPAND_VOLUME")
+                    }
                 }
             ]
         )
+
+    def ControllerExpandVolume(self, request, context):
+        """
+        Controller plugin RPC call implementation of EXPAND_VOLUME
+        """
+
+        start_time = time.time()
+        expansion_requested_pvsize = request.capacity_range.required_bytes
+
+        # Get existing volume
+        existing_volume = search_volume(request.volume_id)
+
+        logging.info(logf(
+            "Expansion requested PV size",
+            size=expansion_requested_pvsize
+        ))
+
+        # Volume size before expansion
+        existing_pvsize = existing_volume.size
+        pvname = existing_volume.volname
+
+        logging.info(logf(
+            "Existing PV size",
+            size=existing_pvsize
+        ))
+
+        pvtype = PV_TYPE_SUBVOL
+        single_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
+                                             "SINGLE_NODE_WRITER")
+
+        if request.volume_capability.AccessMode == single_node_writer:
+            pvtype = PV_TYPE_VIRTBLOCK
+
+        logging.debug(logf(
+            "Found PV type",
+            pvtype=pvtype,
+            capability=request.volume_capability
+        ))
+
+        hostvol = existing_volume.hostvol
+        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
+
+        # Check free-size in storage-pool before expansion
+        if is_hosting_volume_free(hostvol, expansion_requested_pvsize):
+
+            if pvtype == PV_TYPE_VIRTBLOCK:
+                update_virtblock_volume(
+                    mntdir, pvname, expansion_requested_pvsize)
+                expand_volume(mntdir)
+            else:
+                update_subdir_volume(
+                    mntdir, pvname, expansion_requested_pvsize)
+
+            logging.info(logf(
+                "Volume expanded",
+                name=pvname,
+                size=expansion_requested_pvsize,
+                hostvol=hostvol,
+                pvtype=pvtype,
+                volpath=existing_volume.volpath,
+                duration_seconds=time.time() - start_time
+            ))
+
+            # sizechanged is the additional change to be
+            # subtracted from storage-pool
+            sizechange = expansion_requested_pvsize - existing_pvsize
+            update_free_size(hostvol, pvname, -sizechange)
+
+            # if not hostvoltype:
+            #     hostvoltype = "unknown"
+
+            # send_analytics_tracker("pvc-%s" % hostvoltype, uid)
+            return csi_pb2.ControllerExpandVolumeResponse(
+                capacity_bytes=int(expansion_requested_pvsize)
+            )
+
+        else:
+
+            errmsg = "Hosting Volume '%s' is Full. Add More Storage" % hostvol
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
+            return csi_pb2.CreateVolumeResponse()
