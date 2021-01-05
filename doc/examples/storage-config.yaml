@@ -1,6 +1,6 @@
 ---
 apiVersion: kadalu-operator.gluster/v1alpha1
-kind: KadaluVolume
+kind: KadaluStorage
 metadata:
   # This will be used as name of PV Hosting Volume
   name: gvol1
