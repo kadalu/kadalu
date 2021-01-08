@@ -310,43 +310,41 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
 
         # Check free-size in storage-pool before expansion
-        if is_hosting_volume_free(hostvol, expansion_requested_pvsize):
-
-            if pvtype == PV_TYPE_VIRTBLOCK:
-                update_virtblock_volume(
-                    mntdir, pvname, expansion_requested_pvsize)
-                expand_volume(mntdir)
-            else:
-                update_subdir_volume(
-                    mntdir, pvname, expansion_requested_pvsize)
-
-            logging.info(logf(
-                "Volume expanded",
-                name=pvname,
-                size=expansion_requested_pvsize,
-                hostvol=hostvol,
-                pvtype=pvtype,
-                volpath=existing_volume.volpath,
-                duration_seconds=time.time() - start_time
-            ))
-
-            # sizechanged is the additional change to be
-            # subtracted from storage-pool
-            sizechange = expansion_requested_pvsize - existing_pvsize
-            update_free_size(hostvol, pvname, -sizechange)
-
-            # if not hostvoltype:
-            #     hostvoltype = "unknown"
-
-            # send_analytics_tracker("pvc-%s" % hostvoltype, uid)
-            return csi_pb2.ControllerExpandVolumeResponse(
-                capacity_bytes=int(expansion_requested_pvsize)
-            )
-
-        else:
+        if is_hosting_volume_free(hostvol, expansion_requested_pvsize) is False:
 
             errmsg = "Hosting Volume '%s' is Full. Add More Storage" % hostvol
             logging.error(errmsg)
             context.set_details(errmsg)
             context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
             return csi_pb2.CreateVolumeResponse()
+
+        if pvtype == PV_TYPE_VIRTBLOCK:
+            update_virtblock_volume(
+                mntdir, pvname, expansion_requested_pvsize)
+            expand_volume(mntdir)
+        else:
+            update_subdir_volume(
+                mntdir, pvname, expansion_requested_pvsize)
+
+        logging.info(logf(
+            "Volume expanded",
+            name=pvname,
+            size=expansion_requested_pvsize,
+            hostvol=hostvol,
+            pvtype=pvtype,
+            volpath=existing_volume.volpath,
+            duration_seconds=time.time() - start_time
+        ))
+
+        # sizechanged is the additional change to be
+        # subtracted from storage-pool
+        sizechange = expansion_requested_pvsize - existing_pvsize
+        update_free_size(hostvol, pvname, -sizechange)
+
+        # if not hostvoltype:
+        #     hostvoltype = "unknown"
+
+        # send_analytics_tracker("pvc-%s" % hostvoltype, uid)
+        return csi_pb2.ControllerExpandVolumeResponse(
+            capacity_bytes=int(expansion_requested_pvsize)
+        )

@@ -206,37 +206,6 @@ def update_free_size(hostvol, pvname, sizechange):
                 acc.update_pv_record(pvname, -sizechange)
 
 
-def is_hosting_volume_free(hostvol, expansion_requested_pvsize):
-    """CHeck if host volume is free to expand volume"""
-
-    mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
-    with statfile_lock:
-
-        # Stat done before `os.path.exists` to prevent ignoring
-        # file not exists even in case of ENOTCONN
-        mntdir_stat = retry_errors(os.statvfs, [mntdir], [ENOTCONN])
-        with SizeAccounting(hvol, mntdir) as acc:
-            acc.update_summary(mntdir_stat.f_bavail * mntdir_stat.f_bsize)
-            pv_stats = acc.get_stats()
-            reserved_size = pv_stats["free_size_bytes"] * RESERVED_SIZE_PERCENTAGE/100
-
-        logging.debug(logf(
-            "pv stats",
-            hostvol=hvol,
-            total_size_bytes=pv_stats["total_size_bytes"],
-            used_size_bytes=pv_stats["used_size_bytes"],
-            free_size_bytes=pv_stats["free_size_bytes"],
-            number_of_pvs=pv_stats["number_of_pvs"],
-            required_size=required_size,
-            reserved_size=reserved_size
-        ))
-
-        if expansion_requested_pvsize < (pv_stats["free_size_bytes"] - reserved_size):
-            return True
-        else:
-            return False
-
-
 def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
     """Mount each hosting volume to find available space"""
     for volume in pv_hosting_volumes:
@@ -415,6 +384,36 @@ def create_subdir_volume(hostvol_mnt, volname, size):
     )
 
 
+def is_hosting_volume_free(hostvol, expansion_requested_pvsize):
+    """CHeck if host volume is free to expand volume"""
+
+    mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
+    with statfile_lock:
+
+        # Stat done before `os.path.exists` to prevent ignoring
+        # file not exists even in case of ENOTCONN
+        mntdir_stat = retry_errors(os.statvfs, [mntdir], [ENOTCONN])
+        with SizeAccounting(hostvol, mntdir) as acc:
+            acc.update_summary(mntdir_stat.f_bavail * mntdir_stat.f_bsize)
+            pv_stats = acc.get_stats()
+            reserved_size = pv_stats["free_size_bytes"] * RESERVED_SIZE_PERCENTAGE/100
+
+        logging.debug(logf(
+            "pv stats",
+            hostvol=hostvol,
+            total_size_bytes=pv_stats["total_size_bytes"],
+            used_size_bytes=pv_stats["used_size_bytes"],
+            free_size_bytes=pv_stats["free_size_bytes"],
+            number_of_pvs=pv_stats["number_of_pvs"],
+            required_size=expansion_requested_pvsize,
+            reserved_size=reserved_size
+        ))
+
+        if expansion_requested_pvsize < (pv_stats["free_size_bytes"] - reserved_size):
+            return True
+
+        return False
+
 def update_subdir_volume(hostvol_mnt, volname, expansion_requested_pvsize):
     """Update sub directory Volume"""
 
@@ -562,7 +561,7 @@ def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize):
     # Save back the changes
     info_file = open(info_file_path + ".json", "w+")
     info_file.write(json.dumps(data))
-    info_file.close
+    info_file.close()
 
     logging.debug(logf(
         "Metadata updated",
