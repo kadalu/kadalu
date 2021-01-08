@@ -269,12 +269,6 @@ rules:
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "watch", "list", "delete", "update", "create"]
-  - apiGroups: [""]
-    resources: ["pods", "pods/log"]
-    verbs: ["create", "get", "list", "watch", "update", "patch"]
-  - apiGroups: [""]
-    resources: ["pods", "pods/exec"]
-    verbs: ["create", "get", "list", "watch", "update", "patch"]
 
 ---
 kind: Role
@@ -286,6 +280,12 @@ rules:
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]
   verbs: ["get", "watch", "list", "delete", "update", "create"]
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["create", "get", "list", "watch", "update", "patch"]
+- apiGroups: [""]
+  resources: ["pods", "pods/exec"]
+  verbs: ["create", "get", "list", "watch", "update", "patch"]
 
 ---
 kind: RoleBinding
