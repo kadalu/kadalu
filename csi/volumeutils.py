@@ -172,7 +172,7 @@ def get_pv_hosting_volumes(filters={}):
                 "name": volname,
                 "type": data["type"],
                 "g_volname": data.get("gluster_volname", None),
-                "g_host": data.get("gluster_host", None),
+                "g_host": data.get("gluster_hosts", None),
                 "g_options": data.get("gluster_options", None),
             }
 
@@ -827,7 +827,7 @@ def mount_glusterfs(volume, mountpoint):
 
 
 # noqa # pylint: disable=unused-argument
-def mount_glusterfs_with_host(volname, mountpoint, host, options=None):
+def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None):
     """Mount Glusterfs Volume"""
 
     # Ignore if already mounted
@@ -857,14 +857,18 @@ def mount_glusterfs_with_host(volname, mountpoint, host, options=None):
     # Fix the log, so we can check it out later
     # log_file = "/var/log/gluster/%s.log" % mountpoint.replace("/", "-")
     log_file = "/var/log/gluster/gluster.log"
+
     cmd = [
         GLUSTERFS_CMD,
         "--process-name", "fuse",
         "-l", "%s" % log_file,
         "--volfile-id", volname,
-        "-s", host,
-        mountpoint
     ]
+    for host in hosts.split(','):
+        cmd.extend(["--volfile-server", host])
+
+    cmd.append(mountpoint)
+
     # if opt_array:
     #     cmd.extend(opt_array)
     #
@@ -898,8 +902,7 @@ def check_external_volume(pv_request, host_volumes):
     for vol in host_volumes:
         if vol["type"] != "External":
             continue
-        if (vol["g_volname"] != params["gluster_volname"]) or \
-           (vol["g_host"] != params["gluster_host"]):
+        if vol["g_volname"] != params["gluster_volname"]:
             continue
 
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, vol["name"])

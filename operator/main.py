@@ -70,20 +70,23 @@ def bricks_validation(bricks):
     return ret
 
 
-def is_host_reachable(host, port):
+def is_host_reachable(hosts, port):
     """Check if glusterd is reachable in the given node"""
     timeout = 5
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(timeout)
-    try:
-        sock.connect((host, int(port)))
-        sock.shutdown(socket.SHUT_RDWR)
-        return True
-    except socket.error as msg:
-        logging.error(logf("Failed to open socket connection", error=msg))
-        return False
-    finally:
-        sock.close()
+    for host in hosts:
+        try:
+            sock.connect((host, int(port)))
+            sock.shutdown(socket.SHUT_RDWR)
+            return True
+        except socket.error as msg:
+            logging.error(logf("Failed to open socket connection",
+                               error=msg, host=host))
+            continue
+        finally:
+            sock.close()
+    return False
 
 def validate_ext_details(obj):
     """Validate external Volume details"""
@@ -93,23 +96,27 @@ def validate_ext_details(obj):
         return False
 
     valid = 0
-    ghost = None
+    ghosts = []
     gport = 24007
+    if cluster.get('gluster_hosts', None):
+        valid += 1
+        hosts = cluster.get('gluster_hosts')
+        ghosts.extend(hosts)
     if cluster.get('gluster_host', None):
         valid += 1
-        ghost = cluster.get('gluster_host', None)
+        ghosts.append(cluster.get('gluster_host'))
     if cluster.get('gluster_volname', None):
         valid += 1
     if cluster.get('gluster_port', None):
         gport = cluster.get('gluster_port', 24007)
 
-    if valid != 2:
+    if valid < 2:
         logging.error(logf("No 'host' and 'volname' details provided."))
         return False
 
-    if not is_host_reachable(ghost, gport):
+    if not is_host_reachable(ghosts, gport):
         logging.error(logf("gluster server not reachable: on %s:%d" %
-                           (ghost, gport)))
+                           (ghosts, gport)))
         #  Noticed that there may be glitches in n/w during this time.
         #  Not good to fail the validation, instead, just log here, so
         #  we are aware this is a possible reason.
@@ -386,12 +393,20 @@ def handle_external_storage_addition(core_v1_client, obj):
     volname = obj["metadata"]["name"]
     details = obj["spec"]["details"]
 
+    hosts = []
+    ghost = details.get("gluster_host", None)
+    ghosts = details.get("gluster_hosts", None)
+    if ghost:
+        hosts.append(ghost)
+    if ghosts:
+        hosts.extend(ghosts)
+
     data = {
         "volname": volname,
         "volume_id": obj["spec"]["volume_id"],
         "type": VOLUME_TYPE_EXTERNAL,
         "kadalu-format": True,
-        "gluster_host": details["gluster_host"],
+        "gluster_hosts": ",".join(hosts),
         "gluster_volname": details["gluster_volname"],
         "gluster_options": details.get("gluster_options", "ignore-me"),
     }
@@ -830,9 +845,8 @@ def deploy_storage_class():
     for sc_name in sc_names:
         filename = os.path.join(MANIFESTS_DIR, "storageclass-%s.yaml" % sc_name)
         if sc_name in installed_scs:
-            logging.info(logf("Ignoring already deployed StorageClass",
+            logging.info(logf("StorageClass already present, continuing with Apply",
                               manifest=filename))
-            continue
 
         # Deploy Storage Class
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)

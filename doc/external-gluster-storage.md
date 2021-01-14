@@ -27,6 +27,7 @@ metadata:
 spec:
   type: External
   details:
+    # gluster_hosts: [ gluster1.kadalu.io, gluster2.kadalu.io ]
     gluster_host: gluster1.kadalu.io
     gluster_volname: kadalu
     gluster_options: log-level=DEBUG

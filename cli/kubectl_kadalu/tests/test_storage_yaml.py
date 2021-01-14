@@ -19,7 +19,8 @@ PATH_3 = "/exports/kadalu/storage3"
 PVC_1 = "pvc1"
 PVC_2 = "pvc2"
 PVC_3 = "pvc3"
-EXTERNAL_HOST = "gluster1.kadalu.io"
+EXTERNAL_HOSTS = ["gluster1.kadalu.io" , "test"]
+EXTERNAL_HOST = ["gluster1.kadalu.io"]
 EXTERNAL_VOLNAME = "kadalu"
 EXTERNAL_OPTIONS = "log-level=DEBUG"
 
@@ -343,9 +344,9 @@ spec:
   type: "{EXTERNAL}"
   storage: []
   details:
-    - gluster_host: "{EXTERNAL_HOST}"
-      gluster_volname: "{EXTERNAL_VOLNAME}"
-      gluster_options: "{EXTERNAL_OPTIONS}"
+    gluster_hosts: "{EXTERNAL_HOSTS}"
+    gluster_volname: "{EXTERNAL_VOLNAME}"
+    gluster_options: "{EXTERNAL_OPTIONS}"
 """
 
 def test_external_storage():
@@ -357,7 +358,7 @@ def test_external_storage():
             "type": EXTERNAL,
             "details": [
                 {
-                    "gluster_host": EXTERNAL_HOST,
+                    "gluster_hosts": EXTERNAL_HOSTS,
                     "gluster_volname": EXTERNAL_VOLNAME,
                     "gluster_options": EXTERNAL_OPTIONS
                 }
