@@ -405,7 +405,7 @@ spec:
             - name: varlog
               mountPath: "/var/log/gluster"
         - name: csi-resizer
-          image: k8s.gcr.io/sig-storage/csi-resizer:v1.0.1
+          image: docker.io/raspbernetes/csi-external-resizer:1.0.0
           args:
             - "--csi-address=$(ADDRESS)"
             - "--timeout=3m"
