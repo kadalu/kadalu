@@ -173,9 +173,10 @@ def storage_add_data(args):
     # External details are specified, no 'storage' section required
     if args.external:
         node, vol = args.external.split(":")
+        nodes = node.split(',')
         content["spec"]["details"] = {
-                "gluster_host": node,
-                "gluster_volname": vol.strip("/")
+            "gluster_hosts": nodes,
+            "gluster_volname": vol.strip("/")
         }
         return content
 

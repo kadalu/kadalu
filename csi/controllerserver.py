@@ -291,7 +291,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         pvtype = PV_TYPE_SUBVOL
         single_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
-                                             "SINGLE_NODE_WRITER")
+                                     "SINGLE_NODE_WRITER")
 
         if request.volume_capability.AccessMode == single_node_writer:
             pvtype = PV_TYPE_VIRTBLOCK

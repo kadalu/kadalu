@@ -6,7 +6,7 @@ metadata:
 provisioner: kadalu
 parameters:
   hostvol_type: "External"
-  gluster_host: {{ gluster_host }}
+  gluster_hosts: {{ gluster_hosts }}
   gluster_volname: {{ gluster_volname }}
 {%- if gluster_volname != "" %}
   gluster_options: {{ gluster_options }}

@@ -22,7 +22,7 @@ STORAGE_PATH_TMPL = """    - node: "${node}"
 STORAGE_PVC_TMPL = """    - pvc: "${pvc}"
 """
 
-EXTERNAL_TMPL = """    gluster_host: "${gluster_host}"
+EXTERNAL_TMPL = """    gluster_hosts: "${gluster_hosts}"
     gluster_volname: "${gluster_volname}"
     gluster_options: "${gluster_options}"
 """
