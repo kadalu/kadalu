@@ -279,18 +279,14 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         # Get existing volume
         existing_volume = search_volume(request.volume_id)
 
-        logging.info(logf(
-            "Expansion requested PV size",
-            size=expansion_requested_pvsize
-        ))
-
         # Volume size before expansion
         existing_pvsize = existing_volume.size
         pvname = existing_volume.volname
 
         logging.info(logf(
-            "Existing PV size",
-            size=existing_pvsize
+            "Existing PV size and Expansion requested PV size",
+            existing_pvsize=existing_pvsize,
+            expansion_requested_pvsize=expansion_requested_pvsize
         ))
 
         pvtype = PV_TYPE_SUBVOL

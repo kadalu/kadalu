@@ -31,7 +31,7 @@ except ImportError:
 #
 CONFIG_FILE = "/var/lib/glusterd/kadalu.info"
 PROJECT_MOD = 4294967296 # XFS project number is 32bit unsigned
-
+SIZE_LIMITS = {} # Handles quota updates
 
 def set_quota(rootdir, subdir_path, quota_value):
     """
@@ -70,34 +70,36 @@ def get_quota_report(rootdir):
     return []
 
 
-def handle_quota(quota_report, brick_path, volname, pvtype):
+def handle_quota(brick_path, volname, pvtype):
     """Sets Quota if info file is available"""
 
     volhash = get_volname_hash(volname)
     volpath = get_volume_path(pvtype, volhash, volname)
     subdir_path = os.path.join(brick_path, volpath)
-    projid = "#%d" % (os.lstat(subdir_path).st_ino % PROJECT_MOD)
-    limit_hard = 0
-    for line in quota_report:
-        if line.startswith(projid):
-            limit_hard = int(line.split()[3])
-            break
-
-    # Quota is already set, continue
-    # TODO: Handle PV resize requests
-    if limit_hard > 0:
-        return
 
     pvinfo_file_path = os.path.join(brick_path, "info", volpath + ".json")
     if os.path.exists(pvinfo_file_path):
         data = {}
         with open(pvinfo_file_path) as pvinfo_file:
             data = json.loads(pvinfo_file.read().strip())
-            logging.info(logf(
-                "data from pvinfo_file is",
-                file=pvinfo_file,
-                data=data
-            ))
+
+            # global dictionary to avoid init to None
+            global SIZE_LIMITS
+
+            # Add every new entry of volnames
+            if volname not in SIZE_LIMITS:
+                SIZE_LIMITS[volname] = {}
+
+            # Handle PV resize quota updates
+
+            # Init existing_size to -1 to handle new quota requests
+            # Update existing_size for every update requests
+            if data["size"] > SIZE_LIMITS[volname].get('existing_size', -1):
+                SIZE_LIMITS[volname]['existing_size'] = data["size"]
+            # Quota already set for size, return
+            else:
+                return
+
             try:
                 set_quota(os.path.dirname(brick_path), subdir_path, data["size"])
                 logging.info(logf(
@@ -133,7 +135,7 @@ def crawl(brick_path):
     for dir1 in os.listdir(subvol_root):
         for dir2 in os.listdir(os.path.join(subvol_root, dir1)):
             for pvdir in os.listdir(os.path.join(subvol_root, dir1, dir2)):
-                handle_quota(quota_report, brick_path, pvdir, PV_TYPE_SUBVOL)
+                handle_quota(brick_path, pvdir, PV_TYPE_SUBVOL)
 
     return
 
