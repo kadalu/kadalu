@@ -107,3 +107,11 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         return csi_pb2.NodeGetInfoResponse(
             node_id=os.environ["NODE_ID"],
         )
+
+    def NodeExpandVolume(self, request, context):
+
+        logging.warning(logf(
+            "NodeExpandVolume called, which is not implemented."
+        ))
+
+        return csi_pb2.NodeExpandVolumeResponse()
