@@ -11,7 +11,7 @@ setup(
     version=version(),
     packages=["kadalu_quotad"],
     include_package_data=True,
-    install_requires=["requests", "xxhash"],
+    install_requires=["xxhash"],
     extras_require={
         "gluster": ["glustercli"]
     },
