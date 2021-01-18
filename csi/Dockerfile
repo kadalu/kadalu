@@ -9,7 +9,7 @@ RUN apt-get update -yq && \
     glusterfs-client build-essential gcc g++ && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools && \
-    python3 -m pip install jinja2 requests datetime xxhash \
+    python3 -m pip install jinja2 datetime xxhash \
     grpcio googleapis-common-protos && \
     apt-get autoremove --purge -y gcc g++ build-essential python3-dev python3-pip && \
     apt-get -y clean && \

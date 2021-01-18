@@ -7,7 +7,7 @@ RUN apt-get update -yq && \
     apt-get install -y --no-install-recommends python3.8 curl xfsprogs net-tools telnet wget e2fsprogs python3-pip sqlite build-essential python3-dev && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools && \
-    python3 -m pip install kubernetes==11.0.0 jinja2 requests datetime xxhash && \
+    python3 -m pip install kubernetes==11.0.0 jinja2 datetime xxhash && \
     curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`/kubectl -o /usr/bin/kubectl && \
     chmod +x /usr/bin/kubectl && \
     apt-get autoremove --purge -y gcc python3-dev build-essential python3-pip curl && \
