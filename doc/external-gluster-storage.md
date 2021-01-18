@@ -27,9 +27,9 @@ metadata:
 spec:
   type: External
   details:
-    - gluster_host: gluster1.kadalu.io
-      gluster_volname: kadalu
-      gluster_options: log-level=DEBUG
+    gluster_host: gluster1.kadalu.io
+    gluster_volname: kadalu
+    gluster_options: log-level=DEBUG
 
 
 # file: pvc-from-external-gluster.yaml

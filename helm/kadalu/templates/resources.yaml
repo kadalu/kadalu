@@ -23,11 +23,44 @@ spec:
             spec:
               type: object
               properties:
-                caps:
+                type:
+                  type: string
+                storage:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      node:
+                        type: string
+                      device:
+                        type: string
+                      path:
+                        type: string
+                      pvc:
+                        type: string
+                tiebreaker:
                   type: object
-                  x-kubernetes-preserve-unknown-fields: true
-            status:
-              type: object
-              x-kubernetes-preserve-unknown-fields: true
+                  properties:
+                    deployment:
+                      type: string
+                    node:
+                      type: string
+                    path:
+                      type: string
+                    port:
+                      type: integer
+                details:
+                  type: object
+                  properties:
+                    gluster_host:
+                      type: string
+                    gluster_hosts:
+                      type: array
+                      items:
+                        type: string
+                    gluster_volname:
+                      type: string
+                    gluster_options:
+                      type: string
       subresources:
         status: {}

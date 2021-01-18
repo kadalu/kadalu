@@ -87,26 +87,21 @@ def is_host_reachable(host, port):
 
 def validate_ext_details(obj):
     """Validate external Volume details"""
-    clusterdata = obj["spec"].get("details", None)
-    if not clusterdata:
+    cluster = obj["spec"].get("details", None)
+    if not cluster:
         logging.error(logf("External Cluster details not given."))
         return False
 
     valid = 0
-    if len(clusterdata) > 1:
-        logging.error(logf("Multiple External Cluster details given."))
-        return False
-
     ghost = None
     gport = 24007
-    for cluster in clusterdata:
-        if cluster.get('gluster_host', None):
-            valid += 1
-            ghost = cluster.get('gluster_host', None)
-        if cluster.get('gluster_volname', None):
-            valid += 1
-        if cluster.get('gluster_port', None):
-            gport = cluster.get('gluster_port', 24007)
+    if cluster.get('gluster_host', None):
+        valid += 1
+        ghost = cluster.get('gluster_host', None)
+    if cluster.get('gluster_volname', None):
+        valid += 1
+    if cluster.get('gluster_port', None):
+        gport = cluster.get('gluster_port', 24007)
 
     if valid != 2:
         logging.error(logf("No 'host' and 'volname' details provided."))
@@ -389,7 +384,7 @@ def deploy_server_pods(obj):
 def handle_external_storage_addition(core_v1_client, obj):
     """Deploy service(One service per Volume)"""
     volname = obj["metadata"]["name"]
-    details = obj["spec"]["details"][0]
+    details = obj["spec"]["details"]
 
     data = {
         "volname": volname,
