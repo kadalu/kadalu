@@ -72,6 +72,8 @@ spec:
               value: "{{ kadalu_version }}"
             - name: K8S_DIST
               value: "{{ k8s_dist }}"
+            - name: VERBOSE
+              value: "{{ verbose }}"
           volumeMounts:
             - name: plugin-dir
               mountPath: /plugin
@@ -95,6 +97,8 @@ spec:
               value: "{{ kadalu_version }}"
             - name: K8S_DIST
               value: "{{ k8s_dist }}"
+            - name: VERBOSE
+              value: "{{ verbose }}"
           volumeMounts:
             - name: plugin-dir
               mountPath: /plugin
@@ -352,6 +356,8 @@ spec:
               value: "{{ kadalu_version }}"
             - name: K8S_DIST
               value: "{{ k8s_dist }}"
+            - name: VERBOSE
+              value: "{{ verbose }}"
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -388,6 +394,8 @@ spec:
               value: "{{ kadalu_version }}"
             - name: K8S_DIST
               value: "{{ k8s_dist }}"
+            - name: VERBOSE
+              value: "{{ verbose }}"
           volumeMounts:
             - name: socket-dir
               mountPath: /plugin
@@ -416,6 +424,8 @@ spec:
               value: "{{ kadalu_version }}"
             - name: K8S_DIST
               value: "{{ k8s_dist }}"
+            - name: VERBOSE
+              value: "{{ verbose }}"
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/

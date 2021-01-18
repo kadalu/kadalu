@@ -41,7 +41,7 @@ jobs:
     - name: Build locally
       run: make build-containers
     - name: Generate Manifests
-      run: make gen-manifest
+      run: VERBOSE="true" make gen-manifest
     - name: Setup Minikube
       run: tests/setup.sh v1.20.0
     - name: Run tests

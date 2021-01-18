@@ -9,6 +9,7 @@ import json
 import logging
 import re
 import socket
+import urllib3
 
 from jinja2 import Template
 from kubernetes import client, config, watch
@@ -20,6 +21,7 @@ NAMESPACE = os.environ.get("KADALU_NAMESPACE", "kadalu")
 VERSION = os.environ.get("KADALU_VERSION", "latest")
 K8S_DIST = os.environ.get("K8S_DIST", "kubernetes")
 KUBELET_DIR = os.environ.get("KUBELET_DIR")
+VERBOSE = os.environ.get("VERBOSE", False)
 MANIFESTS_DIR = "/kadalu/templates"
 KUBECTL_CMD = "/usr/bin/kubectl"
 KADALU_CONFIG_MAP = "kadalu-info"
@@ -378,6 +380,7 @@ def deploy_server_pods(obj):
         template_args["brick_device_dir"] = get_brick_device_dir(storage)
         template_args["brick_node_id"] = storage["node_id"]
         template_args["k8s_dist"] = K8S_DIST
+        template_args["verbose"] = VERBOSE
 
         filename = os.path.join(MANIFESTS_DIR, "server.yaml")
         template(filename, **template_args)
@@ -788,7 +791,7 @@ def deploy_csi_pods(core_v1_client):
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
     template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
              docker_user=docker_user, k8s_dist=K8S_DIST,
-             kubelet_dir=KUBELET_DIR)
+             kubelet_dir=KUBELET_DIR, verbose=VERBOSE)
 
     lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
     logging.info(logf("Deployed CSI Pods", manifest=filename))
@@ -891,4 +894,10 @@ def main():
 
 if __name__ == "__main__":
     logging_setup()
+
+    # This not advised in general, but in kadalu's operator, it is OK to
+    # ignore these warnings as we know to make calls only inside of
+    # kubernetes cluster
+    urllib3.disable_warnings()
+
     main()
