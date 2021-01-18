@@ -135,8 +135,7 @@ def logf(msg, **kwargs):
 def logging_setup():
     """Logging Setup"""
     root = logging.getLogger()
-    # verbose = os.environ.get("VERBOSE", False)
-    verbose = True
+    verbose = os.environ.get("VERBOSE", False)
     root.setLevel(logging.INFO)
     if verbose:
         root.setLevel(logging.DEBUG)
