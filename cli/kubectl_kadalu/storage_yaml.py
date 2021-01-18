@@ -22,9 +22,9 @@ STORAGE_PATH_TMPL = """    - node: "${node}"
 STORAGE_PVC_TMPL = """    - pvc: "${pvc}"
 """
 
-EXTERNAL_TMPL = """    - gluster_host: "${gluster_host}"
-      gluster_volname: "${gluster_volname}"
-      gluster_options: "${gluster_options}"
+EXTERNAL_TMPL = """    gluster_host: "${gluster_host}"
+    gluster_volname: "${gluster_volname}"
+    gluster_options: "${gluster_options}"
 """
 
 TIEBREAKER_TMPL = """  tiebreaker:
@@ -54,10 +54,8 @@ def to_storage_yaml(data):
 
     if data["spec"].get("details", None) is not None:
         yaml += "  details:\n"
-        for entry in data["spec"]["details"]:
-            if entry.get("gluster_options", None) is None:
-                entry["gluster_options"] = "log-level=INFO"
-            yaml += Template(EXTERNAL_TMPL).substitute(**entry)
+        entry = data["spec"]["details"]
+        yaml += Template(EXTERNAL_TMPL).substitute(**entry)
 
     if data["spec"].get("tiebreaker", None) is not None:
         yaml += Template(TIEBREAKER_TMPL).substitute(**data["spec"]["tiebreaker"])
