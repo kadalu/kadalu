@@ -5,6 +5,7 @@ import os
 import logging
 import time
 import random
+import json
 
 import grpc
 
@@ -80,8 +81,30 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             "Got list of hosting Volumes",
             volumes=",".join(v['name'] for v in host_volumes)
         ))
+        hostvol = None
         ext_volume = None
+        data = {}
         hostvoltype = filters.get("hostvol_type", None)
+        if not hostvoltype:
+            # This means, the request came on 'kadalu' storage class type.
+
+            # Randomize the entries so we can issue PV from different storage
+            random.shuffle(host_volumes)
+
+            hostvol = mount_and_select_hosting_volume(host_volumes, pvsize)
+            if hostvol is None:
+                errmsg = "No Hosting Volumes available, add more storage"
+                logging.error(errmsg)
+                context.set_details(errmsg)
+                context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
+                return csi_pb2.CreateVolumeResponse()
+
+            info_file_path = os.path.join(VOLINFO_DIR, "%s.info" % hostvol)
+            with open(info_file_path) as info_file:
+                data = json.load(info_file)
+
+            hostvoltype = data['type']
+
         if hostvoltype == 'External':
             ext_volume = check_external_volume(request, host_volumes)
 
@@ -172,17 +195,17 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             return csi_pb2.CreateVolumeResponse()
 
+        if not hostvol:
+            # Randomize the entries so we can issue PV from different storage
+            random.shuffle(host_volumes)
 
-        # Randomize the entries so we can issue PV from different storage
-        random.shuffle(host_volumes)
-
-        hostvol = mount_and_select_hosting_volume(host_volumes, pvsize)
-        if hostvol is None:
-            errmsg = "No Hosting Volumes available, add more storage"
-            logging.error(errmsg)
-            context.set_details(errmsg)
-            context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
-            return csi_pb2.CreateVolumeResponse()
+            hostvol = mount_and_select_hosting_volume(host_volumes, pvsize)
+            if hostvol is None:
+                errmsg = "No Hosting Volumes available, add more storage"
+                logging.error(errmsg)
+                context.set_details(errmsg)
+                context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
+                return csi_pb2.CreateVolumeResponse()
 
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
         if pvtype == PV_TYPE_VIRTBLOCK:
@@ -203,9 +226,6 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         ))
 
         update_free_size(hostvol, request.name, -pvsize)
-
-        if not hostvoltype:
-            hostvoltype = "unknown"
 
         send_analytics_tracker("pvc-%s" % hostvoltype, uid)
         return csi_pb2.CreateVolumeResponse(
