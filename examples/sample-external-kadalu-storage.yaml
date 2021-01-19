@@ -31,3 +31,37 @@ spec:
     persistentVolumeClaim:
       claimName: pv-ext-kadalu
   restartPolicy: OnFailure
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv-ext-kadalu-1
+spec:
+  storageClassName: kadalu # Add 'kadalu.external.' to name from KadaluStorage kind
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Mi # This needs to be set using 'kadalu-quotad'
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-ext-kadalu-1
+  labels:
+    app: sample-app
+spec:
+  containers:
+  - name: sample-app
+    image: docker.io/kadalu/sample-pv-check-app:latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - mountPath: "/mnt/pv"
+      name: csivol
+  volumes:
+  - name: csivol
+    persistentVolumeClaim:
+      claimName: pv-ext-kadalu-1
+  restartPolicy: OnFailure
