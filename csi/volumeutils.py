@@ -902,7 +902,7 @@ def check_external_volume(pv_request, host_volumes):
     for vol in host_volumes:
         if vol["type"] != "External":
             continue
-        if vol["g_volname"] != params["gluster_volname"]:
+        if vol["g_volname"] != params.get("gluster_volname", None):
             continue
 
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, vol["name"])
