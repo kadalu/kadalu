@@ -16,9 +16,9 @@ def set_args(name, subparsers):
 
     arg(
         "--version",
-        help="Kadalu Version to Install [default: latest]",
-        choices=[VERSION, "devel", "latest"],
-        default="latest"
+        help="Kadalu Version to Install [default: " + VERSION + "]",
+        choices=[VERSION, "devel"],
+        default=VERSION
     )
     arg(
         "--type",
@@ -63,10 +63,12 @@ def run(args):
 
     operator_file = args.local_yaml
     if not operator_file:
-        file_url = "https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests"
+        file_url = ""
         insttype = ""
 
-        if args.version and args.version != "latest":
+        if args.version and args.version == "devel":
+            file_url = "https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests"
+        elif args.version:
             file_url = "https://github.com/kadalu/kadalu/releases/download/%s" % args.version
 
         if args.type and args.type != "kubernetes":
