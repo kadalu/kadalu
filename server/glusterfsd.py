@@ -132,7 +132,7 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
                         ))
                         sys.exit(1)
 
-            if 'already mounted' not in err.err:
+            elif 'already mounted' not in err.err:
                 logging.error(logf(
                     "Failed to mount export brick",
                     fstype=brickfs,
@@ -141,8 +141,10 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
                     error=err,
                 ))
                 sys.exit(1)
+
             else:
                 pass
+
 
 def start():
     """
