@@ -63,7 +63,7 @@ def is_gluster_mount_proc_running(volname, mountpoint):
     to confirm Glusterfs process is mounted
     """
     cmd = (
-        r'ps ax | grep -w "/usr/sbin/glusterfs" '
+        r'ps ax | grep -w "/opt/sbin/glusterfs" '
         r'| grep -w "\-\-volfile\-id %s" '
         r'| grep -w -q "%s"' % (volname, mountpoint)
     )

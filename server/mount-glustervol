@@ -16,6 +16,18 @@ data = {}
 with open(info_file) as f:
     data = json.load(f)
 
+# Tricky to get this right, but this solves all the elements of distribute in code :-)
+data['dht_subvol'] = []
+if data["type"] == "Replica1":
+    for brick in data["bricks"]:
+        data["dht_subvol"].append("%s-client-%d" % (data["volname"], brick["brick_index"]))
+else:
+    count = 3
+    if data["type"] == "Replica2":
+        count = 2
+    for i in range(0, int(len(data["bricks"]) / count)):
+        data["dht_subvol"].append("%s-replica-%d" % (data["volname"], i))
+
 template_file = os.path.join(templates_dir, "%s.client.vol" % data["type"])
 client_volfile = os.path.join(volfiles_dir, "%s.client.vol" % volname)
 content = ""
@@ -27,11 +39,12 @@ Template(content).stream(**data).dump(client_volfile)
 os.makedirs("/mnt/%s" % volname)
 
 os.execv(
-    "/usr/sbin/glusterfs",
+    "/opt/sbin/glusterfs",
     [
-        "/usr/sbin/glusterfs",
+        "/opt/sbin/glusterfs",
         "--process-name", "fuse",
         "--volfile-id=%s" % volname,
+        "--fs-display-name", "kadalu:%s" % volname,
         "-f", client_volfile,
         "/mnt/%s" % volname
     ]

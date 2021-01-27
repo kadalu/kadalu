@@ -1,57 +1,26 @@
-volume {{ volname }}-client
+{% for brick in bricks %}
+volume {{ volname }}-client-{{ brick["brick_index"] }}
     type protocol/client
-    option transport.socket.keepalive-count 9
-    option transport.socket.read-fail-log off
-    option transport.socket.lowlat off
-    option client-bind-insecure off
-    option remote-subvolume {{ bricks[0]["brick_path"] }}
-    option event-threads 2
-    option non-blocking-io off
-    option transport.socket.ssl-enabled off
-    option transport.socket.keepalive-time 20
-    option transport.listen-backlog 1024
-    option transport.tcp-user-timeout 42
-    option ping-timeout 42
-    option filter-O_DIRECT disable
-    option remote-host {{ bricks[0]["node"] }}
-    option transport.socket.keepalive-interval 2
-    option send-gids on
-    option transport.socket.nodelay 1
-    option transport.socket.own-thread off
-    option transport.socket.keepalive 1
-    option transport-type socket
-    option frame-timeout 1800
+    option remote-subvolume {{ brick["brick_path"] }}
+    option remote-host {{ brick["node"] }}
+end-volume
+
+{% endfor %}
+
+volume {{ volname }}-dht
+    type cluster/distribute
+    subvolumes {{ dht_subvol|join(' ') }}
 end-volume
 
 volume {{ volname }}-utime
     type features/utime
     option noatime on
-    subvolumes {{ volname }}-client
-end-volume
-
-volume {{ volname }}-read-only
-    type features/read-only
-    option read-only off
-    subvolumes {{ volname }}-utime
+    subvolumes {{ volname }}-dht
 end-volume
 
 volume {{ volname }}-md-cache
     type performance/md-cache
-    option cache-swift-metadata true
-    option cache-capability-xattrs true
-    option md-cache-statfs off
-    option md-cache-timeout 1
-    option cache-glusterfs-acl false
-    option cache-posix-acl false
-    option global-cache-invalidation true
-    option cache-invalidation false
-    option pass-through false
-    option force-readdirp true
-    option cache-selinux false
-    option md-cache on
-    option cache-samba-metadata false
-    option cache-ima-xattrs true
-    subvolumes {{ volname }}-read-only
+    subvolumes {{ volname }}-utime
 end-volume
 
 volume {{ volname }}-write-behind
@@ -59,11 +28,6 @@ volume {{ volname }}-write-behind
     option cache-size 1MB
     option flush-behind on
     option write-behind on
-    option aggregate-size 128KB
-    option resync-failed-syncs-after-fsync off
-    option strict-write-ordering off
-    option strict-O_DIRECT off
-    option trickling-writes on
     subvolumes {{ volname }}-md-cache
 end-volume
 
@@ -80,44 +44,13 @@ end-volume
 volume {{ volname }}-nl-cache
     type performance/nl-cache
     option pass-through false
-    option nl-cache-timeout 60
-    option nl-cache-limit 131072
-    option nl-cache-positive-entry false
     option nl-cache on
     subvolumes {{ volname }}-open-behind
 end-volume
 
 volume {{ volname }}
     type debug/io-stats
-    option client-threads 16
-    option brick-threads 16
-    option ios-dump-format json
-    option ios-sample-buf-size 65535
     option unique-id /no/such/path
-    option client-log-flush-timeout 120
-    option ios-sample-interval 0
-    option ios-dump-interval 0
-    option sys-log-level CRITICAL
-    option ios-dnscache-ttl-sec 86400
-    option count-fop-hits off
-    option latency-measurement off
-    option global-threading off
-    option brick-log-flush-timeout 120
-    option client-log-format with-msg-id
-    option brick-logger gluster-log
-    option client-log-level INFO
-    option brick-log-buf-size 5
-    option client-log-buf-size 5
-    option log-buf-size 5
-    option brick-log-format with-msg-id
-    option client-logger gluster-log
-    option dump-fd-stats off
-    option log-flush-timeout 120
-    option brick-log-level INFO
     subvolumes {{ volname }}-nl-cache
 end-volume
 
-volume meta-autoload
-    type meta
-    subvolumes {{ volname }}
-end-volume

@@ -154,18 +154,13 @@ def validate_volume_request(obj):
     if not bricks_validation(bricks):
         return False
 
-    if (voltype == VOLUME_TYPE_REPLICA_1 and len(bricks) != 1) or \
-       (voltype == VOLUME_TYPE_REPLICA_3 and len(bricks) != 3):
+    if (voltype == VOLUME_TYPE_REPLICA_2) and (len(bricks) % 2 != 0) or \
+       ((voltype == VOLUME_TYPE_REPLICA_3) and (len(bricks) % 3 != 0)):
         logging.error("Invalid number of storage directories/devices"
                       " specified")
         return False
 
     if voltype == VOLUME_TYPE_REPLICA_2:
-        if len(bricks) != 2:
-            logging.error("Invalid number of storage directories/devices"
-                          " specified")
-            return False
-
         tiebreaker = obj["spec"].get("tiebreaker", None)
         if tiebreaker and (not tiebreaker.get("node", None) or
                            not tiebreaker.get("path", None)):
