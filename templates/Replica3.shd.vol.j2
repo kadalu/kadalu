@@ -1,64 +1,41 @@
-volume {{ volname }}-replicate-0-client-0
+{% for brick in bricks %}
+volume {{ volname }}-client-{{ brick["brick_index"] }}
     type protocol/client
-    option remote-subvolume {{ bricks[0]["brick_path"] }}
-    option remote-host {{ bricks[0]["node"] }}
+    option volfile-key /{{ volname }}
+    option remote-subvolume {{ brick["brick_path"] }}
+    option remote-host {{ brick["node"] }}
 end-volume
 
-volume {{ volname }}-replicate-0-client-1
-    type protocol/client
-    option remote-host {{ bricks[1]["node"] }}
-    option remote-subvolume {{ bricks[1]["brick_path"] }}
-end-volume
+{% endfor %}
 
-volume {{ volname }}-replicate-0-client-2
-    type protocol/client
-    option remote-host {{ bricks[2]["node"] }}
-    option remote-subvolume {{ bricks[2]["brick_path"] }}
-end-volume
-
-volume {{ volname }}-replicate-0
+{% for i in range(dht_subvol|length) %}
+volume {{ volname }}-replica-{{ i }}
     type cluster/replicate
     option data-self-heal on
-    option halo-enabled False
-    option background-self-heal-count 8
-    option granular-entry-heal no
     option iam-self-heal-daemon true
-    option pre-op-compat on
     option metadata-self-heal on
-    option consistent-io no
     option self-heal-daemon on
-    option optimistic-change-log on
     option choose-local true
     option ensure-durability on
     option data-change-log on
-    option heal-wait-queue-length 128
-    option eager-lock on
     option entry-self-heal on
-    option shd-wait-qlength 1024
-    option consistent-metadata no
-    option entry-change-log on
-    option metadata-change-log on
-    option locking-scheme full
-    option metadata-splitbrain-forced-heal off
-    option shd-max-threads 1
-    option heal-timeout 600
-    option quorum-reads no
-    option quorum-type none
-    subvolumes {{ volname }}-replicate-0-client-0 {{ volname }}-replicate-0-client-1 {{ volname }}-replicate-0-client-2
+    subvolumes {{ volname }}-client-{{ i * 3 }} {{ volname }}-client-{{ (i * 3) + 1}} {{ volname }}-client-{{ (i * 3) + 2}}
+end-volume
+
+{% endfor %}
+
+volume {{ volname }}-dht
+    type cluster/distribute
+    subvolumes {{ dht_subvol|join(' ') }}
 end-volume
 
 volume {{ volname }}-utime
     type features/utime
     option noatime on
-    subvolumes {{ volname }}-replicate-0
+    subvolumes {{ volname }}-dht
 end-volume
 
 volume {{ volname }}
     type debug/io-stats
     subvolumes {{ volname }}-utime
-end-volume
-
-volume meta-autoload
-    type meta
-    subvolumes {{ volname }}
 end-volume

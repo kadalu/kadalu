@@ -1,0 +1,8 @@
+FROM alpine
+
+RUN apk add --no-cache bash
+RUN apk add --no-cache attr
+
+COPY quota-crawler.sh /quota-crawler.sh
+
+ENTRYPOINT ["/bin/bash", "/quota-crawler.sh"]

@@ -17,13 +17,12 @@ from kadalulib import execute, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, \
     retry_errors, is_gluster_mount_proc_running, SizeAccounting
 
 
-GLUSTERFS_CMD = "/usr/sbin/glusterfs"
+GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/usr/bin/mount"
 UNMOUNT_CMD = "/usr/bin/umount"
 MKFS_XFS_CMD = "/usr/sbin/mkfs.xfs"
 RESERVED_SIZE_PERCENTAGE = 10
 HOSTVOL_MOUNTDIR = "/mnt"
-GLUSTERFS_CMD = "/usr/sbin/glusterfs"
 VOLFILES_DIR = "/kadalu/volfiles"
 TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
@@ -351,6 +350,26 @@ def create_subdir_volume(hostvol_mnt, volname, size):
         pvsize_buffer=pvsize_buffer,
     ))
 
+    #setfattr -n trusted.glusterfs.namespace -v true
+    #setfattr -n trusted.gfs.squota.limit -v size
+    try:
+        retry_errors(os.setxattr,
+                     [os.path.join(hostvol_mnt, volpath),
+                      "trusted.glusterfs.namespace",
+                      "true".encode()],
+                     [ENOTCONN])
+        retry_errors(os.setxattr,
+                     [os.path.join(hostvol_mnt, volpath),
+                      "trusted.gfs.squota.limit",
+                      str(size).encode()],
+                     [ENOTCONN])
+    # noqa # pylint: disable=broad-except
+    except Exception as err:
+        logging.info(logf(
+            "Failed to set quota using simple-quota. Continuing",
+            error=err
+        ))
+
     count = 0
     while True:
         count += 1
@@ -450,6 +469,11 @@ def update_subdir_volume(hostvol_mnt, volname, expansion_requested_pvsize):
         pvsize_buffer=pvsize_buffer,
     ))
 
+    retry_errors(os.setxattr,
+                 [os.path.join(hostvol_mnt, volpath),
+                  "trusted.gfs.squota.limit",
+                  str(expansion_requested_pvsize).encode()],
+                 [ENOTCONN])
     count = 0
     while True:
         count += 1
@@ -748,6 +772,18 @@ def generate_client_volfile(volname):
     with open(info_file_path) as info_file:
         data = json.load(info_file)
 
+    # Tricky to get this right, but this solves all the elements of distribute in code :-)
+    data['dht_subvol'] = []
+    if data["type"] == "Replica1":
+        for brick in data["bricks"]:
+            data["dht_subvol"].append("%s-client-%d" % (data["volname"], brick["brick_index"]))
+    else:
+        count = 3
+        if data["type"] == "Replica2":
+            count = 2
+        for i in range(0, int(len(data["bricks"]) / count)):
+            data["dht_subvol"].append("%s-replica-%d" % (data["volname"], i))
+
     template_file_path = os.path.join(
         TEMPLATES_DIR,
         "%s.client.vol.j2" % data["type"]
@@ -763,7 +799,7 @@ def generate_client_volfile(volname):
     Template(content).stream(**data).dump(client_volfile)
 
 
-def mount_glusterfs(volume, mountpoint):
+def mount_glusterfs(volume, mountpoint, is_client=False):
     """Mount Glusterfs Volume"""
     if volume["type"] == "External":
         volname = volume['g_volname']
@@ -796,7 +832,8 @@ def mount_glusterfs(volume, mountpoint):
             mount_glusterfs_with_host(volume['g_volname'],
                                       mountpoint,
                                       volume['g_host'],
-                                      volume['g_options'])
+                                      volume['g_options'],
+                                      is_client)
         return
 
     with mount_lock:
@@ -812,6 +849,11 @@ def mount_glusterfs(volume, mountpoint):
             "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volume['name']),
             mountpoint
         ]
+
+        # required for 'simple-quota'
+        if not is_client:
+            cmd.extend(["--client-pid", "-14"])
+
         try:
             execute(*cmd)
         except CommandException as err:
@@ -827,7 +869,7 @@ def mount_glusterfs(volume, mountpoint):
 
 
 # noqa # pylint: disable=unused-argument
-def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None):
+def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None, is_client=False):
     """Mount Glusterfs Volume"""
 
     # Ignore if already mounted
@@ -864,6 +906,10 @@ def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None):
         "-l", "%s" % log_file,
         "--volfile-id", volname,
     ]
+    # on server component we can mount glusterfs with client-pid
+    if not is_client:
+        cmd.extend(["--client-pid", "-14"])
+
     for host in hosts.split(','):
         cmd.extend(["--volfile-server", host])
 

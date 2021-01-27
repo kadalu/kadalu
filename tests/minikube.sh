@@ -6,13 +6,14 @@ fail=0
 ARCH=`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`
 function wait_till_pods_start() {
     # give it some time
+
     cnt=0
     local_timeout=200
     while true; do
 	cnt=$((cnt + 1))
 	sleep 2
 	ret=$(kubectl get pods -nkadalu -o wide | grep 'Running' | wc -l)
-	if [[ $ret -ge 9 ]]; then
+	if [[ $ret -ge 11 ]]; then
 	    echo "Successful after $cnt seconds"
 	    break
 	fi
@@ -187,10 +188,10 @@ up)
     if [[ "${VM_DRIVER}" != "none" ]]; then
 	wait_for_ssh
 	# shellcheck disable=SC2086
-	minikube ssh "sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file{1,2.1,2.2,3.1}; sudo mkdir -p /mnt/${DISK}/{dir3.2,dir3.2_modified,pvc}"
+	minikube ssh "sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1}; sudo mkdir -p /mnt/${DISK}/{dir3.2,dir3.2_modified,pvc}"
     else
 	sudo mkdir -p /mnt/${DISK}
-	sudo truncate -s 4g /mnt/${DISK}/file{1,2.1,2.2,3.1}
+	sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1}
 	sudo mkdir -p /mnt/${DISK}/dir3.2
 	sudo mkdir -p /mnt/${DISK}/dir3.2_modified
 	sudo mkdir -p /mnt/${DISK}/pvc
@@ -234,7 +235,8 @@ kadalu_operator)
     sed -i -e "s/DISK/${DISK}/g" tests/get-minikube-pvc.yaml
     kubectl apply -f tests/get-minikube-pvc.yaml
 
-    sleep 1
+    # Generally it needs some time for operator to get started, give it time, so some logs are reduced in tests
+    sleep 15;
     kubectl apply -f /tmp/kadalu-storage.yaml
 
     wait_till_pods_start
@@ -243,13 +245,13 @@ kadalu_operator)
 test_kadalu)
     date
 
-    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 191
+    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 90
 
-    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 191
+    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 90
+    
+    #get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 60
 
-    #get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 131
-
-    get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 2 131
+    get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 2 90
 
     cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
     sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
@@ -258,11 +260,10 @@ test_kadalu)
     kubectl apply -f /tmp/kadalu-storage.yaml
 
     sleep 5;
+    echo "After modification"
     wait_till_pods_start
 
-    echo "After modification"
-
-    #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 191
+    #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 60
 
     # Log everything so we are sure if things are as expected
     for p in $(kubectl -n kadalu get pods -o name); do

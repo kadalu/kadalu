@@ -4,7 +4,6 @@ Starts Gluster Brick(fsd) process
 import os
 import uuid
 import sys
-import json
 import logging
 
 from jinja2 import Template
@@ -62,25 +61,23 @@ def set_volume_id_xattr(brick_path, volume_id):
         sys.exit(1)
 
 
-def generate_brick_volfile(volfile_path, volname):
+def generate_brick_volfile(volfile_path, volname, volume_id, brick_path):
     """
     Generate Volfile based on Volinfo stored in Config map
     For now, Generated Volfile is used in configmap
     """
-    data = {}
-    with open(os.path.join(VOLINFO_DIR, "%s.info" % volname)) as info_file:
-        data = json.load(info_file)
-
     content = ""
-    template_file = os.path.join(
-        TEMPLATES_DIR,
-        "%s.brick%s.vol.j2" % (data["type"], os.environ["BRICK_INDEX"])
-    )
+    template_file = os.path.join(TEMPLATES_DIR, "brick.vol.j2")
     with open(template_file) as tmpl_file:
         content = tmpl_file.read()
 
-    tmpl = Template(content)
+    data = {}
+    # Brick volfile needs only these 3 parameters
+    data["volname"] = volname
+    data["volume_id"] = volume_id
+    data["brick_path"] = brick_path
 
+    tmpl = Template(content)
     tmpl.stream(**data).dump(volfile_path)
 
 
@@ -102,49 +99,48 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
                 mode=0o755,
                 exist_ok=True)
 
-    if brickfs == "xfs":
-        try:
-            execute("mount", "-oprjquota", "-t", "xfs", brick_device, mountdir)
-        except CommandException as err:
-            if 'wrong fs type' in err.err:
-                # This error pops up when we do mount on an empty device or wrong fs
-                # Try doing a mkfs and try mount
+    try:
+        execute("mount", brick_device, mountdir)
+    except CommandException as err:
+        if 'wrong fs type' in err.err:
+            # This error pops up when we do mount on an empty device or wrong fs
+            # Try doing a mkfs and try mount
+            try:
+                execute("mkfs.xfs", brick_device)
+            except CommandException as err:
+                if "appears to contain an existing filesystem" not in err.err:
+                    logging.error(logf(
+                        "Failed to create file system",
+                        fstype=brickfs,
+                        device=brick_device,
+                    ))
+                    sys.exit(1)
+                else:
+                    pass
                 try:
-                    execute("mkfs.xfs", brick_device)
+                    execute("mount", brick_device, mountdir)
                 except CommandException as err:
-                    if "appears to contain an existing filesystem" not in err.err:
-                        logging.error(logf(
-                            "Failed to create file system",
-                            fstype=brickfs,
-                            device=brick_device,
-                        ))
-                        sys.exit(1)
-                    else:
-                        pass
-                    try:
-                        execute("mount", "-oprjquota", "-t", "xfs", brick_device, mountdir)
-                    except CommandException as err:
-                        logging.error(logf(
-                            "Failed to mount export brick (after mkfs)",
-                            fstype=brickfs,
-                            device=brick_device,
-                            mountdir=mountdir,
-                            error=err,
-                        ))
-                        sys.exit(1)
+                    logging.error(logf(
+                        "Failed to mount export brick (after mkfs)",
+                        fstype=brickfs,
+                        device=brick_device,
+                        mountdir=mountdir,
+                        error=err,
+                    ))
+                    sys.exit(1)
 
-            elif 'already mounted' not in err.err:
-                logging.error(logf(
-                    "Failed to mount export brick",
-                    fstype=brickfs,
-                    device=brick_device,
-                    mountdir=mountdir,
-                    error=err,
-                ))
-                sys.exit(1)
+        elif 'already mounted' not in err.err:
+            logging.error(logf(
+                "Failed to mount export brick",
+                fstype=brickfs,
+                device=brick_device,
+                mountdir=mountdir,
+                error=err,
+            ))
+            sys.exit(1)
 
-            else:
-                pass
+        else:
+            pass
 
 
 def start_args():
@@ -170,7 +166,7 @@ def start_args():
 
     volfile_id = "%s.%s.%s" % (volname, nodename, brick_path_name)
     volfile_path = os.path.join(VOLFILES_DIR, "%s.vol" % volfile_id)
-    generate_brick_volfile(volfile_path, volname)
+    generate_brick_volfile(volfile_path, volname, volume_id, brick_path)
 
     # UID is stored at the time of installation in configmap.
     uid = None
@@ -184,7 +180,7 @@ def start_args():
 
     return Proc(
         "glusterfsd",
-        "/usr/sbin/glusterfsd",
+        "/opt/sbin/glusterfsd",
         [
             "-N",
             "--volfile-id", volfile_id,

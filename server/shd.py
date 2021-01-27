@@ -21,6 +21,18 @@ def generate_shd_volfile(client_volfile, volname, voltype):
     with open(info_file_path) as info_file:
         data = json.load(info_file)
 
+    # Tricky to get this right, but this solves all the elements of distribute in code :-)
+    data['dht_subvol'] = []
+    if data["type"] == "Replica1":
+        for brick in data["bricks"]:
+            data["dht_subvol"].append("%s-client-%d" % (data["volname"], brick["brick_index"]))
+    else:
+        count = 3
+        if data["type"] == "Replica2":
+            count = 2
+        for i in range(0, int(len(data["bricks"]) / count)):
+            data["dht_subvol"].append("%s-replica-%d" % (data["volname"], i))
+
     template_file_path = os.path.join(TEMPLATES_DIR,
                                       "%s.shd.vol.j2" % voltype)
     content = ""
@@ -42,7 +54,7 @@ def start_args():
 
     return Proc(
         "shd",
-        "/usr/sbin/glusterfs",
+        "/opt/sbin/glusterfs",
         [
             "-N",
             "--volfile-id", "gluster/glustershd",
