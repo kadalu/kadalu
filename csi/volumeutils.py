@@ -906,9 +906,9 @@ def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None, is_clien
         "-l", "%s" % log_file,
         "--volfile-id", volname,
     ]
-    # on server component we can mount glusterfs with client-pid
-    if not is_client:
-        cmd.extend(["--client-pid", "-14"])
+    ## on server component we can mount glusterfs with client-pid
+    #if not is_client:
+    #    cmd.extend(["--client-pid", "-14"])
 
     for host in hosts.split(','):
         cmd.extend(["--volfile-server", host])
