@@ -20,9 +20,7 @@ it can setup the Storage within operator itself.
 
 [`minikube`](https://kubernetes.io/docs/setup/minikube/) is a good way to get a hang of k8s for beginners. If you already have a k8s setup available to test out, skip this step, and goto [Next step](#try-kadalu)
 
-You can follow ['Install minikube'](https://kubernetes.io/docs/tasks/tools/install-minikube/) document to setup minikube. Please note that right now (k8s - 1.14.0) there seems to be some issues with default 'minikube', and hence please use only `--vm-driver=none` option.
-
-To get your minikube host (can be VM image too) setup,, please follow link [here.](https://docs.docker.com/install/linux/docker-ce/fedora/) which lists all the required steps to get started.
+You can follow ['Install minikube'](https://kubernetes.io/docs/tasks/tools/install-minikube/) document to setup minikube. Please note that if you are using `minikube version` below 1.17.0, use `--vm-driver=none` option. More on this issue is recorded at [kadalu/issue#351](https://github.com/kadalu/kadalu/issues/351).
 
 ## Try kadalu
 
@@ -125,7 +123,8 @@ As we use glusterfs as storage backend, without any sharding/striping/disperse m
 
 ### On upgrade
 
-As long as glusterfs promises to keep the backend layout same, and continue to provide storage after upgrade, we don't see any issue with upgrade. Currently our operator is not checking for newer versions and upgrading itself, but just killing the brick pod when new version is available should fetch new pod and start it back all fine.
+As long as glusterfs promises to keep the backend layout same, and continue to provide storage after upgrade, we don't see any issue with upgrade. Currently one known issue is that our operator is not checking for heal pending count while upgrading storage pods.
+
 
 ### Gluster and Kadalu
 
