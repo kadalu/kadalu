@@ -846,13 +846,14 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             "--process-name", "fuse",
             "-l", log_file,
             "--volfile-id", volume['name'],
+            "--fs-display-name", "kadalu:%s" % volume['name'],
             "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volume['name']),
             mountpoint
         ]
 
-        # required for 'simple-quota'
-        if not is_client:
-            cmd.extend(["--client-pid", "-14"])
+        ## required for 'simple-quota'
+        # if not is_client:
+        #    cmd.extend(["--client-pid", "-14"])
 
         try:
             execute(*cmd)

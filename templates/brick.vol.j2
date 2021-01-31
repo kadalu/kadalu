@@ -32,6 +32,7 @@ end-volume
 volume {{ volname }}-quota
     type features/simple-quota
     option pass-through false
+    option cmd-from-all-client true
     subvolumes {{ volname }}-locks
 end-volume
 
