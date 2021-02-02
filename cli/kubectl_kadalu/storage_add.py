@@ -172,7 +172,7 @@ def storage_add_data(args):
 
     # External details are specified, no 'storage' section required
     if args.external:
-        node, vol = args.external.split(":")
+        node, vol = args.external.split(":", 1)
         nodes = node.split(',')
         content["spec"]["details"] = {
             "gluster_hosts": nodes,
@@ -187,7 +187,7 @@ def storage_add_data(args):
     # Device details are specified
     if args.device:
         for devdata in args.device:
-            node, dev = devdata.split(":")
+            node, dev = devdata.split(":", 1)
             content["spec"]["storage"].append(
                 {
                     "node": node,
@@ -198,7 +198,7 @@ def storage_add_data(args):
     # If Path is specified
     if args.path:
         for pathdata in args.path:
-            node, path = pathdata.split(":")
+            node, path = pathdata.split(":", 1)
             content["spec"]["storage"].append(
                 {
                     "node": node,
@@ -217,7 +217,7 @@ def storage_add_data(args):
 
     # TODO: Support for different port can be added later
     if args.type == "Replica2":
-        node, path = args.tiebreaker.split(":")
+        node, path = args.tiebreaker.split(":", 1)
         content["spec"]["tiebreaker"] = {
             "node": node,
             "path": path,
