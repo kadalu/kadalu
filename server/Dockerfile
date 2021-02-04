@@ -2,6 +2,9 @@ FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
+    apt install software-properties-common -y && \
+    apt-add-repository -y ppa:gluster/glusterfs-8 && \
+    apt-get update -yq && \
     apt-get install --no-install-recommends -y python3.8 xfsprogs \
     net-tools telnet wget e2fsprogs python3-pip sqlite gcc python3-dev \
     python3-pyxattr glusterfs-server libffi-dev libssl-dev \
