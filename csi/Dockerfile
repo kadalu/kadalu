@@ -4,6 +4,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV GRPC_PYTHON_BUILD_EXT_COMPILER_JOBS 8
 
 RUN apt-get update -yq && \
+    apt install software-properties-common -y && \
+    apt-add-repository -y ppa:gluster/glusterfs-8 && \
+    apt-get update -yq && \
     apt-get install --no-install-recommends -y python3.8 xfsprogs \
     net-tools telnet wget e2fsprogs python3-pip sqlite python3-dev \
     glusterfs-client build-essential gcc g++ && \
