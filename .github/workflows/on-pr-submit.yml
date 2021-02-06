@@ -53,9 +53,12 @@ jobs:
           sudo mkdir -p /mnt/bricks
           sudo netstat -ntlp
           sudo glusterd || echo "Starting glusterd manually failed"
-          sudo sed -i -e "/s/external.kadalu.io/$(minikube ip | cut -f1,2,3 -d'.').1/g" tests/storage-add.yaml
-          sudo gluster volume create kadalu $(echo $(minikube ip | cut -f1,2,3 -d'.').1):/mnt/bricks/1
-          sudo gluster volume start kadalu
+          export IP="$(echo $(sudo minikube ip | cut -f1,2,3 -d'.').1)" || export IP="10.1.0.1" && \
+          echo $IP && \
+          sudo gluster peer probe $IP && \
+          sudo sed -i -e "s/external.kadalu.io/$IP/g" tests/storage-add.yaml && \
+          sudo gluster volume create kadalu $IP:/mnt/bricks/1 || echo "Failed to create gluster export"
+          sudo gluster volume start kadalu || echo "Failed to start gluster export"
           sudo gluster volume info
     - name: Run tests
       run: tests/travis-test.sh v1.20.0
