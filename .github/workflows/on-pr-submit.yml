@@ -53,10 +53,10 @@ jobs:
           sudo mkdir -p /mnt/bricks
           sudo netstat -ntlp
           sudo glusterd || echo "Starting glusterd manually failed"
-          sudo grep -q external.kadalu.io /etc/hosts || sudo sh -c "echo $(minikube ip | cut -f1,2,3 -d'.').1 external.kadalu.io >> /etc/hosts"
-          sudo sed -i -e "/s/external.kadalu.io/$(minikube ip | cut -f1,2,3 -d'.').1/g' tests/storage-add.yaml
+          sudo sed -i -e "/s/external.kadalu.io/$(minikube ip | cut -f1,2,3 -d'.').1/g" tests/storage-add.yaml
           sudo gluster volume create kadalu $(echo $(minikube ip | cut -f1,2,3 -d'.').1):/mnt/bricks/1
           sudo gluster volume start kadalu
+          sudo gluster volume info
     - name: Run tests
       run: tests/travis-test.sh v1.20.0
     - name: Cleanup
