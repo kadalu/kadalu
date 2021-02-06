@@ -58,6 +58,6 @@ spec:
   type: External
   details:
     gluster_hosts:
-      - gluster1.kadalu.io
+      - external.kadalu.io
     gluster_volname: kadalu
     gluster_options: log-level=DEBUG

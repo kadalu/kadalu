@@ -44,8 +44,20 @@ jobs:
       run: VERBOSE="true" make gen-manifest
     - name: Setup Minikube
       run: tests/setup.sh v1.20.0
+    - name: setup glusterfs on host
+      run: |
+          sudo apt install software-properties-common -y
+          sudo apt-add-repository -y ppa:gluster/glusterfs-8
+          sudo apt-get update -yq
+          sudo apt install glusterfs-server
+          sudo mkdir -p /mnt/bricks
+          sudo netstat -ntlp
+          sudo glusterd || echo "Starting glusterd manually failed"
+          sudo grep -q external.kadalu.io /etc/hosts || sudo sh -c "echo $(minikube ip | cut -f1,2,3 -d'.').1 external.kadalu.io >> /etc/hosts"
+          sudo sed -i -e "/s/external.kadalu.io/$(minikube ip | cut -f1,2,3 -d'.').1/g' tests/storage-add.yaml
+          sudo gluster volume create kadalu $(echo $(minikube ip | cut -f1,2,3 -d'.').1):/mnt/bricks/1
+          sudo gluster volume start kadalu
     - name: Run tests
       run: tests/travis-test.sh v1.20.0
     - name: Cleanup
       run: tests/cleanup.sh v1.20.0
-
