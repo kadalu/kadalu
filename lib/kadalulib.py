@@ -6,6 +6,7 @@ import sys
 import os
 import time
 import sqlite3
+import signal
 
 import xxhash
 
@@ -267,3 +268,105 @@ class SizeAccounting:
             "used_size_bytes": used_size_bytes,
             "free_size_bytes": total_size_bytes - used_size_bytes
         }
+
+
+class Proc:
+    def __init__(self, name, command, args):
+        self.name = name
+        self.command = command
+        self.args = args
+
+    def with_args(self):
+        return [self.command] + self.args
+
+
+class ProcState:
+    def __init__(self, proc):
+        self.proc = proc
+        self.enabled = True
+        self.subproc = None
+
+    def start(self):
+        self.subproc = subprocess.Popen(
+            self.proc.with_args(),
+            stderr=sys.stderr,
+            universal_newlines=True,
+            env=os.environ
+        )
+
+    def stop(self):
+        if self.subproc is not None:
+            self.subproc.kill()
+            self.subproc.communicate()
+            self.subproc = None
+
+    def restart(self):
+        self.stop()
+        self.start()
+
+
+class Monitor:
+    def __init__(self, procs=None):
+        self.procs = {}
+        self.terminating = False
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
+        if procs is not None:
+            for proc in procs:
+                self.procs[proc.name] = ProcState(proc)
+
+    def add_process(self, proc):
+        self.procs[proc.name] = ProcState(proc)
+
+    def start_all(self):
+        for name, state in self.procs.items():
+            state.start()
+            print("Started %s" % state.proc.name)
+
+    def stop_all(self):
+        for name, state in self.procs.items():
+            state.stop()
+            print("Stopped %s" % state.proc.name)
+
+    def restart_all(self):
+        for name, state in self.procs.items():
+            state.restart()
+            print("Restarted %s" % state.proc.name)
+
+    def exit_gracefully(self, signum, frame):
+        self.terminating = True
+
+    def monitor_proc(self, name, state, terminating):
+        if not state.enabled:
+            return
+
+        if terminating:
+            state.stop()
+            print("Terminated %s" % state.proc.name)
+            return
+
+        ret = state.subproc.poll()
+        if ret is None:
+            return
+
+        if not terminating:
+            state.restart()
+            print("Restarted %s" % state.proc.name)
+
+    def monitor(self):
+        try:
+            while True:
+                terminating = self.terminating
+
+                for name, state in self.procs.items():
+                    self.monitor_proc(name, state, terminating)
+
+                if terminating:
+                    print("Terminating Monitor process")
+                    sys.exit(0)
+                    break
+
+                time.sleep(1)
+        except KeyboardInterrupt:
+            self.terminating = True
+            sys.exit(1)
