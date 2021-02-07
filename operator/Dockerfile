@@ -30,6 +30,7 @@ COPY templates/external-storageclass.yaml.j2         /kadalu/templates/external-
 COPY lib/kadalulib.py                       /kadalu/kadalulib.py
 COPY cli/kubectl_kadalu/utils.py            /kadalu/utils.py
 COPY operator/main.py                       /kadalu/
+COPY operator/start.py                      /kadalu/
 COPY cli/build/kubectl-kadalu               /usr/bin/kubectl-kadalu
 COPY lib/startup.sh                         /kadalu/startup.sh
 
@@ -48,7 +49,7 @@ LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="kadalu"
 LABEL version="${version}"
 
-ENTRYPOINT ["/kadalu/startup.sh", "/usr/bin/python3", "/kadalu/main.py"]
+ENTRYPOINT ["/usr/bin/python3", "/kadalu/start.py"]
 
 # Debugging, Comment the above line and
 # uncomment below line

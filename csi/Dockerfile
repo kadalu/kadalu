@@ -27,6 +27,7 @@ COPY csi/csi_pb2_grpc.py       /kadalu/
 COPY csi/csi_pb2.py            /kadalu/
 COPY csi/identityserver.py     /kadalu/
 COPY csi/main.py               /kadalu/
+COPY csi/start.py              /kadalu/
 COPY csi/nodeserver.py         /kadalu/
 COPY csi/volumeutils.py        /kadalu/
 COPY lib/startup.sh            /kadalu/
@@ -50,7 +51,7 @@ LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="kadalu"
 LABEL version="${version}"
 
-ENTRYPOINT ["/kadalu/startup.sh", "/usr/bin/python3", "/kadalu/main.py"]
+ENTRYPOINT ["/usr/bin/python3", "/kadalu/start.py"]
 
 # Debugging, Comment the above line and
 # uncomment below line

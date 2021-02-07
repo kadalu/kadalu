@@ -37,12 +37,8 @@ spec:
 {%- endif %}
 
       containers:
-        - name: glusterfsd
+        - name: server
           image: docker.io/{{ docker_user }}/kadalu-server:{{ kadalu_version }}
-          lifecycle:
-            preStop:
-              exec:
-                command: ["/kadalu/stop-server.sh", "{{ volname }}"]
           readinessProbe:
             tcpSocket:
               port: 24007
@@ -57,6 +53,10 @@ spec:
 {%- if kube_hostname != "" %}
             - name: HOSTNAME
               value: {{ kube_hostname }}
+{%- endif %}
+{%- if shd_required %}
+            - name: SHD_REQUIRED
+              value: "1"
 {%- endif %}
             - name: VOLUME
               value: {{ volname }}
@@ -78,6 +78,8 @@ spec:
               value: "{{ k8s_dist }}"
             - name: VERBOSE
               value: "{{ verbose }}"
+            - name: SUBVOL_ROOT
+              value: "subvol"
           securityContext:
             capabilities: {}
             privileged: true
@@ -96,88 +98,9 @@ spec:
               mountPath: "/var/lib/gluster"
             - name: glusterfsd-mountdir
               mountPath: "/bricks/{{ volname }}"
-              mountPropagation: Bidirectional
 {%- if brick_device_dir != "" %}
             - name: brick-device-dir
               mountPath: "/brickdev"
-{%- endif %}
-
-        - name: quotad
-          image: docker.io/{{ docker_user }}/kadalu-server:{{ kadalu_version }}
-          env:
-{%- if kube_hostname != "" %}
-            - name: HOSTNAME
-              value: {{ kube_hostname }}
-{%- endif %}
-            - name: VOLUME
-              value: {{ volname }}
-            - name: VOLUME_TYPE
-              value: {{ voltype }}
-            - name: BRICK_PATH
-              value: {{ brick_path }}
-            - name: NODEID
-              value: {{ brick_node_id }}
-            - name: VOLUME_ID
-              value: {{ volume_id }}
-            - name: BRICK_INDEX
-              value: "{{ brick_index }}"
-            - name: KADALU_SERVER_ROLE
-              value: "quotad"
-            - name: SUBVOL_ROOT
-              value: "subvol"
-            - name: BRICK_DEVICE
-              value: "{{ brick_device }}"
-            - name: KADALU_VERSION
-              value: "{{ kadalu_version }}"
-            - name: K8S_DIST
-              value: "{{ k8s_dist }}"
-            - name: VERBOSE
-              value: "{{ verbose }}"
-          securityContext:
-            capabilities: {}
-            privileged: true
-          volumeMounts:
-            - name: glusterfsd-mountdir
-              mountPath: "/bricks/{{ volname }}"
-              mountPropagation: Bidirectional
-{%- if shd_required %}
-        - name: shd
-          image: docker.io/{{ docker_user }}/kadalu-server:{{ kadalu_version }}
-          env:
-{%- if kube_hostname != "" %}
-            - name: HOSTNAME
-              value: {{ kube_hostname }}
-{%- endif %}
-            - name: VOLUME
-              value: {{ volname }}
-            - name: VOLUME_TYPE
-              value: {{ voltype }}
-            - name: BRICK_PATH
-              value: {{ brick_path }}
-            - name: NODEID
-              value: {{ brick_node_id }}
-            - name: VOLUME_ID
-              value: {{ volume_id }}
-            - name: BRICK_INDEX
-              value: "{{ brick_index }}"
-            - name: KADALU_SERVER_ROLE
-              value: "shd"
-            - name: SUBVOL_ROOT
-              value: "subvol"
-            - name: BRICK_DEVICE
-              value: "{{ brick_device }}"
-            - name: KADALU_VERSION
-              value: "{{ kadalu_version }}"
-            - name: K8S_DIST
-              value: "{{ k8s_dist }}"
-            - name: VERBOSE
-              value: "{{ verbose }}"
-          securityContext:
-            capabilities: {}
-            privileged: true
-          volumeMounts:
-            - name: glusterfsd-volfilesdir
-              mountPath: "/var/lib/gluster"
 {%- endif %}
       volumes:
         - name: gluster-dev

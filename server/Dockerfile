@@ -60,7 +60,7 @@ LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="kadalu"
 LABEL version="${version}"
 
-ENTRYPOINT ["/kadalu/startup.sh", "/usr/bin/python3", "/kadalu/server.py"]
+ENTRYPOINT ["/usr/bin/python3", "/kadalu/server.py"]
 
 # Debugging, Comment the above line and
 # uncomment below line

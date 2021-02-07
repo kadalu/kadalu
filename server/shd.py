@@ -6,6 +6,8 @@ import json
 
 from jinja2 import Template
 
+from kadalulib import Proc
+
 
 VOLFILES_DIR = "/kadalu/volfiles"
 TEMPLATES_DIR = "/kadalu/templates"
@@ -28,7 +30,7 @@ def generate_shd_volfile(client_volfile, volname, voltype):
     Template(content).stream(**data).dump(client_volfile)
 
 
-def start():
+def start_args():
     """
     Start the Gluster Self-Heal Process
     """
@@ -38,10 +40,10 @@ def start():
     volfile_path = os.path.join(VOLFILES_DIR, "glustershd.vol")
     generate_shd_volfile(volfile_path, volname, voltype)
 
-    os.execv(
+    return Proc(
+        "shd",
         "/usr/sbin/glusterfs",
         [
-            "/usr/sbin/glusterfs",
             "-N",
             "--volfile-id", "gluster/glustershd",
             "-p", "/var/run/gluster/glustershd.pid",
@@ -52,6 +54,3 @@ def start():
             "-f", volfile_path
         ]
     )
-
-if __name__ == "__main__":
-    start()

@@ -270,23 +270,28 @@ class SizeAccounting:
         }
 
 
+# noqa # pylint: disable=too-few-public-methods
 class Proc:
+    """Handle Process details"""
     def __init__(self, name, command, args):
         self.name = name
         self.command = command
         self.args = args
 
     def with_args(self):
+        """Return command and args together to use in Popen"""
         return [self.command] + self.args
 
 
 class ProcState:
+    """Handle Process states"""
     def __init__(self, proc):
         self.proc = proc
         self.enabled = True
         self.subproc = None
 
     def start(self):
+        """Start a Process"""
         self.subproc = subprocess.Popen(
             self.proc.with_args(),
             stderr=sys.stderr,
@@ -295,17 +300,20 @@ class ProcState:
         )
 
     def stop(self):
+        """Stop a Process"""
         if self.subproc is not None:
             self.subproc.kill()
             self.subproc.communicate()
             self.subproc = None
 
     def restart(self):
+        """Restart a Process"""
         self.stop()
         self.start()
 
 
 class Monitor:
+    """Start and Monitor multiple processes"""
     def __init__(self, procs=None):
         self.procs = {}
         self.terminating = False
@@ -316,27 +324,34 @@ class Monitor:
                 self.procs[proc.name] = ProcState(proc)
 
     def add_process(self, proc):
+        """Add a Process to the list of Monitored processes"""
         self.procs[proc.name] = ProcState(proc)
 
     def start_all(self):
+        """Start all Managed Processes"""
         for name, state in self.procs.items():
             state.start()
-            print("Started %s" % state.proc.name)
+            print("Started %s" % name)
 
     def stop_all(self):
+        """Stop all Managed Processes"""
         for name, state in self.procs.items():
             state.stop()
-            print("Stopped %s" % state.proc.name)
+            print("Stopped %s" % name)
 
     def restart_all(self):
+        """Restart all managed Processes"""
         for name, state in self.procs.items():
             state.restart()
-            print("Restarted %s" % state.proc.name)
+            print("Restarted %s" % name)
 
-    def exit_gracefully(self, signum, frame):
+    def exit_gracefully(self, _signum, _frame):
+        """When SIGTERM/SIGINT received"""
         self.terminating = True
 
-    def monitor_proc(self, name, state, terminating):
+    # noqa # pylint: disable=no-self-use
+    def monitor_proc(self, state, terminating):
+        """Monitor single process"""
         if not state.enabled:
             return
 
@@ -354,12 +369,16 @@ class Monitor:
             print("Restarted %s" % state.proc.name)
 
     def monitor(self):
+        """
+        Start monitoring all the started processes.
+        Restart processes on failure
+        """
         try:
             while True:
                 terminating = self.terminating
 
-                for name, state in self.procs.items():
-                    self.monitor_proc(name, state, terminating)
+                for _, state in self.procs.items():
+                    self.monitor_proc(state, terminating)
 
                 if terminating:
                     print("Terminating Monitor process")

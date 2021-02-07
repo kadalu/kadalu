@@ -839,7 +839,7 @@ def deploy_storage_class():
     scs = api_instance.list_storage_class()
     sc_names = []
     for tmpl in os.listdir(MANIFESTS_DIR):
-        if tmpl.startswith("storageclass-"):
+        if tmpl.startswith("storageclass-") and tmpl.endswith(".j2"):
             sc_names.append(
                 tmpl.replace("storageclass-", "").replace(".yaml.j2", "")
             )
