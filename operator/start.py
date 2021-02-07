@@ -1,7 +1,7 @@
 import os
 import sys
 
-from kadalulib import Monitor, Proc
+from kadalulib import Monitor, Proc, logging_setup
 
 
 def main():
@@ -15,4 +15,5 @@ def main():
 
 
 if __name__ == "__main__":
+    logging_setup()
     main()
