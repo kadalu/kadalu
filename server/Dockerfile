@@ -11,7 +11,7 @@ RUN apt-get update -yq && \
     build-essential && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools && \
-    python3 -m pip install jinja2 datetime xxhash && \
+    python3 -m pip install jinja2 datetime xxhash prometheus-client && \
     (python3 -m pip install glustercli || true && echo "External storage Quota feature may not work") && \
     apt-get autoremove --purge -y gcc build-essential python3-pip python3-dev libffi-dev libssl-dev build-essential && \
     apt-get -y clean && \
