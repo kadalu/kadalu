@@ -331,19 +331,19 @@ class Monitor:
         """Start all Managed Processes"""
         for name, state in self.procs.items():
             state.start()
-            print("Started %s" % name)
+            logging.info(logf("Started Process", name=name))
 
     def stop_all(self):
         """Stop all Managed Processes"""
         for name, state in self.procs.items():
             state.stop()
-            print("Stopped %s" % name)
+            logging.info(logf("Stopped Process", name=name))
 
     def restart_all(self):
         """Restart all managed Processes"""
         for name, state in self.procs.items():
             state.restart()
-            print("Restarted %s" % name)
+            logging.info(logf("Restarted Process", name=name))
 
     def exit_gracefully(self, _signum, _frame):
         """When SIGTERM/SIGINT received"""
@@ -357,7 +357,7 @@ class Monitor:
 
         if terminating:
             state.stop()
-            print("Terminated %s" % state.proc.name)
+            logging.info(logf("Terminated Process", name=state.proc.name))
             return
 
         ret = state.subproc.poll()
@@ -366,7 +366,7 @@ class Monitor:
 
         if not terminating:
             state.restart()
-            print("Restarted %s" % state.proc.name)
+            logging.info(logf("Restarted Process", name=state.proc.name))
 
     def monitor(self):
         """
@@ -381,7 +381,7 @@ class Monitor:
                     self.monitor_proc(state, terminating)
 
                 if terminating:
-                    print("Terminating Monitor process")
+                    logging.info("Terminating Monitor process")
                     sys.exit(0)
                     break
 

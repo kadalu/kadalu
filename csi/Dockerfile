@@ -28,6 +28,7 @@ COPY csi/csi_pb2.py            /kadalu/
 COPY csi/identityserver.py     /kadalu/
 COPY csi/main.py               /kadalu/
 COPY csi/start.py              /kadalu/
+COPY csi/exporter.py           /kadalu/
 COPY csi/nodeserver.py         /kadalu/
 COPY csi/volumeutils.py        /kadalu/
 COPY lib/startup.sh            /kadalu/
