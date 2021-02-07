@@ -10,7 +10,8 @@ import logging
 from jinja2 import Template
 import xattr
 
-from kadalulib import execute, CommandException, logf, send_analytics_tracker
+from kadalulib import execute, CommandException, logf, \
+     send_analytics_tracker, Proc
 
 
 VOLUME_ID_XATTR_NAME = "trusted.glusterfs.volume-id"
@@ -146,9 +147,10 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
                 pass
 
 
-def start():
+def start_args():
     """
-    Start the Gluster Brick Process
+    Prepare the things required for Brick Start and Returns the Proc
+    object required to start Brick Process.
     """
 
     brick_device = os.environ.get("BRICK_DEVICE", None)
@@ -180,10 +182,10 @@ def start():
     # developers to understand and build project in a better way
     send_analytics_tracker("server", uid)
 
-    os.execv(
+    return Proc(
+        "glusterfsd",
         "/usr/sbin/glusterfsd",
         [
-            "/usr/sbin/glusterfsd",
             "-N",
             "--volfile-id", volfile_id,
             "-p", "/var/run/gluster/glusterfsd-%s.pid" % brick_path_name,
