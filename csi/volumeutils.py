@@ -852,8 +852,8 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
         ]
 
         ## required for 'simple-quota'
-        # if not is_client:
-        #    cmd.extend(["--client-pid", "-14"])
+        if not is_client:
+            cmd.extend(["--client-pid", "-14"])
 
         try:
             execute(*cmd)
@@ -948,8 +948,6 @@ def check_external_volume(pv_request, host_volumes):
     hvol = None
     for vol in host_volumes:
         if vol["type"] != "External":
-            continue
-        if vol["g_volname"] != params.get("gluster_volname", None):
             continue
 
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, vol["name"])
