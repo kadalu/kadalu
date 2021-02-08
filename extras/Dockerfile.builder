@@ -18,7 +18,7 @@ RUN apt-get update -yq && \
     python3 -m venv $VIRTUAL_ENV && cd /kadalu && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools && \
-    pip install glustercli grpcio kubernetes==11.0.0 \
+    pip install glustercli grpcio kubernetes==11.0.0 prometheus-client \
     jinja2 requests datetime xxhash googleapis-common-protos pyxattr && \
     apt-get autoremove --allow-remove-essential --purge -y curl xfsprogs net-tools telnet wget \
     python3-pip sqlite build-essential g++ python3-dev flex bison openssl libssl-dev libtirpc-dev liburcu-dev \
