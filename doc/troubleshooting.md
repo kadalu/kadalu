@@ -82,3 +82,9 @@ If PVC is successfully created, but it failed to move to `Bound` state, then thi
 ### server-*-N
 
 These are the pods, which has `glusterfsd` processes running, exporting the storage provided in storage config. One may need to check the logs of server too if PVC creation.
+
+### All pods' log using CLI
+
+If you have installed `kubectl_kadalu` package, then you can do below to get the logs of all pods running in kadalu namespace. It is helpful when one is not sure where to look for errors.
+
+`kubectl kadalu logs`
