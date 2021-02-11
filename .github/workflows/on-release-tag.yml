@@ -99,18 +99,21 @@ jobs:
             --file extras/Dockerfile.builder .
           KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
             --platform linux/amd64 \
+            --target prod \
             --tag docker.io/kadalu/kadalu-csi:${{ env.kadalu_version }} \
             --tag docker.io/kadalu/kadalu-csi:latest \
             --output "type=image,name=docker.io/kadalu/kadalu-csi,push=true" \
             --file csi/Dockerfile.frombuilder .
           KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
             --platform linux/amd64 \
+            --target prod \
             --tag docker.io/kadalu/kadalu-operator:${{ env.kadalu_version }} \
             --tag docker.io/kadalu/kadalu-operator:latest \
             --output "type=image,name=docker.io/kadalu/kadalu-operator,push=true" \
             --file operator/Dockerfile.frombuilder .
           KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
             --platform linux/amd64 \
+            --target prod \
             --tag docker.io/kadalu/kadalu-server:${{ env.kadalu_version }} \
             --tag docker.io/kadalu/kadalu-server:latest \
             --output "type=image,name=docker.io/kadalu/kadalu-server,push=true" \

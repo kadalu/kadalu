@@ -52,6 +52,7 @@ function build_container()
                  "${build_args[@]}" \
                  --network host \
                  -f "$DOCKERFILE" \
+                 --target prod
                  . || exit 1
 }
 
