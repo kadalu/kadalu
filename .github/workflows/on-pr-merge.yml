@@ -52,7 +52,7 @@ jobs:
           context: .
           file: csi/Dockerfile.frombuilder
           platforms: linux/amd64
-          builder: prod
+          target: prod
           push: true
           tags: |
             docker.io/kadalu/kadalu-csi:${{ github.sha }}
@@ -70,7 +70,7 @@ jobs:
           context: .
           file: operator/Dockerfile.frombuilder
           platforms: linux/amd64
-          builder: prod
+          target: prod
           push: true
           tags: |
             docker.io/kadalu/kadalu-operator:${{ github.sha }}
@@ -88,7 +88,7 @@ jobs:
           context: .
           file: server/Dockerfile.frombuilder
           platforms: linux/amd64
-          builder: prod
+          target: prod
           push: true
           tags: |
             docker.io/kadalu/kadalu-server:${{ github.sha }}
