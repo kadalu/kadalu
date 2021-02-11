@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 prod
+FROM ubuntu:20.04 as prod
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
