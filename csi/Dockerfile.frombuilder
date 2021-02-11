@@ -30,6 +30,7 @@ COPY csi/nodeserver.py         /kadalu/
 COPY csi/volumeutils.py        /kadalu/
 COPY lib/startup.sh            /kadalu/
 COPY csi/quota-crawler.sh      /kadalu/
+COPY csi/heal-info.sh          /kadalu/
 
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/
 COPY templates/Replica2.client.vol.j2 /kadalu/templates/

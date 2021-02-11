@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 
 import logs
 import install
+import healinfo
 import storage_add
 import storage_list
 import storage_remove
@@ -21,6 +22,7 @@ def get_args():
     subparsers = parser.add_subparsers(dest="mode")
 
     logs.set_args("logs", subparsers)
+    healinfo.set_args("logs", subparsers)
     install.set_args("install", subparsers)
     storage_add.set_args("storage-add", subparsers)
     storage_list.set_args("storage-list", subparsers)
@@ -61,6 +63,9 @@ def main():
         if args.mode == "logs":
             logs.validate(args)
             logs.run(args)
+        if args.mode == "healinfo":
+            healinfo.validate(args)
+            healinfo.run(args)
     except KeyboardInterrupt:
         return
 
