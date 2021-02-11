@@ -11,17 +11,10 @@ volume {{ volname }}-changelog
     subvolumes {{ volname }}-posix
 end-volume
 
-volume {{ volname }}-bitrot-stub
-    type features/bitrot-stub
-    option bitrot off
-    option export {{ brick_path }}
-    subvolumes {{ volname }}-changelog
-end-volume
-
 volume {{ volname }}-access-control
     type features/access-control
     option super-uid 0
-    subvolumes {{ volname }}-bitrot-stub
+    subvolumes {{ volname }}-changelog
 end-volume
 
 volume {{ volname }}-locks
