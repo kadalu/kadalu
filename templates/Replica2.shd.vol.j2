@@ -1,189 +1,57 @@
-volume {{ volname }}-replicate-0-client-0
-    type protocol/client
-    option opversion 70000
-    option clnt-lk-version 1
-    option volfile-checksum 0
-    option volfile-key /{{ volname }}
-    option client-version 7dev
-    option process-name fuse
-    option process-uuid CTX_ID:9adfef22-2e0c-411f-a979-de075cb3b0db-GRAPH_ID:0-PID:5043-HOST:{{ bricks[0]["node"] }}-PC_NAME:{{ volname }}-replicate-0-client-0-RECON_NO:-0
-    option fops-version 1298437
-    option transport.socket.ssl-enabled off
-    option transport.socket.keepalive-time 20
-    option transport.socket.lowlat off
-    option event-threads 2
-    option transport.tcp-user-timeout 42
-    option transport.socket.keepalive-interval 2
-    option non-blocking-io off
-    option remote-subvolume {{ bricks[0]["brick_path"] }}
-    option transport.socket.keepalive-count 9
-    option filter-O_DIRECT disable
-    option remote-host {{ bricks[0]["node"] }}
-    option transport.socket.nodelay 1
-    option send-gids on
-    option ping-timeout 42
-    option client-bind-insecure off
-    option transport.socket.own-thread off
-    option transport.listen-backlog 1024
-    option frame-timeout 1800
-    option transport-type socket
-    option transport.socket.read-fail-log off
-    option transport.socket.keepalive 1
-end-volume
-
-volume {{ volname }}-replicate-0-client-1
-    type protocol/client
-    option opversion 70000
-    option clnt-lk-version 1
-    option volfile-checksum 0
-    option volfile-key /{{ volname }}
-    option client-version 7dev
-    option process-name fuse
-    option process-uuid CTX_ID:9adfef22-2e0c-411f-a979-de075cb3b0db-GRAPH_ID:0-PID:5043-HOST:{{ bricks[1]["node"] }}-PC_NAME:{{ volname }}-replicate-0-client-1-RECON_NO:-0
-    option fops-version 1298437
-    option transport.socket.ssl-enabled off
-    option frame-timeout 1800
-    option remote-host {{ bricks[1]["node"] }}
-    option non-blocking-io off
-    option remote-subvolume {{ bricks[1]["brick_path"] }}
-    option transport.socket.lowlat off
-    option transport.tcp-user-timeout 42
-    option transport.socket.read-fail-log off
-    option transport.socket.nodelay 1
-    option event-threads 2
-    option send-gids on
-    option transport.socket.own-thread off
-    option client-bind-insecure off
-    option filter-O_DIRECT disable
-    option transport-type socket
-    option transport.socket.keepalive-interval 2
-    option transport.socket.keepalive-count 9
-    option transport.socket.keepalive-time 20
-    option transport.socket.keepalive 1
-    option transport.listen-backlog 1024
-    option ping-timeout 42
-end-volume
-
 volume {{ volume_id }}-ta
     type protocol/client
-    option opversion 70000
-    option clnt-lk-version 1
-    option volfile-checksum 0
-    option client-version 7dev
-    option process-name fuse
-    option process-uuid CTX_ID:9adfef22-2e0c-411f-a979-de075cb3b0db-GRAPH_ID:0-PID:5043-HOST:ta-PC_NAME:{{ volname }}-ta-RECON_NO
-    option fops-version 1298437
-    option transport-type socket
-    option transport.listen-backlog 1024
     option remote-host {{ tiebreaker["node"] }}
     option remote-port {{ tiebreaker["port"] }}
     option remote-subvolume {{ tiebreaker["path"] }}
-    option transport.socket.keepalive-count 9
-    option transport.socket.own-thread off
-    option transport.socket.nodelay 1
-    option transport.socket.keepalive-time 20
-    option transport.tcp-user-timeout 42
-    option filter-O_DIRECT disable
-    option send-gids on
-    option ping-timeout 42
-    option transport.socket.read-fail-log off
-    option transport.socket.lowlat off
-    option frame-timeout 1800
-    option event-threads 2
-    option transport.socket.keepalive 1
-    option transport.socket.keepalive-interval 2
-    option non-blocking-io off
-    option client-bind-insecure off
-    option transport.socket.ssl-enabled off
 end-volume
 
-volume {{ volname }}-replicate-0
+{% for brick in bricks %}
+volume {{ volname }}-client-{{ brick["brick_index"] }}
+    type protocol/client
+    option volfile-key /{{ volname }}
+    option remote-subvolume {{ brick["brick_path"] }}
+    option remote-host {{ brick["node"] }}
+end-volume
+
+{% endfor %}
+
+{% for i in range(dht_subvol|length) %}
+volume {{ volname }}-replica-{{ i }}
     type cluster/replicate
     option data-self-heal on
-    option halo-enabled False
-    option halo-shd-max-latency 99999
-    option background-self-heal-count 8
-    option afr-dirty-xattr trusted.afr.dirty
-    option granular-entry-heal no
     option iam-self-heal-daemon true
     option pre-op-compat on
     option metadata-self-heal on
     option consistent-io no
-    option favorite-child-policy none
-    option full-lock yes
-    option data-self-heal-window-size 1
-    option post-op-delay-secs 1
     option self-heal-daemon on
-    option optimistic-change-log on
     option choose-local true
-    option ensure-durability on
-    option iam-nfs-daemon off
     option data-change-log on
-    option heal-wait-queue-length 128
-    option read-subvolume-index -1
-    option use-compound-fops no
-    option afr-pending-xattr {{ volname }}-client-0,{{ volname }}-client-1,{{ volume_id }}-ta
-    option self-heal-readdir-size 1KB
-    option eager-lock on
-    option entrylk-trace off
     option entry-self-heal on
-    option shd-wait-qlength 1024
     option consistent-metadata no
     option entry-change-log on
     option metadata-change-log on
-    option halo-min-replicas 2
     option read-hash-mode 5
-    option locking-scheme full
-    option metadata-splitbrain-forced-heal off
-    option shd-max-threads 1
-    option heal-timeout 600
-    option halo-max-replicas 99999
-    option halo-max-latency 5
-    option halo-nfsd-max-latency 5
-    option quorum-reads no
-    option quorum-type none
-    option inodelk-trace off
+    option afr-pending-xattr {{ volname }}-client-{{ i * 2 }},{{volname }}-client-{{(i * 2) + 1}},{{ volume_id }}-ta
     option thin-arbiter {{ tiebreaker["node"] }}:{{ tiebreaker["path"] }}
-    subvolumes {{ volname }}-replicate-0-client-0 {{ volname }}-replicate-0-client-1 {{ volume_id }}-ta
+    subvolumes {{ volname }}-client-{{ i * 2 }} {{ volname }}-client-{{ (i * 2) + 1}} {{ volume_id }}-ta
 end-volume
+
+{% endfor %}
+
+volume {{ volname }}-dht
+    type cluster/distribute
+    subvolumes {{ dht_subvol|join(' ') }}
+end-volume
+
 
 volume {{ volname }}-utime
     type features/utime
     option noatime on
-    subvolumes {{ volname }}-replicate-0
+    subvolumes {{ volname }}-dht
 end-volume
 
 volume {{ volname }}
     type debug/io-stats
-    option brick-log-flush-timeout 120
-    option ios-dump-interval 0
-    option brick-log-format with-msg-id
-    option latency-measurement off
-    option client-threads 16
-    option client-log-buf-size 5
-    option sys-log-level CRITICAL
-    option dump-fd-stats off
-    option client-log-flush-timeout 120
-    option count-fop-hits off
-    option ios-dnscache-ttl-sec 86400
-    option ios-dump-format json
-    option ios-sample-interval 0
-    option log-flush-timeout 120
-    option log-buf-size 5
-    option brick-log-level INFO
-    option client-log-level INFO
-    option brick-threads 16
-    option brick-log-buf-size 5
-    option client-log-format with-msg-id
-    option brick-logger gluster-log
-    option client-logger gluster-log
-    option unique-id /no/such/path
-    option ios-sample-buf-size 65535
-    option global-threading off
+    option unique-id {{ volume_id }}
     subvolumes {{ volname }}-utime
-end-volume
-
-volume meta-autoload
-    type meta
-    subvolumes {{ volname }}
 end-volume

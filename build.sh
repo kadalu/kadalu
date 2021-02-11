@@ -61,6 +61,6 @@ fi
 
 echo "Building images kadalu-\$service:${VERSION}";
 
-build_container "kadalu-server" "server/Dockerfile" ${KADALU_VERSION}
-build_container "kadalu-csi" "csi/Dockerfile" ${KADALU_VERSION}
-build_container "kadalu-operator" "operator/Dockerfile" ${KADALU_VERSION}
+build_container "kadalu-server" "server/Dockerfile.frombuilder" ${KADALU_VERSION}
+build_container "kadalu-csi" "csi/Dockerfile.frombuilder" ${KADALU_VERSION}
+build_container "kadalu-operator" "operator/Dockerfile.frombuilder" ${KADALU_VERSION}

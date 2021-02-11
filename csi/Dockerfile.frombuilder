@@ -1,22 +1,19 @@
 FROM ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV GRPC_PYTHON_BUILD_EXT_COMPILER_JOBS 8
-
 RUN apt-get update -yq && \
-    apt install software-properties-common -y && \
-    apt-add-repository -y ppa:gluster/glusterfs-8 && \
-    apt-get update -yq && \
-    apt-get install --no-install-recommends -y python3.8 xfsprogs \
-    net-tools telnet wget e2fsprogs python3-pip sqlite python3-dev \
-    glusterfs-client build-essential gcc g++ && \
-    python3 -m pip install --upgrade pip && \
-    python3 -m pip install --upgrade setuptools && \
-    python3 -m pip install jinja2 datetime xxhash prometheus-client \
-    grpcio googleapis-common-protos && \
-    apt-get autoremove --purge -y gcc g++ build-essential python3-dev python3-pip && \
+    apt-get install -y --no-install-recommends attr python3 libtirpc3 libxml2 bash && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
+
+# copy glusterfs installed in /opt
+COPY --from=kadalu/builder:latest /opt /opt
+
+# actual application to be copied here
+# using already installed packages from builder for faster build time
+COPY --from=kadalu/builder:latest /kadalu /kadalu
 
 RUN mkdir -p /kadalu/volfiles /kadalu/templates
 RUN mkdir -p /var/log/glusterfs /var/run/gluster
@@ -32,6 +29,8 @@ COPY csi/exporter.py           /kadalu/
 COPY csi/nodeserver.py         /kadalu/
 COPY csi/volumeutils.py        /kadalu/
 COPY lib/startup.sh            /kadalu/
+COPY csi/quota-crawler.sh      /kadalu/
+COPY csi/heal-info.sh          /kadalu/
 
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/
 COPY templates/Replica2.client.vol.j2 /kadalu/templates/
@@ -52,7 +51,7 @@ LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="kadalu"
 LABEL version="${version}"
 
-ENTRYPOINT ["/usr/bin/python3", "/kadalu/start.py"]
+ENTRYPOINT ["python3", "/kadalu/start.py"]
 
 # Debugging, Comment the above line and
 # uncomment below line

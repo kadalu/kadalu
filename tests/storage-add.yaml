@@ -8,7 +8,11 @@ spec:
   type: Replica1
   storage:
     - node: minikube           # node name as shown in `kubectl get nodes`
-      device: /mnt/DISK/file1
+      device: /mnt/DISK/file1.1
+    - node: minikube           # node name as shown in `kubectl get nodes`
+      device: /mnt/DISK/file1.2
+    - node: minikube           # node name as shown in `kubectl get nodes`
+      device: /mnt/DISK/file1.3
 
 
 ## ------------------------------------------------------------

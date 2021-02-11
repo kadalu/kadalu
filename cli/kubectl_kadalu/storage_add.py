@@ -105,9 +105,8 @@ def validate(args):
         sys.exit(1)
 
     # pylint: disable=too-many-boolean-expressions
-    if ((args.type == "Replica1" and num_storages != 1) or
-            (args.type == "Replica2" and num_storages != 2) or
-            (args.type == "Replica3" and num_storages != 3)):
+    if ((args.type == "Replica2" and num_storages % 2 != 0) or
+            (args.type == "Replica3" and num_storages % 3 != 0)):
         print("Number of storages not matching for type=%s" % args.type,
               file=sys.stderr)
         sys.exit(1)
