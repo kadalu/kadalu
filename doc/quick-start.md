@@ -53,7 +53,7 @@ NOTE: if your host is running RHEL/CentOS 7.x series or Ubuntu/Debian older than
 
 ```
 # On CentOS7.x/Ubuntu-16.04
-sudo wipefs -a -t dos -f /dev/sdc
+sudo dd if=/dev/zero of=/dev/sdc bs=512 count=1
 sudo mkfs.xfs /dev/sdc
 ```
 

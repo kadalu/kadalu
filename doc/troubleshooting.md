@@ -54,5 +54,37 @@ If storage cannot be created, check the logs. In case of the following error
 ... you might check your disk config and ensure that there are no partitions and especially no partition table on the disk. The following command may be handy to delete the partition table
 
 ```console
+$ dd if=/dev/zero of=/dev/md3 bs=512 count=1
 $ wipefs -a -t dos -f /dev/md3/
 ```
+
+NOTE: above, you may need to replace 'md3' with proper device of your choice.
+
+
+## Different Pods and where to look for logs
+
+Kadalu namespace has many pods created if everything is fine, including those of storage pods. Lets look at which pod would have the required information for you when you get into an error!
+
+### operator
+
+This pod is the first pod to be started in the namespace, and starts other required pods. This is the pod which keeps a watch on CRD, and starts the storage service too.
+
+If you have any error in starting of storage pods, check the logs here.
+
+### csi-provisioner
+
+This pod creates the PV, and assigns the size (quota) to the PV. If PV creation fails, this pod's log is what we need to check.
+
+### csi-nodeplugin
+
+If PVC is successfully created, but it failed to move to `Bound` state, then this is where the issue can be. This performs the mount of all the PVs.
+
+### server-*-N
+
+These are the pods, which has `glusterfsd` processes running, exporting the storage provided in storage config. One may need to check the logs of server too if PVC creation.
+
+### All pods' log using CLI
+
+If you have installed `kubectl_kadalu` package, then you can do below to get the logs of all pods running in kadalu namespace. It is helpful when one is not sure where to look for errors.
+
+`kubectl kadalu logs`
