@@ -1,22 +1,25 @@
-FROM ubuntu:20.04
-
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends python3 libtirpc3 libxml2 && \
-    apt-get -y clean && \
-    rm -rf /var/lib/apt/lists/*
+FROM kadalu/builder:latest as builder
 
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
 
-# copy glusterfs installed in /opt
-COPY --from=kadalu/builder:latest /opt /opt
+RUN python3 -m pip install kubernetes==11.0.0
+
+FROM ubuntu:20.04 as prod
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update -yq && \
+    apt-get install -y --no-install-recommends python3 && \
+    apt-get -y clean && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/kadalu/bin:$PATH"
 
 # kubectl binary
-COPY --from=kadalu/builder:latest /usr/bin/kubectl /usr/bin/kubectl
+COPY --from=builder /usr/bin/kubectl /usr/bin/kubectl
 
 # actual application to be copied here
 # using already installed packages from builder for faster build time
-COPY --from=kadalu/builder:latest /kadalu /kadalu
+COPY --from=builder /kadalu /kadalu
 
 RUN mkdir -p /kadalu/manifests
 
