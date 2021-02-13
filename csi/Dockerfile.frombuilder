@@ -42,6 +42,7 @@ COPY templates/Replica2.client.vol.j2 /kadalu/templates/
 COPY templates/Replica3.client.vol.j2 /kadalu/templates/
 
 RUN chmod +x /kadalu/startup.sh
+RUN chmod +x /kadalu/heal-info.sh
 
 ARG version="(unknown)"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')

@@ -22,7 +22,7 @@ def get_args():
     subparsers = parser.add_subparsers(dest="mode")
 
     logs.set_args("logs", subparsers)
-    healinfo.set_args("logs", subparsers)
+    healinfo.set_args("healinfo", subparsers)
     install.set_args("install", subparsers)
     storage_add.set_args("storage-add", subparsers)
     storage_list.set_args("storage-list", subparsers)
