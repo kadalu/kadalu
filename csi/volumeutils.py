@@ -30,7 +30,6 @@ VOLINFO_DIR = "/var/lib/gluster"
 statfile_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 mount_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 
-
 class Volume():
     """Hosting Volume object"""
     def __init__(self, volname, voltype, hostvol, **kwargs):
@@ -121,7 +120,7 @@ def filter_supported_pvtype(volume, filters):
 # Disabled pylint here because filters argument is used as
 # readonly in all functions
 # noqa # pylint: disable=dangerous-default-value
-def get_pv_hosting_volumes(filters={}):
+def get_pv_hosting_volumes(filters={}, iteration=0):
     """Get list of pv hosting volumes"""
     volumes = []
     total_volumes = 0
@@ -181,9 +180,11 @@ def get_pv_hosting_volumes(filters={}):
 
     # If volume file is not yet available, ConfigMap may not be ready
     # or synced. Wait for some time and try again
-    if total_volumes == 0:
-        time.sleep(2)
-        return get_pv_hosting_volumes()
+    # Lets just give maximum 2 minutes for the config map to come up!
+    if total_volumes == 0 and iteration < 40:
+        time.sleep(3)
+        iteration += 1
+        return get_pv_hosting_volumes(filters, iteration)
 
     return volumes
 
@@ -671,7 +672,7 @@ def search_volume(volname):
     subdir_path = get_volume_path(PV_TYPE_SUBVOL, volhash, volname)
     virtblock_path = get_volume_path(PV_TYPE_VIRTBLOCK, volhash, volname)
 
-    host_volumes = get_pv_hosting_volumes()
+    host_volumes = get_pv_hosting_volumes({})
     for volume in host_volumes:
         hvol = volume['name']
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
@@ -714,7 +715,7 @@ def get_subdir_virtblock_vols(mntdir, volumes, pvtype):
 
 def volume_list(voltype=None):
     """List of Volumes"""
-    host_volumes = get_pv_hosting_volumes()
+    host_volumes = get_pv_hosting_volumes({})
     volumes = []
     for volume in host_volumes:
         hvol = volume['name']
