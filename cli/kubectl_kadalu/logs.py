@@ -9,12 +9,13 @@ import utils
 # TODO: provide 'hint' based on grepping error logs. That way, users get to
 #       check for few common errors easily
 
-def set_args(_name, _subparsers):
+def set_args(name, subparsers):
     """ add arguments to argparser """
     # TODO: in future allow users to pass optional pod names
     # TODO: make 'all-containers' optional based on container name (along with pod name).
     # TODO: provide options to pass options to kubectl logs (like tail, container name etc)
-    return
+    parser = subparsers.add_parser(name)
+    utils.add_global_flags(parser)
 
 
 def validate(_args):
@@ -28,9 +29,11 @@ def run(args):
     try:
         cmd = utils.kubectl_cmd(args) + ["get", "pods", "-nkadalu", "-oname"]
         resp = utils.execute(cmd)
-        pods = resp.stdout
+        pods = resp.stdout.split('\n')
 
         for pod in pods:
+            if pod == "":
+                continue
             log_cmd = utils.kubectl_cmd(args) + ["logs", "-nkadalu", pod, "--all-containers=true"]
             log_resp = utils.execute(log_cmd)
             print("----- (Kadalu Namespace) %s -----" % pod)
