@@ -9,10 +9,11 @@ import utils
 # TODO: provide 'hint' based on grepping error logs. That way, users get to
 #       check for few common errors easily
 
-def set_args(_name, _subparsers):
+def set_args(name, subparsers):
     """ add arguments to argparser """
     # TODO: allow check of specific storage pool
-    return
+    parser = subparsers.add_parser(name)
+    utils.add_global_flags(parser)
 
 
 def validate(_args):
