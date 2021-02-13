@@ -27,9 +27,9 @@ def run(args):
     try:
         cmd = utils.kubectl_cmd(args) + ["exec",
                                          "-nkadalu",
-                                         "csi-provisioner-0",
+                                         "kadalu-csi-provisioner-0",
                                          "-c",
-                                         "kadalu-csi-provisioner",
+                                         "kadalu-provisioner",
                                          "--", "/kadalu/heal-info.sh"]
         resp = utils.execute(cmd)
         print(resp.stdout)
