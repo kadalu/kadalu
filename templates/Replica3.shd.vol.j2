@@ -2,6 +2,7 @@
 volume {{ volname }}-client-{{ brick["brick_index"] }}
     type protocol/client
     option volfile-key /{{ volname }}
+    option transport.socket.read-fail-log false
     option remote-subvolume {{ brick["brick_path"] }}
     option remote-host {{ brick["node"] }}
 end-volume
