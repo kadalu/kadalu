@@ -32,6 +32,8 @@ jobs:
   run-on-minikube:
     name: kube 1.20.0
     runs-on: ubuntu-latest
+    env:
+      KUBE_VERSION: v1.20.0
     # Skip based on commit message
     if: "!contains(github.event.head_commit.message, '[ci skip]')"
     steps:
@@ -43,9 +45,21 @@ jobs:
     - name: Generate Manifests
       run: VERBOSE="true" make gen-manifest
     - name: Setup Minikube
-      run: tests/setup.sh v1.20.0
+      run: tests/setup.sh $KUBE_VERSION
     - name: Run tests
-      run: tests/travis-test.sh v1.20.0
+      run: tests/travis-test.sh $KUBE_VERSION
     - name: Cleanup
-      run: tests/cleanup.sh v1.20.0
+      run: tests/cleanup.sh $KUBE_VERSION
 
+      # Deploy KaDalu via Helm and run tests if PR address Helm charts
+    - name: Setup Minikube for Helm Charts
+      if: "contains(github.event.head_commit.message, '[helm]')"
+      run: tests/setup.sh $KUBE_VERSION
+    - name: Run tests
+      if: "contains(github.event.head_commit.message, '[helm]')"
+      run: tests/travis-test.sh $KUBE_VERSION
+      env:
+        INSTALL_TYPE: helm
+    - name: Cleanup
+      if: "contains(github.event.head_commit.message, '[helm]')"
+      run: tests/cleanup.sh $KUBE_VERSION

@@ -13,6 +13,7 @@ help:
 	@echo "    make release           - Publish the built container images"
 	@echo "    make prepare-release-manifests - Prepare release manifest files"
 	@echo "    make cli-build         - Build CLI binary"
+	@echo "    make helm-chart        - Create a tgz archive of Helm chart"
 
 build-grpc:
 	python3 -m grpc_tools.protoc -I./csi/protos --python_out=csi --grpc_python_out=csi ./csi/protos/csi.proto
@@ -114,6 +115,10 @@ pypi-build:
 	echo ${KADALU_VERSION} > server/VERSION
 	cd server; rm -rf dist; python3 setup.py sdist;
 
+helm-chart:
+	@echo "Creating tgz archive of helm chart(Version: ${KADALU_VERSION}).."
+	cd helm; tar -czf kadalu-helm-chart.tgz kadalu
+
 ifeq ($(TWINE_PASSWORD),)
 pypi-upload: pypi-build
 	cd server; twine upload --username kadalu dist/*
@@ -126,7 +131,7 @@ endif
 ifeq ($(KADALU_VERSION), latest)
 release: prepare-release
 else
-release: prepare-release pypi-upload cli-build
+release: prepare-release pypi-upload cli-build helm-chart
 	docker tag ${DOCKER_USER}/kadalu-operator:${KADALU_VERSION} ${DOCKER_USER}/kadalu-operator:${KADALU_LATEST}
 	docker tag ${DOCKER_USER}/kadalu-csi:${KADALU_VERSION} ${DOCKER_USER}/kadalu-csi:${KADALU_LATEST}
 	docker tag ${DOCKER_USER}/kadalu-server:${KADALU_VERSION} ${DOCKER_USER}/kadalu-server:${KADALU_LATEST}

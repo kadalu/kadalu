@@ -156,6 +156,8 @@ function install_kubectl() {
 # configure minikube
 MINIKUBE_VERSION=${MINIKUBE_VERSION:-"v1.15.1"}
 KUBE_VERSION=${KUBE_VERSION:-"v1.20.0"}
+HELM_VERSION=${HELM_VERSION:-"v3.5.0"}
+INSTALL_TYPE=${INSTALL_TYPE:-"default"}
 MEMORY=${MEMORY:-"3000"}
 VM_DRIVER=${VM_DRIVER:-"none"}
 #configure image repo
@@ -217,9 +219,16 @@ kadalu_operator)
 
     echo "Starting the kadalu Operator"
 
-    # pick the operator file from repo
-    sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator.yaml
-    kubectl apply -f manifests/kadalu-operator.yaml
+    if [[ "$INSTALL_TYPE" == "default" ]]
+    then
+      # pick the operator file from repo
+      sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator.yaml
+      kubectl apply -f manifests/kadalu-operator.yaml
+    elif [[ "$INSTALL_TYPE" == "helm" ]]
+    then
+      curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 && chmod +x get_helm.sh && ./get_helm.sh --version $HELM_VERSION
+      cd helm && helm install --create-namespace kadalu kadalu-chart kadalu/ --values kadalu/values.yaml && cd -
+    fi
 
     sleep 1
     # Start storage
@@ -299,7 +308,7 @@ clean)
 *)
     echo " $0 [command]
 Available Commands:
-  up               Starts a local kubernetes cluster and prepare disk for rook
+  up               Starts a local kubernetes cluster and prepare disks for gluster
   down             Stops a running local kubernetes cluster
   clean            Deletes a local kubernetes cluster
   ssh              Log into or run a command on a minikube machine with SSH
