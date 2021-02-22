@@ -289,7 +289,7 @@ spec:
           securityContext:
             capabilities: {}
             privileged: true
-          image: docker.io/kadalu/kadalu-operator:devel
+          image: docker.io/kadalu/kadalu-operator:arm
           imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
@@ -305,7 +305,7 @@ spec:
             - name: DOCKER_USER
               value: "kadalu"
             - name: KADALU_VERSION
-              value: "devel"
+              value: "arm"
             - name: KADALU_NAMESPACE
               value: "kadalu"
             - name: KUBELET_DIR

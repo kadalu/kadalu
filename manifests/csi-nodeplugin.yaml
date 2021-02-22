@@ -80,7 +80,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: docker.io/kadalu/kadalu-csi:devel
+          image: docker.io/kadalu/kadalu-csi:arm
           env:
             - name: NODE_ID
               valueFrom:
@@ -89,7 +89,7 @@ spec:
             - name: CSI_ENDPOINT
               value: unix://plugin/csi.sock
             - name: KADALU_VERSION
-              value: "devel"
+              value: "arm"
             - name: K8S_DIST
               value: "kubernetes"
             - name: VERBOSE

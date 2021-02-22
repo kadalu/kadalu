@@ -28,7 +28,7 @@ def template(filename, template_file=None, template_args=None):
 
 if __name__ == "__main__":
     DOCKER_USER = os.environ.get("DOCKER_USER", "kadalu")
-    KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
+    KADALU_VERSION = os.environ.get("KADALU_VERSION", "arm")
     K8S_DIST = os.environ.get("K8S_DIST", "kubernetes")
     VERBOSE = os.environ.get("VERBOSE", "no")
     KUBELET_DIR = "/var/lib/kubelet"
