@@ -72,6 +72,7 @@ def get_configmap_data(args):
 
     except utils.CommandError as err:
         utils.command_error(cmd, err.stderr)
+        return None
 
     except KeyError:
         # Validate method expects None when 'storage' not found.

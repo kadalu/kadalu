@@ -151,8 +151,10 @@ def get_kube_nodes(args):
         return nodes
     except utils.CommandError as err:
         utils.command_error(cmd, err.stderr)
+        return None
     except FileNotFoundError:
         utils.kubectl_cmd_help(args.kubectl_cmd)
+        return None
 
 
 def storage_add_data(args):

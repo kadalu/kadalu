@@ -612,6 +612,7 @@ def get_configmap_data(volname):
             "Failed to get details from configmap",
             error=err
         ))
+        return None
 
 
 def get_num_pvs(storage_info_data):
