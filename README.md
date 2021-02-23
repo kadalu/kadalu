@@ -44,13 +44,21 @@ We would like your contributions to come as feedbacks, testing, development etc.
 If you are interested in financial donation to the project, or to the developers, you can do so at our [opencollective](https://opencollective.com/kadalu) page. (We like github sponsors too, but its still in waiting list for an org in India).
 
 
+## Helm support
+
+`helm install kadalu https://github.com/kadalu/kadalu/releases/download/<release>/kadalu-helm-chart.tgz`
+
+NOTE: We are still evolving with Helm chart based development, and happy to get contributions on the same.
+
+
 ## Platform supports
 
-We support x86_64 (amd64) by default (all releases, `devel` and `latest` tags), and in release 0.7.0, 0.7.1 and 0.7.2 tags arm64 is also supported. If you want to try arm64 in latest form try below command to start the operator
+We support x86_64 (amd64) by default (all releases, `devel` and `latest` tags), and in release 0.7.7 tag arm64 and arm/v7 is supported. If you want to try arm64 or arm/v7 in latest form try below command to start the operator
 
 `kubectl apply -f https://raw.githubusercontent.com/kadalu/kadalu/arm/manifests/kadalu-operator.yaml`
 
 For any other platforms, we need users to confirm it works by building images locally. Once it works, we can include it in our automated scripts. You can confirm the build by command `make release` after checkout of the repository in the respective platform.
+
 
 ## How to pronounce kadalu ?
 
