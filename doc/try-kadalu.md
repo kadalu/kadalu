@@ -35,23 +35,16 @@ After this follow our [Homepage](https://github.com/kadalu/kadalu). You are good
 
 ## Further considerations
 
-### What do we do when we have more nodes?
+### What do we do when we have more storage nodes?
 
-Kadalu's design principles are with couple of assumptions: (ie, In the early development phase).
-
-- The PVC size requirements are going to be lesser than one available disk of any node.
-- No need to change settings once Gluster is running (in most of the cases).
-
-With that assumption, lets look into what happens when you have more node. For easier to understand reasons, I am assuming `kadalu.replica1` mode, so there is 1 brick process per a disk (or available storage, like EBS, RAID device, SAN Array etc).
-
-Now, the examples given are for setting up it on 1 node, 1 device. When you have more storage you need to export, then just export more storage with multiple storage config definitions.
+We understand many examples given are for setting up it on 1 node, 1 device. When you have more storage you need to export, then just export more storage in the multiple of Replica count.
 
 For example:
 
 ```yaml
 # File: storage-config.yaml
 ---
-apiVersion: kadalu-operator.storage/v1alpha1
+apiVersion: kadalu-operator.storage/v1
 kind: KadaluStorage
 metadata:
   # This will be used as name of PV Hosting Volume
@@ -59,35 +52,15 @@ metadata:
 spec:
   type: Replica1
   storage:
-    - node: kube1      # node name as shown in `kubectl get nodes`
-      device: /dev/vdc # Device to provide storage to all PV
----
-apiVersion: kadalu-operator.storage/v1alpha1
-kind: KadaluStorage
-metadata:
-  # This will be used as name of PV Hosting Volume
-  name: storage-pool-2 # **Notice** the name change here
-spec:
-  type: Replica1
-  storage:
-    - node: kube2      # node name as shown in `kubectl get nodes`
-      device: /dev/vdd # Device to provide storage to all PV
----
-apiVersion: kadalu-operator.storage/v1alpha1
-kind: KadaluStorage
-metadata:
-  # This will be used as name of PV Hosting Volume
-  name: storage-pool-3 # **Notice** the name change here
-spec:
-  type: Replica1
-  storage:
-    - node: kube3       # node name as shown in `kubectl get nodes`
-      device: /dev/vdc # Device to provide storage to all PV
+    - node: kube1        # node name as shown in `kubectl get nodes`
+      device: /dev/vdc
+    - node: kube2
+      device: /dev/vdd
+    - node: kube3
+      device: /dev/vdc
 ```
 
-Note that you just need to provide one more config with different name to host a brick process. Our CSI driver will automatically understand there are 3 volumes which it can connect to, and depending on the available space, will provide storage in one of the gluster volume.
-
-The newer configs can be given at any time, and CSI driver will understand the existence of new storage, (through kadalu operator), and will be consumed when more PV requests come by.
+NOTE: If you are using kadalu versions below 0.8.0, then please refer to document on 0.7.7 version.
 
 ### how to configure kadalu to have at least one mirroring data in case of some crash?
 
@@ -96,7 +69,7 @@ The answer we have is, providing kadalu-config using 3 nodes, and using gluster 
 ```yaml
 # File: storage-config.yaml
 ---
-apiVersion: kadalu-operator.storage/v1alpha1
+apiVersion: kadalu-operator.storage/v1
 kind: KadaluStorage
 metadata:
   # This will be used as name of PV Hosting Volume
@@ -115,7 +88,7 @@ spec:
 
 With this, there will be 3 bricks, and kadalu CSI driver will mount the corresponding volume and provide data.
 
-Also note that, there can be both replica1 and replica3 type volume co-existing in the system. Note that while claiming the PV, you just need to provide `storageClassName: kadalu.replica1` or `storageClassName: kadalu.replica3` to use the relevant option.
+**NOTE**: There can be both replica1 and replica3 type volume co-existing in the system. Note that while claiming the PV, you just need to provide `storageClassName: kadalu.replica1` or `storageClassName: kadalu.replica3` to use the relevant option.
 
 ### On data recovery
 
