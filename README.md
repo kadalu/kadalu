@@ -46,7 +46,7 @@ If you are interested in financial donation to the project, or to the developers
 
 ## Helm support
 
-`helm install kadalu https://github.com/kadalu/kadalu/releases/download/<release>/kadalu-helm-chart.tgz`
+`helm install kadalu --create-namespace https://github.com/kadalu/kadalu/releases/download/<release>/kadalu-helm-chart.tgz`
 
 NOTE: We are still evolving with Helm chart based development, and happy to get contributions on the same.
 
