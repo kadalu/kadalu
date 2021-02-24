@@ -1,0 +1,32 @@
+{{- if (eq .Values.kubernetesDistro "openshift") }}
+---
+kind: SecurityContextConstraints
+apiVersion: security.openshift.io/v1
+metadata:
+  name: kadalu-scc
+allowPrivilegedContainer: true
+allowHostNetwork: true
+allowHostDirVolumePlugin: true
+priority:
+allowedCapabilities: ['*']
+allowHostPorts: true
+allowHostPID: true
+allowHostIPC: true
+readOnlyRootFilesystem: false
+requiredDropCapabilities: []
+defaultAddCapabilities: []
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+fsGroup:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+volumes: ['*']
+users:
+  - system:serviceaccount:kadalu:kadalu-server-sa
+  - system:serviceaccount:kadalu:kadalu-operator
+  - system:serviceaccount:kadalu:kadalu-csi-provisioner
+  - system:serviceaccount:kadalu:kadalu-csi-nodeplugin
+{{- end}}

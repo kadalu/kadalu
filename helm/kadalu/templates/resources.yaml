@@ -14,8 +14,8 @@ spec:
   scope: Namespaced
   versions:
     - name: v1alpha1
-      served: true
       storage: true
+      served: true
       schema:
         openAPIV3Schema:
           type: object
@@ -62,5 +62,3 @@ spec:
                       type: string
                     gluster_options:
                       type: string
-      subresources:
-        status: {}

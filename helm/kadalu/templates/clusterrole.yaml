@@ -2,8 +2,8 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: pod-exec
   namespace: {{ .Release.Namespace }}
+  name: pod-exec
 rules:
 - apiGroups: [""]
   resources: ["pods", "pods/log"]

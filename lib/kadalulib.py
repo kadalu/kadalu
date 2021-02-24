@@ -136,14 +136,14 @@ def logf(msg, **kwargs):
 def logging_setup():
     """Logging Setup"""
     root = logging.getLogger()
-    verbose = os.environ.get("VERBOSE", False)
+    verbose = os.environ.get("VERBOSE", "no")
     root.setLevel(logging.INFO)
-    if verbose:
+    if verbose == "yes":
         root.setLevel(logging.DEBUG)
 
     handler = logging.StreamHandler(sys.stderr)
     handler.setLevel(logging.INFO)
-    if verbose:
+    if verbose == "yes":
         handler.setLevel(logging.DEBUG)
 
     formatter = logging.Formatter("[%(asctime)s] %(levelname)s "

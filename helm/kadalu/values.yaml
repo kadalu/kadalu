@@ -3,6 +3,8 @@
 # Declare variables to be passed into your templates.
 
 replicaCount: 1
+kubernetesDistro: kubernetes
+verbose: 'no'
 
 image:
   repository: kadalu/kadalu-operator
