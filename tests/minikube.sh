@@ -156,8 +156,7 @@ function install_kubectl() {
 # configure minikube
 MINIKUBE_VERSION=${MINIKUBE_VERSION:-"v1.15.1"}
 KUBE_VERSION=${KUBE_VERSION:-"v1.20.0"}
-HELM_VERSION=${HELM_VERSION:-"v3.5.0"}
-INSTALL_TYPE=${INSTALL_TYPE:-"default"}
+SKIP_HELM=${SKIP_HELM:-"false"}
 MEMORY=${MEMORY:-"3000"}
 VM_DRIVER=${VM_DRIVER:-"none"}
 #configure image repo
@@ -217,18 +216,41 @@ ssh)
 kadalu_operator)
     docker images
 
+    if [ "$SKIP_HELM" == "false" ]; then
+
+        # As per https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
+        # `helm` is already part of github runner
+        for distro in kubernetes rke microk8s openshift
+        do
+            if [ "$distro" != "kubernetes" ]; then
+                export operator="kadalu-operator-$distro"
+            else
+                export operator="kadalu-operator"
+            fi
+            export verbose="yes" dist=$distro
+            echo Validating helm template for "'$distro'" against "'$operator'" [Empty for no diff]
+            echo
+
+            # Helm templates will not have 'kind: Namespace' so need to skip first 6 lines from operator manifest
+            if [ "$distro" == "openshift" ]; then
+                # Helm follows a specific order while installing/uninstalling (https://github.com/helm/helm/blob/release-3.0/pkg/releaseutil/kind_sorter.go#L27)
+                # resources and it doesn't contain OpenShift 'SecurityContextConstraints' kind, so need to sort lines before 'diff'
+                diff <(helm template --namespace kadalu helm/kadalu --set-string kubernetesDistro=$distro,verbose=$verbose | grep -v '#' | sort) \
+                    <(grep -v '#' manifests/"$operator.yaml" | tail -n +6 | sort ) --ignore-blank-lines
+            else
+                diff <(helm template --namespace kadalu helm/kadalu --set-string kubernetesDistro=$distro,verbose=$verbose | grep -v '#') \
+                    <(grep -v '#' manifests/"$operator.yaml" | tail -n +6) --ignore-blank-lines
+            fi
+        done
+        unset operator verbose dist
+
+    fi
+
     echo "Starting the kadalu Operator"
 
-    if [[ "$INSTALL_TYPE" == "default" ]]
-    then
-      # pick the operator file from repo
-      sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator.yaml
-      kubectl apply -f manifests/kadalu-operator.yaml
-    elif [[ "$INSTALL_TYPE" == "helm" ]]
-    then
-      curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 && chmod +x get_helm.sh && ./get_helm.sh --version $HELM_VERSION
-      cd helm && helm install --create-namespace kadalu kadalu-chart kadalu/ --values kadalu/values.yaml && cd -
-    fi
+    # pick the operator file from repo
+    sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator.yaml
+    kubectl apply -f manifests/kadalu-operator.yaml
 
     sleep 1
     # Start storage

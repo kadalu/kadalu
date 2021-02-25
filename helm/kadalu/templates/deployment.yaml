@@ -40,9 +40,15 @@ spec:
               value: "kadalu"
             - name: KADALU_VERSION
               value: "devel"
-            - name: KADALU_NAMESPCE
-              value: {{ .Release.Namespace }}
+            - name: KADALU_NAMESPACE
+              value: "{{ .Release.Namespace }}"
             - name: KUBELET_DIR
+              {{- if (eq .Values.kubernetesDistro "microk8s") }}
+              value: "/var/snap/microk8s/common/var/lib/kubelet"
+              {{- else }}
               value: "/var/lib/kubelet"
+              {{- end }}
             - name: K8S_DIST
-              value: "kubernetes"
+              value: "{{ .Values.kubernetesDistro }}"
+            - name: VERBOSE
+              value: "{{ .Values.verbose }}"

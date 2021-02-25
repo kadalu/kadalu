@@ -30,7 +30,7 @@ if __name__ == "__main__":
     DOCKER_USER = os.environ.get("DOCKER_USER", "kadalu")
     KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
     K8S_DIST = os.environ.get("K8S_DIST", "kubernetes")
-    VERBOSE = os.environ.get("VERBOSE", False)
+    VERBOSE = os.environ.get("VERBOSE", "no")
     KUBELET_DIR = "/var/lib/kubelet"
     if K8S_DIST == "microk8s":
         KUBELET_DIR = "/var/snap/microk8s/common/var/lib/kubelet"

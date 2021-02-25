@@ -46,7 +46,15 @@ If you are interested in financial donation to the project, or to the developers
 
 ## Helm support
 
-`helm install kadalu --create-namespace https://github.com/kadalu/kadalu/releases/download/<release>/kadalu-helm-chart.tgz`
+`helm install kadalu --create-namespace https://github.com/kadalu/kadalu/releases/download/<release>/kadalu-helm-chart.tgz --set-string kubernetesDistro=$K8S_DIST`
+
+Where `K8S_DIST` can be one of below values:
+- kubernetes
+- openshift
+- rke
+- microk8s
+
+If `--set-string` isn't supplied `kubernetes` will be used as default.
 
 NOTE: We are still evolving with Helm chart based development, and happy to get contributions on the same.
 

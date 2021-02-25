@@ -122,6 +122,7 @@ rules:
       - pods
       - services
       - endpoints
+      - persistentvolumes
       - persistentvolumeclaims
       - persistentvolumeclaims/status
       - customresourcedefinitions
@@ -282,7 +283,11 @@ spec:
               value: "kadalu"
             - name: KADALU_VERSION
               value: "devel"
+            - name: KADALU_NAMESPACE
+              value: "kadalu"
             - name: KUBELET_DIR
               value: "/var/lib/kubelet"
             - name: K8S_DIST
               value: "kubernetes"
+            - name: VERBOSE
+              value: "no"
