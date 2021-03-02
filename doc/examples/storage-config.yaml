@@ -1,5 +1,5 @@
 ---
-apiVersion: kadalu-operator.gluster/v1alpha1
+apiVersion: kadalu-operator.gluster/v1
 kind: KadaluStorage
 metadata:
   # This will be used as name of PV Hosting Volume
@@ -11,4 +11,3 @@ spec:
       path: /mnt/data   # Directory path xattrs support.
                         # This is the directory which would
                         # export the storage to all the  PVs.
-  options: {}

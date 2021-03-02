@@ -20,7 +20,7 @@ sample yaml file
 ```yaml
 # file: external-config.yaml
 ---
-apiVersion: kadalu-operator.storage/v1alpha1
+apiVersion: kadalu-operator.storage/v1
 kind: KadaluStorage
 metadata:
   name: ext-config

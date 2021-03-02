@@ -36,7 +36,7 @@ Once the device is ready, inform the kadalu operator that it can be used as stor
 ```yaml
 # File: sample-storage-config.yaml
 ---
-apiVersion: kadalu-operator.gluster/v1alpha1
+apiVersion: kadalu-operator.gluster/v1
 kind: KadaluStorage
 metadata:
   # This will be used as name of PV Hosting Volume
@@ -46,7 +46,6 @@ spec:
   storage:
     - node: kube1
       device: /dev/sdc
-  options: {}
 ```
 
 ```console
