@@ -111,7 +111,7 @@ Also, if `device` option has a file as option, the same file will be formatted a
 
 In this case, a directory path (/mnt/mount/path or similar) is exported as a brick from a node in the cluster as storage for gluster server process. This is particularly useful when a larger device is mounted and shared with other applications too.
 
-Note that path option is valid only if the file system on the given path is xfs, and is mounted with `prjquota` mount option. path option is helpful for those who want to try kadalu in an existing setup. When path option is provided, kadalu operator doesn't try to format and mount, but uses the path as export path for kadalu storage volume.
+Note that path option is valid only if the file system on the given path is xfs. path option is helpful for those who want to try kadalu in an existing setup. When path option is provided, kadalu operator doesn't try to format and mount, but uses the path as export path for kadalu storage volume.
 
 The sample command looks like below:
 
