@@ -336,6 +336,15 @@ test_kadalu)
 	echo "======================= End $p ======================="
     done
 
+    # DRAFT START
+    set +e
+    kubectl apply -f tests/csi-driver-tests/csi-sanity-pod.yaml
+    kubectl wait --for=condition=ready pod -l app=csi-sanity --timeout=15s
+    kubectl exec csi-sanity -it -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination'
+    # TODO: Decide on pass/fail threshold
+    set -e
+    # DRAFT END
+
     date
 
     # Return failure if fail variable is set to 1

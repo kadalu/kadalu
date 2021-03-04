@@ -1,0 +1,35 @@
+# Currently this pod is neither a part of production deployment nor used in CI.
+# Only used for manually debugging KaDalu CSI Driver
+
+# Once this pod is deployed you can run below for communicating with CSI driver
+# In one prompt: `kubectl port-forward pods/csi-driver-debug :10000`
+# In other prompt: `while true; do nc -vz 127.0.0.1 <port_from_above_op>; sleep 10; done` to keep port-forward alive
+
+# For communicating to CSI Driver you can use either https://github.com/fullstorydev/grpcurl or
+# more specific to CSI https://github.com/rexray/gocsi/tree/master/csc
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: csi-driver-debug
+  labels:
+    app: csi-driver-debug
+spec:
+  # podAffinity isn't required as nodeplugin is deployed to every node and so
+  # the csi.sock file can be accessed without any issues
+  containers:
+    - name: socat
+      image: alpine/socat:1.0.5
+      args:
+        - tcp-listen:10000,fork,reuseaddr
+        - unix-connect:/plugin/csi.sock
+      volumeMounts:
+        - name: csi-sock
+          mountPath: /plugin/csi.sock
+  restartPolicy: OnFailure
+  volumes:
+    - name: csi-sock
+      hostPath:
+        path: /var/lib/kubelet/plugins_registry/kadalu/csi.sock
+        type: Socket
