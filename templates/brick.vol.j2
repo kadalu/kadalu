@@ -66,6 +66,7 @@ end-volume
 volume {{ volname }}-server
     type protocol/server
     option transport-type tcp
+    option transport.socket.read-fail-log false
     option auth.addr.{{ brick_path }}.allow *
     subvolumes {{ brick_path }}
 end-volume

@@ -1,5 +1,6 @@
 volume {{ volume_id }}-ta
     type protocol/client
+    option transport.socket.read-fail-log false
     option remote-host {{ tiebreaker["node"] }}
     option remote-port {{ tiebreaker["port"] }}
     option remote-subvolume {{ tiebreaker["path"] }}
@@ -9,6 +10,7 @@ end-volume
 volume {{ volname }}-client-{{ brick["brick_index"] }}
     type protocol/client
     option volfile-key /{{ volname }}
+    option transport.socket.read-fail-log false
     option remote-subvolume {{ brick["brick_path"] }}
     option remote-host {{ brick["node"] }}
 end-volume
