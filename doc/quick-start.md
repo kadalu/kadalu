@@ -6,7 +6,7 @@
 Download the latest release of Kadalu Kubectl plugin using,
 
 ```
-curl -LO https://github.com/kadalu/kadalu/releases/download/0.7.7/kubectl-kadalu
+curl -LO https://github.com/kadalu/kadalu/releases/download/0.8.0/kubectl-kadalu
 ```
 
 Make the kubectl binary executable.

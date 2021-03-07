@@ -5,14 +5,13 @@
 - Kubernetes 1.13.0 + version
 - The host should support xfs (`mkfs.xfs`)
   - On some systems this might require installation of xfsprogs package
-- The `mount -t xfs` with `-oprjquota` should work
 
 ### Setup
 
 Download the latest release of Kadalu Kubectl plugin using,
 
 ```
-curl -LO https://github.com/kadalu/kadalu/releases/download/0.7.1/kubectl-kadalu
+curl -LO https://github.com/kadalu/kadalu/releases/download/0.8.0/kubectl-kadalu
 ```
 
 Make the kubectl binary executable.
