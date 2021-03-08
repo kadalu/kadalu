@@ -50,7 +50,7 @@ jobs:
         timeout-minutes: 120
         with:
           context: .
-          file: csi/Dockerfile.frombuilder
+          file: csi/Dockerfile
           platforms: linux/amd64
           target: prod
           push: true
@@ -68,7 +68,7 @@ jobs:
         timeout-minutes: 20
         with:
           context: .
-          file: operator/Dockerfile.frombuilder
+          file: operator/Dockerfile
           platforms: linux/amd64
           target: prod
           push: true
@@ -86,7 +86,7 @@ jobs:
         timeout-minutes: 20
         with:
           context: .
-          file: server/Dockerfile.frombuilder
+          file: server/Dockerfile
           platforms: linux/amd64
           target: prod
           push: true
