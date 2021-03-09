@@ -630,7 +630,7 @@ def get_num_pvs(storage_info_data):
 
     cmd = ["kubectl", "exec", "-i",
            bricks[0]['node'].replace("." + volname, ""),
-           "-c", "glusterfsd", "-nkadalu", "--", "sqlite3",
+           "-c", "server", "-nkadalu", "--", "sqlite3",
            dbpath,
            query]
 
