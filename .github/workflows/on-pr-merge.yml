@@ -52,7 +52,6 @@ jobs:
           context: .
           file: extras/Dockerfile.builder
           platforms: linux/amd64
-          target: prod
           push: false
           tags: |
             docker.io/kadalu/builder:latest
