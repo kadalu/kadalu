@@ -282,7 +282,7 @@ test_kadalu)
     
     #get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 60
 
-    get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 2 90
+    #get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 2 90
 
     cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
     sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml

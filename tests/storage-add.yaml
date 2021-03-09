@@ -53,15 +53,15 @@ spec:
 
 ## ------------------------------------------------------------
 # This is for external storage
----
-apiVersion: kadalu-operator.storage/v1alpha1
-kind: KadaluStorage
-metadata:
-  name: ext-config
-spec:
-  type: External
-  details:
-    gluster_hosts:
-      - gluster1.kadalu.io
-    gluster_volname: kadalu
-    gluster_options: log-level=DEBUG
+# ---
+# apiVersion: kadalu-operator.storage/v1alpha1
+# kind: KadaluStorage
+# metadata:
+#   name: ext-config
+# spec:
+#   type: External
+#   details:
+#     gluster_hosts:
+#       - gluster1.kadalu.io
+#     gluster_volname: kadalu
+#     gluster_options: log-level=DEBUG
