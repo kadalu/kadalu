@@ -45,12 +45,29 @@ jobs:
           pip install -r requirements.txt
           KADALU_VERSION=devel make cli-build
       -
+        name: Builder Image
+        uses: docker/build-push-action@v2
+        timeout-minutes: 120
+        with:
+          context: .
+          file: extras/Dockerfile.builder
+          platforms: linux/amd64
+          target: prod
+          push: false
+          tags: |
+            docker.io/kadalu/builder:latest
+          build-args: |
+            version==${{ github.sha }}
+            builddate=`date +%Y-%m-%d-%H:%M`
+          secrets: |
+            KADALU_VERSION=${{ github.sha }}
+      -
         name: Build CSI Image and push
         uses: docker/build-push-action@v2
         timeout-minutes: 120
         with:
           context: .
-          file: csi/Dockerfile.frombuilder
+          file: csi/Dockerfile
           platforms: linux/amd64
           target: prod
           push: true
@@ -68,7 +85,7 @@ jobs:
         timeout-minutes: 20
         with:
           context: .
-          file: operator/Dockerfile.frombuilder
+          file: operator/Dockerfile
           platforms: linux/amd64
           target: prod
           push: true
@@ -86,7 +103,7 @@ jobs:
         timeout-minutes: 20
         with:
           context: .
-          file: server/Dockerfile.frombuilder
+          file: server/Dockerfile
           platforms: linux/amd64
           target: prod
           push: true

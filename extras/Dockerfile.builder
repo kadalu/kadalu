@@ -1,6 +1,6 @@
 FROM ubuntu:20.04
 
-ARG branch="series_0"
+ARG branch="series_1"
 
 ENV GRPC_PYTHON_BUILD_EXT_COMPILER_JOBS 8
 ENV DEBIAN_FRONTEND=noninteractive
