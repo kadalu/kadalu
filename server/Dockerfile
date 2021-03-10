@@ -9,7 +9,7 @@ COPY --from=kadalu/builder:latest /opt /opt
 COPY --from=kadalu/builder:latest /kadalu /kadalu
 
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends python3 xfsprogs libtirpc3 && \
+    apt-get install -y --no-install-recommends python3 xfsprogs libtirpc3 sqlite3 && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
