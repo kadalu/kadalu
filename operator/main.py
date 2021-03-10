@@ -559,16 +559,24 @@ def handle_deleted(core_v1_client, obj):
 
     storage_info_data = get_configmap_data(volname)
 
-    logging.warning(logf(
+    logging.info(logf(
         "Delete requested",
         volname=volname
     ))
 
     pv_count = get_num_pvs(storage_info_data)
 
+    if pv_count == -1:
+        logging.error(logf(
+            "Storage delete failed. Failed to get PV count",
+            number_of_pvs=pv_count,
+            storage=volname
+        ))
+        return
+
     if pv_count != 0:
 
-        logging.error(logf(
+        logging.warning(logf(
             "Storage delete failed. Storage is not empty",
             number_of_pvs=pv_count,
             storage=volname
@@ -587,6 +595,8 @@ def handle_deleted(core_v1_client, obj):
             volname=volname,
             manifest=filename
         ))
+
+    return
 
 
 def get_configmap_data(volname):
@@ -647,8 +657,8 @@ def get_num_pvs(storage_info_data):
             "storage \"%s\"" % volname,
             error=msg
         ))
-        # Set default as 0
-        return 0
+        # Return error as its -1
+        return -1
 
 
 def delete_server_pods(storage_info_data, obj):
