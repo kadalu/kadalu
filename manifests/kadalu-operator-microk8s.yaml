@@ -222,6 +222,9 @@ rules:
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "watch", "list", "delete", "update", "create"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
 
 ---
 kind: ClusterRoleBinding
