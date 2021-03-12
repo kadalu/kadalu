@@ -105,33 +105,72 @@ jobs:
           pip install -r requirements.txt
           KADALU_VERSION=${{ env.kadalu_version }} make cli-build
       -
-        name: Build CSI Image and push
+        name: Build Builder Image
+        uses: docker/build-push-action@v2
         timeout-minutes: 260
-        run: |
-          KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --tag docker.io/kadalu/builder:${{ env.kadalu_version }} \
-            --tag docker.io/kadalu/builder:latest \
-            --output "type=image,name=docker.io/kadalu/builder,push=true" \
-            --file extras/Dockerfile.builder .
-          KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --target prod \
-            --tag docker.io/kadalu/kadalu-csi:${{ env.kadalu_version }} \
-            --tag docker.io/kadalu/kadalu-csi:latest \
-            --output "type=image,name=docker.io/kadalu/kadalu-csi,push=true" \
-            --file csi/Dockerfile .
-          KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --target prod \
-            --tag docker.io/kadalu/kadalu-operator:${{ env.kadalu_version }} \
-            --tag docker.io/kadalu/kadalu-operator:latest \
-            --output "type=image,name=docker.io/kadalu/kadalu-operator,push=true" \
-            --file operator/Dockerfile .
-          KADALU_VERSION=${{ env.kadalu_version }} docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --target prod \
-            --tag docker.io/kadalu/kadalu-server:${{ env.kadalu_version }} \
-            --tag docker.io/kadalu/kadalu-server:latest \
-            --output "type=image,name=docker.io/kadalu/kadalu-server,push=true" \
-            --file server/Dockerfile .
+        with:
+          context: .
+          file: extras/Dockerfile.builder
+          platforms: linux/arm64,linux/amd64
+          push: true
+          tags: |
+            docker.io/kadalu/builder:latest
+          build-args: |
+            version==${{ env.kadalu_version }}
+            builddate=`date +%Y-%m-%d-%H:%M`
+          secrets: |
+            KADALU_VERSION=${{ env.kadalu_version }}
+      -
+        name: Build CSI Image and push
+        uses: docker/build-push-action@v2
+        timeout-minutes: 200
+        with:
+          context: .
+          file: csi/Dockerfile
+          platforms: linux/arm64,linux/amd64
+          target: prod
+          push: true
+          tags: |
+            docker.io/kadalu/kadalu-csi:${{ env.kadalu_version }}
+            docker.io/kadalu/kadalu-csi:latest
+          build-args: |
+            version==${{ env.kadalu_version }}
+            builddate=`date +%Y-%m-%d-%H:%M`
+          secrets: |
+            KADALU_VERSION=${{ env.kadalu_version }}
+      -
+        name: Build Operator Image and push
+        uses: docker/build-push-action@v2
+        timeout-minutes: 120
+        with:
+          context: .
+          file: operator/Dockerfile
+          platforms: linux/arm64,linux/amd64
+          target: prod
+          push: true
+          tags: |
+            docker.io/kadalu/kadalu-operator:${{ env.kadalu_version }}
+            docker.io/kadalu/kadalu-operator:latest
+          build-args: |
+            version==${{ env.kadalu_version }}
+            builddate=`date +%Y-%m-%d-%H:%M`
+          secrets: |
+            KADALU_VERSION=${{ env.kadalu_version }}
+      -
+        name: Build Storage Server Image and push
+        uses: docker/build-push-action@v2
+        timeout-minutes: 120
+        with:
+          context: .
+          file: server/Dockerfile
+          platforms: linux/arm64,linux/amd64
+          target: prod
+          push: true
+          tags: |
+            docker.io/kadalu/kadalu-server:${{ env.kadalu_version }}
+            docker.io/kadalu/kadalu-server:latest
+          build-args: |
+            version==${{ env.kadalu_version }}
+            builddate=`date +%Y-%m-%d-%H:%M`
+          secrets: |
+            KADALU_VERSION=${{ env.kadalu_version }}
