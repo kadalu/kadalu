@@ -83,6 +83,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Set Version variable
+        id: vars
+        run: echo ::set-output name=tag::${GITHUB_REF#refs/tags/}
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -116,10 +119,10 @@ jobs:
           tags: |
             docker.io/kadalu/builder:latest
           build-args: |
-            version==${{ env.kadalu_version }}
+            version=${{ steps.vars.outputs.tag }}
             builddate=`date +%Y-%m-%d-%H:%M`
           secrets: |
-            KADALU_VERSION=${{ env.kadalu_version }}
+            KADALU_VERSION=${{ steps.vars.outputs.tag }}
       -
         name: Build CSI Image and push
         uses: docker/build-push-action@v2
@@ -131,13 +134,13 @@ jobs:
           target: prod
           push: true
           tags: |
-            docker.io/kadalu/kadalu-csi:${{ env.kadalu_version }}
+            docker.io/kadalu/kadalu-csi:${{ steps.vars.outputs.tag }}
             docker.io/kadalu/kadalu-csi:latest
           build-args: |
-            version==${{ env.kadalu_version }}
+            version=${{ steps.vars.outputs.tag }}
             builddate=`date +%Y-%m-%d-%H:%M`
           secrets: |
-            KADALU_VERSION=${{ env.kadalu_version }}
+            KADALU_VERSION=${{ steps.vars.outputs.tag }}
       -
         name: Build Operator Image and push
         uses: docker/build-push-action@v2
@@ -149,13 +152,13 @@ jobs:
           target: prod
           push: true
           tags: |
-            docker.io/kadalu/kadalu-operator:${{ env.kadalu_version }}
+            docker.io/kadalu/kadalu-operator:${{ steps.vars.outputs.tag }}
             docker.io/kadalu/kadalu-operator:latest
           build-args: |
-            version==${{ env.kadalu_version }}
+            version=${{ steps.vars.outputs.tag }}
             builddate=`date +%Y-%m-%d-%H:%M`
           secrets: |
-            KADALU_VERSION=${{ env.kadalu_version }}
+            KADALU_VERSION=${{ steps.vars.outputs.tag }}
       -
         name: Build Storage Server Image and push
         uses: docker/build-push-action@v2
@@ -167,10 +170,10 @@ jobs:
           target: prod
           push: true
           tags: |
-            docker.io/kadalu/kadalu-server:${{ env.kadalu_version }}
+            docker.io/kadalu/kadalu-server:${{ steps.vars.outputs.tag }}
             docker.io/kadalu/kadalu-server:latest
           build-args: |
-            version==${{ env.kadalu_version }}
+            version=${{ steps.vars.outputs.tag }}
             builddate=`date +%Y-%m-%d-%H:%M`
           secrets: |
-            KADALU_VERSION=${{ env.kadalu_version }}
+            KADALU_VERSION=${{ steps.vars.outputs.tag }}
