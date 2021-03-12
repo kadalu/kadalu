@@ -40,20 +40,7 @@ end-volume
 
 {% endfor %}
 
-volume {{ volname }}-dht
-    type cluster/distribute
-    subvolumes {{ dht_subvol|join(' ') }}
-end-volume
-
-
-volume {{ volname }}-utime
-    type features/utime
-    option noatime on
-    subvolumes {{ volname }}-dht
-end-volume
-
 volume {{ volname }}
     type debug/io-stats
-    option unique-id {{ volume_id }}
-    subvolumes {{ volname }}-utime
+    subvolumes {{ dht_subvol|join(' ') }}
 end-volume
