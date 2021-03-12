@@ -153,6 +153,33 @@ function install_kubectl() {
     curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/"${KUBE_VERSION}"/bin/linux/${ARCH}/kubectl && chmod +x kubectl && mv kubectl /usr/local/bin/
 }
 
+function run_io(){
+
+  # Deploy io-app deployment with 2 replicas
+  kubectl apply -f tests/io-app.yaml
+
+  # Compressed image is ~25MB and so it shouldn't take more than 30s to reach ready state
+  kubectl wait --for=condition=ready pod -l app=io-app --timeout=30s
+
+  # Store pod names
+  pods=($(kubectl get pods -l app=io-app -o jsonpath={'..metadata.name'}))
+
+  echo Run IO from first pod [~30s]
+  kubectl exec -it ${pods[0]} -- sh -c 'cd /mnt/alpha; mkdir -p io-1; for j in create rename chmod chown chgrp symlink hardlink truncate setxattr create; do crefi --multi -n 5 -b 5 -d 5 --max=10K --min=500 --random -t text -T=3 --fop=$j io-1/; done' > /dev/null
+
+  echo Run IO from second pod [~30s]
+  kubectl exec -it ${pods[1]} -- sh -c 'cd /mnt/alpha; mkdir -p io-2; for j in create rename chmod chown chgrp symlink hardlink truncate setxattr create; do crefi --multi -n 5 -b 5 -d 5 --max=10K --min=500 --random -t text -T=3 --fop=$j io-2/; done' > /dev/null
+
+  echo Collecting arequal-checksum from pods under io-pod deployment
+  first_sum=$(kubectl exec -it ${pods[0]} -- sh -c 'arequal-checksum /mnt/alpha') && echo "$first_sum"
+  second_sum=$(kubectl exec -it ${pods[1]} -- sh -c 'arequal-checksum /mnt/alpha') && echo "$second_sum"
+
+  echo Validate checksum between first and second pod [Empty for checksum match]
+  diff <(echo "$first_sum") <(echo "$second_sum")
+
+  return 0
+}
+
 # configure minikube
 MINIKUBE_VERSION=${MINIKUBE_VERSION:-"v1.15.1"}
 KUBE_VERSION=${KUBE_VERSION:-"v1.20.0"}
@@ -295,6 +322,9 @@ test_kadalu)
     wait_till_pods_start
 
     #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 60
+
+    # Run minimal IO test
+    run_io
 
     # Log everything so we are sure if things are as expected
     for p in $(kubectl -n kadalu get pods -o name); do

@@ -1,0 +1,49 @@
+# -*- mode: yaml -*-
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv-io
+spec:
+  storageClassName: kadalu.replica3
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Mi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: io-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: io-app
+  template:
+    metadata:
+      labels:
+        app: io-app
+    spec:
+      containers:
+      - name: io-pod
+        image: docker.io/leelavg/dark-side:latest
+        imagePullPolicy: IfNotPresent
+        command: ['sh', '-c', 'echo "Ready!" && while true; do sleep 10; done;']
+        volumeMounts:
+        - mountPath: '/mnt/alpha'
+          name: csivol
+        livenessProbe:
+          exec:
+            command:
+              - 'sh'
+              - '-ec'
+              - 'df'
+          initialDelaySeconds: 3
+          periodSeconds: 3
+      volumes:
+      - name: csivol
+        persistentVolumeClaim:
+          claimName: pv-io
