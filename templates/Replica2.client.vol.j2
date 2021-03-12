@@ -20,13 +20,12 @@ end-volume
 {% for i in range(dht_subvol|length) %}
 volume {{ volname }}-replica-{{ i }}
     type cluster/replicate
-    option data-self-heal off
-    option granular-entry-heal no
+    option data-self-heal on
+    option granular-entry-heal on
     option iam-self-heal-daemon off
-    option metadata-self-heal off
-    option self-heal-daemon off
+    option metadata-self-heal on
+    option entry-self-heal on
     option read-hash-mode 5
-    option entry-self-heal off
     option afr-pending-xattr {{ volname }}-client-{{ i * 2 }},{{ volname }}-client-{{ (i * 2) + 1}},{{ volume_id }}-ta
     option thin-arbiter {{ tiebreaker["node"] }}:{{ tiebreaker["path"] }}
     subvolumes {{ volname }}-client-{{ i * 2 }} {{ volname }}-client-{{ (i * 2) + 1}} {{ volume_id }}-ta
