@@ -60,7 +60,6 @@ def validate(args):
 def fetch_pod_logs(args):
     """ Get logs for a particular pod """
     try:
-        # Set default to '--allcontainers' to avoid exception
         container_name = ""
         if args.allcontainers:
             container_name = "--all-containers"
@@ -89,11 +88,10 @@ def run(args):
         else:
             cmd = utils.kubectl_cmd(args) + ["get", "pods", "-nkadalu", "-oname"]
             resp = utils.execute(cmd)
-            pods = resp.stdout.split('\n')
+            # Remove empty lines(pod-names) from command response
+            pods = [pod for pod in resp.stdout.split('\n') if pod.strip()]
 
             for pod in pods:
-                if pod == "":
-                    continue
                 log_cmd = utils.kubectl_cmd(args) + [
                     "logs", "-nkadalu",
                     pod, "--all-containers=true"]
