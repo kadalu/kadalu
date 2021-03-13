@@ -2,7 +2,7 @@ FROM kadalu/builder:latest as builder
 
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
 
-RUN python3 -m pip install grpcio googleapis-common-protos
+RUN python3 -m pip install grpcio googleapis-common-protos >/dev/null
 
 FROM ubuntu:20.04 as prod
 ENV DEBIAN_FRONTEND=noninteractive
