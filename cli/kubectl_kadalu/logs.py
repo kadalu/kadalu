@@ -57,48 +57,30 @@ def validate(args):
         sys.exit(1)
 
 
-def fetch_pod_logs(args):
-    """ Get logs for a particular pod """
-    try:
-        container_name = ""
-        if args.allcontainers:
-            container_name = "--all-containers"
-        elif args.container:
-            container_name = args.container
-
-        log_cmd = utils.kubectl_cmd(args) + [
-            "logs", "-nkadalu",
-            args.podname, container_name]
-        log_resp = utils.execute(log_cmd)
-        print("----- (Kadalu Namespace) %s -----" % args.podname)
-        print(log_resp.stdout)
-        print()
-
-    except FileNotFoundError:
-        utils.kubectl_cmd_help(args.kubectl_cmd)
-    except utils.CommandError as err:
-        utils.command_error(log_cmd, err.stderr)
-
 def run(args):
     """ perform log subcommand """
 
     try:
-        if args.podname:
-            fetch_pod_logs(args)
-        else:
+
+        pods, container = [args.podname], "--all-containers=true"
+
+        if args.container:
+            container = '-c' + args.container
+
+        if not args.podname:
             cmd = utils.kubectl_cmd(args) + ["get", "pods", "-nkadalu", "-oname"]
             resp = utils.execute(cmd)
             # Remove empty lines(pod-names) from command response
-            pods = [pod for pod in resp.stdout.split('\n') if pod.strip()]
+            pods = [pod for pod in resp.stdout.strip().split()]
 
-            for pod in pods:
-                log_cmd = utils.kubectl_cmd(args) + [
-                    "logs", "-nkadalu",
-                    pod, "--all-containers=true"]
-                log_resp = utils.execute(log_cmd)
-                print("----- (Kadalu Namespace) %s -----" % pod)
-                print(log_resp.stdout)
-                print()
+        for pod in pods:
+            log_cmd = utils.kubectl_cmd(args) + [
+                "logs", "-nkadalu",
+                pod, container]
+            log_resp = utils.execute(log_cmd)
+            print("----- (Kadalu Namespace) %s -----" % pod)
+            print(log_resp.stdout)
+            print()
 
     except utils.CommandError as err:
         utils.command_error(cmd, err.stderr)
