@@ -145,7 +145,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
                 # The external volume should be used as kadalu host vol
 
-                if is_hosting_volume_free(ext_volume['name'], pvsize) is False:
+                if not is_hosting_volume_free(ext_volume['name'], pvsize):
                     errmsg = "Hosting Volume '%s' is Full. Add More Storage" % ext_volume['name']
                     logging.error(errmsg)
                     context.set_details(errmsg)
@@ -331,7 +331,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
 
         # Check free-size in storage-pool before expansion
-        if is_hosting_volume_free(hostvol, expansion_requested_pvsize) is False:
+        if not is_hosting_volume_free(hostvol, expansion_requested_pvsize):
 
             errmsg = "Hosting Volume '%s' is Full. Add More Storage" % hostvol
             logging.error(errmsg)
