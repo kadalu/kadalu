@@ -114,7 +114,7 @@ jobs:
         with:
           context: .
           file: extras/Dockerfile.builder
-          platforms: linux/arm64,linux/amd64
+          platforms: linux/amd64
           push: true
           tags: |
             docker.io/kadalu/builder:latest
@@ -130,7 +130,7 @@ jobs:
         with:
           context: .
           file: csi/Dockerfile
-          platforms: linux/arm64,linux/amd64
+          platforms: linux/amd64
           target: prod
           push: true
           tags: |
@@ -148,7 +148,7 @@ jobs:
         with:
           context: .
           file: operator/Dockerfile
-          platforms: linux/arm64,linux/amd64
+          platforms: linux/amd64
           target: prod
           push: true
           tags: |
@@ -166,7 +166,7 @@ jobs:
         with:
           context: .
           file: server/Dockerfile
-          platforms: linux/arm64,linux/amd64
+          platforms: linux/amd64
           target: prod
           push: true
           tags: |
