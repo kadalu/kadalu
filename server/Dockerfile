@@ -1,17 +1,24 @@
+FROM kadalu/builder:latest as builder
+
+ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
+
 FROM ubuntu:20.04 as prod
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
-COPY --from=kadalu/builder:latest /opt /opt
+COPY --from=builder /opt /opt
 
 # actual application to be copied here
 # using already installed packages from builder for faster build time
-COPY --from=kadalu/builder:latest /kadalu /kadalu
+COPY --from=builder /kadalu /kadalu
 
 RUN apt-get update -yq && \
     apt-get install -y --no-install-recommends python3 xfsprogs libtirpc3 sqlite3 && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
+
+# copy pyxattr installed in pypi_source image
+COPY --from=kadalu/pypi_source:latest /usr/local/lib/python3.8/dist-packages /kadalu/lib/python3.8/site-packages/
 
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
 RUN mkdir -p /var/run/gluster /var/log/glusterfs
@@ -19,8 +26,6 @@ RUN mkdir -p /var/run/gluster /var/log/glusterfs
 COPY lib/kadalulib.py        /kadalu/kadalulib.py
 COPY server/server.py        /kadalu/server.py
 COPY server/glusterfsd.py    /kadalu/glusterfsd.py
-#COPY server/kadalu_quotad/quotad.py       /kadalu/quotad.py
-#COPY server/kadalu_quotad/glusterutils.py /kadalu/glusterutils.py
 COPY server/shd.py           /kadalu/shd.py
 COPY server/mount-glustervol /usr/bin/mount-glustervol
 COPY lib/startup.sh          /kadalu/startup.sh
