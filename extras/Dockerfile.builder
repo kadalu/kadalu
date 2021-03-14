@@ -21,6 +21,8 @@ RUN apt-get update -yq && \
     python3 -m pip install --upgrade setuptools && \
     pip install prometheus-client jinja2 requests datetime xxhash
 
+RUN sed -i "s/include-system-site-packages = false/include-system-site-packages = true/g" /kadalu/pyvenv.cfg
+
 # Debugging, Comment the above line and
 # uncomment below line
 ENTRYPOINT ["tail", "-f", "/dev/null"]
