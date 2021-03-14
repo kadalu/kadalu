@@ -71,7 +71,7 @@ def run(args):
             cmd = utils.kubectl_cmd(args) + ["get", "pods", "-nkadalu", "-oname"]
             resp = utils.execute(cmd)
             # Remove empty lines(pod-names) from command response
-            pods = [pod for pod in resp.stdout.strip().split()]
+            pods = resp.stdout.strip().split()
 
         for pod in pods:
             log_cmd = utils.kubectl_cmd(args) + [
