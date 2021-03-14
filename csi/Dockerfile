@@ -8,7 +8,6 @@ FROM ubuntu:20.04 as prod
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
     apt-get install -y --no-install-recommends attr python3 libtirpc3 bash && \
-    apt-get install -y --no-install-recommends python3-grpcio >/dev/null && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -20,6 +19,9 @@ COPY --from=builder /opt /opt
 # actual application to be copied here
 # using already installed packages from builder for faster build time
 COPY --from=builder /kadalu /kadalu
+
+# copy grpcio installed in pypi_source image
+COPY --from=kadalu/pypi_source:latest /usr/local/lib/python3.8/dist-packages /kadalu/lib/python3.8/site-packages/
 
 RUN mkdir -p /kadalu/volfiles /kadalu/templates
 RUN mkdir -p /var/log/glusterfs /var/run/gluster
