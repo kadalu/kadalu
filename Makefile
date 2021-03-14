@@ -69,7 +69,7 @@ pylint:
 	@pylint --disable W0511,W0603 -s n server/quotad.py
 	@pylint --disable=W0511 -s n server/server.py
 	@pylint --disable=W0511 -s n server/shd.py
-	@pylint --disable=W0511 -s n csi/controllerserver.py
+	@pylint --disable=W0511,R0911 -s n csi/controllerserver.py
 	@pylint --disable=W0511 -s n csi/identityserver.py
 	@pylint --disable=W0511 -s n csi/main.py
 	@pylint --disable=W0511 -s n csi/nodeserver.py

@@ -145,8 +145,17 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
                 # The external volume should be used as kadalu host vol
 
-                # TODO: handle the case where host-volume is full
-                # can-be-fixed-by-an-intern
+                if not is_hosting_volume_free(ext_volume['name'], pvsize):
+
+                    logging.error(logf(
+                        "Hosting volume is full. Add more storage",
+                        volume=ext_volume['name']
+                    ))
+                    errmsg = "External resource is exhausted"
+                    context.set_details(errmsg)
+                    context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
+                    return csi_pb2.CreateVolumeResponse()
+
                 if pvtype == PV_TYPE_VIRTBLOCK:
                     vol = create_virtblock_volume(
                         mntdir, request.name, pvsize)
@@ -326,10 +335,13 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
 
         # Check free-size in storage-pool before expansion
-        if is_hosting_volume_free(hostvol, expansion_requested_pvsize) is False:
+        if not is_hosting_volume_free(hostvol, expansion_requested_pvsize):
 
-            errmsg = "Hosting Volume '%s' is Full. Add More Storage" % hostvol
-            logging.error(errmsg)
+            logging.error(logf(
+                "Hosting volume is full. Add more storage",
+                volume=hostvol
+            ))
+            errmsg = "Host volume resource is exhausted"
             context.set_details(errmsg)
             context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
             return csi_pb2.CreateVolumeResponse()

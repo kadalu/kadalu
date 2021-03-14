@@ -404,8 +404,8 @@ def create_subdir_volume(hostvol_mnt, volname, size):
     )
 
 
-def is_hosting_volume_free(hostvol, expansion_requested_pvsize):
-    """CHeck if host volume is free to expand volume"""
+def is_hosting_volume_free(hostvol, requested_pvsize):
+    """Check if host volume is free to expand or create (external)volume"""
 
     mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
     with statfile_lock:
@@ -425,11 +425,11 @@ def is_hosting_volume_free(hostvol, expansion_requested_pvsize):
             used_size_bytes=pv_stats["used_size_bytes"],
             free_size_bytes=pv_stats["free_size_bytes"],
             number_of_pvs=pv_stats["number_of_pvs"],
-            required_size=expansion_requested_pvsize,
+            required_size=requested_pvsize,
             reserved_size=reserved_size
         ))
 
-        if expansion_requested_pvsize < (pv_stats["free_size_bytes"] - reserved_size):
+        if requested_pvsize < (pv_stats["free_size_bytes"] - reserved_size):
             return True
 
         return False
