@@ -1,15 +1,21 @@
+FROM kadalu/builder:latest as builder
+
+ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
+RUN python3 -m pip install glustercli
+
 FROM ubuntu:20.04 as prod
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
-COPY --from=kadalu/builder:latest /opt /opt
+COPY --from=builder /opt /opt
 
 # actual application to be copied here
 # using already installed packages from builder for faster build time
-COPY --from=kadalu/builder:latest /kadalu /kadalu
+COPY --from=builder /kadalu /kadalu
 
 RUN apt-get update -yq && \
     apt-get install -y --no-install-recommends python3 xfsprogs libtirpc3 sqlite3 && \
+    apt-get install -y --no-install-recommends python3-pyxattr && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 

@@ -60,6 +60,12 @@ if [ "x${KADALU_VERSION}" = "x" ]; then
     KADALU_VERSION=${VERSION}
 fi
 
+echo "Building base builder image - This may take a while"
+
+$RUNTIME_CMD $build \
+	     -t "${DOCKER_USER}/builder:latest" "${build_args[@]}" \
+	     --network host -f extras/Dockerfile.builder .
+
 echo "Building images kadalu-\$service:${VERSION}";
 
 build_container "kadalu-server" "server/Dockerfile" ${KADALU_VERSION}
