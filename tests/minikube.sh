@@ -165,10 +165,11 @@ function run_io(){
   pods=($(kubectl get pods -l app=io-app -o jsonpath={'..metadata.name'}))
 
   echo Run IO from first pod [~30s]
-  kubectl exec -it ${pods[0]} -- sh -c 'cd /mnt/alpha; mkdir -p io-1; for j in create rename chmod chown chgrp symlink hardlink truncate setxattr create; do crefi --multi -n 5 -b 5 -d 5 --max=10K --min=500 --random -t text -T=3 --fop=$j io-1/; done' > /dev/null
+  # 10 types of IO operations are performed
+  kubectl exec -it ${pods[0]} -- sh -c 'cd /mnt/alpha; mkdir -p io-1; for j in create rename chmod chown chgrp symlink hardlink truncate setxattr create; do crefi --multi -n 5 -b 5 -d 5 --max=10K --min=500 --random -t text -T=3 --fop=$j io-1/ 2>/dev/null; done' | wc -l | grep 10
 
   echo Run IO from second pod [~30s]
-  kubectl exec -it ${pods[1]} -- sh -c 'cd /mnt/alpha; mkdir -p io-2; for j in create rename chmod chown chgrp symlink hardlink truncate setxattr create; do crefi --multi -n 5 -b 5 -d 5 --max=10K --min=500 --random -t text -T=3 --fop=$j io-2/; done' > /dev/null
+  kubectl exec -it ${pods[1]} -- sh -c 'cd /mnt/alpha; mkdir -p io-2; for j in create rename chmod chown chgrp symlink hardlink truncate setxattr create; do crefi --multi -n 5 -b 5 -d 5 --max=10K --min=500 --random -t text -T=3 --fop=$j io-2/ 2>/dev/null; done' | wc -l | grep 10
 
   echo Collecting arequal-checksum from pods under io-pod deployment
   first_sum=$(kubectl exec -it ${pods[0]} -- sh -c 'arequal-checksum /mnt/alpha') && echo "$first_sum"
@@ -183,7 +184,7 @@ function run_io(){
 # configure minikube
 MINIKUBE_VERSION=${MINIKUBE_VERSION:-"v1.15.1"}
 KUBE_VERSION=${KUBE_VERSION:-"v1.20.0"}
-SKIP_HELM=${SKIP_HELM:-"false"}
+COMMIT_MSG=${COMMIT_MSG:-""}
 MEMORY=${MEMORY:-"3000"}
 VM_DRIVER=${VM_DRIVER:-"none"}
 #configure image repo
@@ -243,7 +244,7 @@ ssh)
 kadalu_operator)
     docker images
 
-    if [ "$SKIP_HELM" == "false" ]; then
+    if [[ ! "$COMMIT_MSG" =~ 'helm skip' ]]; then
 
         # As per https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
         # `helm` is already part of github runner

@@ -41,18 +41,32 @@ jobs:
     - name: Install Docker Dependencies
       run: sudo apt-get install -y conntrack
     - name: Build locally
-      run: make build-containers
+      run: |
+        echo GITHUB_CONTEXT: "$GITHUB_CONTEXT"
+        make build-containers;
+        # Conditionally build test containers if PR edits tests/**/Dockerfile
+        CONTAINERS_FOR=''
+        for name in $FILE_NAMES; do
+          if [[ "$name" =~ ^tests.*Dockerfile$ ]]; then
+            CONTAINERS_FOR=TESTING
+            break
+          fi
+        done;
+        # In build script, only test containers will be built if this variable is set
+        [[ "$CONTAINERS_FOR" == "TESTING" ]] && CONTAINERS_FOR=TESTING make build-containers
+      env:
+        FILE_NAMES: ${{ join(github.event.pull_request.files.*.filename, ' ') }}
+        # Temporary: Only for debugging if step fails
+        GITHUB_CONTEXT: ${{ toJSON(github) }}
     - name: Generate Manifests
       run: VERBOSE="yes" make gen-manifest
     - name: Setup Minikube
       run: tests/setup.sh $KUBE_VERSION
     - name: Run tests
-      if: "!contains(github.event.head_commit.message, '[helm skip]')"
-      run: tests/travis-test.sh $KUBE_VERSION
-    - name: Run tests without validating helm
-      if: "contains(github.event.head_commit.message, '[helm skip]')"
       run: tests/travis-test.sh $KUBE_VERSION
       env:
-        SKIP_HELM: "true"
+        # Current conditions in minikube.sh which are using commit message:
+        # [helm skip]: If contained in COMMIT MESSAGE, validating helm is skipped
+        COMMIT_MSG: ${{ github.event.head_commit.message }}
     - name: Cleanup
       run: tests/cleanup.sh $KUBE_VERSION
