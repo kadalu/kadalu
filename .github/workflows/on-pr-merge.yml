@@ -121,19 +121,13 @@ jobs:
         run: |
           echo GITHUB_CONTEXT: "$GITHUB_CONTEXT"
           build_test='no'
-          for name in $ADDED_FILES $MODIFIED_FILES; do
-            if [[ "$name" =~ ^tests.*Dockerfile$ ]];
-              build_test='yes'
-              break
-            fi
-          done;
-          echo ::set-output name=build_test::$build_test
-        env:
-          ADDED_FILES: ${{ join(github.event.push.commits.*.added, ' ') }}
-          MODIFIED_FILES: ${{ join(github.event.push.commits.*.modified, ' ') }}
-          # Temporary: Only for debugging if step fails
-          GITHUB_CONTEXT: ${{ toJSON(github) }}
+          URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files"
+          FILES=$(curl -s -X GET -G $URL | jq -r '.[] | .filename')
 
+          if grep -e '^tests.*Dockerfile$' <<< "$FILES"; then
+            build_test='yes'
+          fi
+          echo ::set-output name=build_test::$build_test
       -
         name: Build test images used in CI
         if: "contains(steps.build_test.outputs.build_test, 'yes')"

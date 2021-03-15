@@ -42,22 +42,18 @@ jobs:
       run: sudo apt-get install -y conntrack
     - name: Build locally
       run: |
-        echo GITHUB_CONTEXT: "$GITHUB_CONTEXT"
         make build-containers;
-        # Conditionally build test containers if PR edits tests/**/Dockerfile
+
+        # Conditionally build test containers if PR includes tests/**/Dockerfile
         CONTAINERS_FOR=''
-        for name in $FILE_NAMES; do
-          if [[ "$name" =~ ^tests.*Dockerfile$ ]]; then
-            CONTAINERS_FOR=TESTING
-            break
-          fi
-        done;
+        URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files"
+        FILES=$(curl -s -X GET -G $URL | jq -r '.[] | .filename')
+
+        if grep -e '^tests.*Dockerfile$' <<< "$FILES"; then
+          CONTAINERS_FOR=TESTING
+        fi
         # In build script, only test containers will be built if this variable is set
         [[ "$CONTAINERS_FOR" == "TESTING" ]] && CONTAINERS_FOR=TESTING make build-containers
-      env:
-        FILE_NAMES: ${{ join(github.event.pull_request.files.*.filename, ' ') }}
-        # Temporary: Only for debugging if step fails
-        GITHUB_CONTEXT: ${{ toJSON(github) }}
     - name: Generate Manifests
       run: VERBOSE="yes" make gen-manifest
     - name: Setup Minikube
