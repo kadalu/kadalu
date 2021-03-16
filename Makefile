@@ -117,7 +117,7 @@ pypi-build:
 
 helm-chart:
 	@echo "Creating tgz archive of helm chart(Version: ${KADALU_VERSION}).."
-	cd helm; tar -czf kadalu-helm-chart.tgz kadalu
+	cd helm; sed -i -e "s/devel/${KADALU_VERSION}/" kadalu/Chart.yaml; tar -czf kadalu-helm-chart.tgz kadalu
 
 ifeq ($(TWINE_PASSWORD),)
 pypi-upload: pypi-build

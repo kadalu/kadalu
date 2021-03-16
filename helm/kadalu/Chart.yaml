@@ -3,4 +3,5 @@ name: kadalu
 icon: https://kadalu.io/static/css/logo.png
 description: kadalu.io Storage Operator and CSI for k8s (with glusterfs)
 type: application
-version: 0.8.0
+# Value of 'version' will be replaced with correct version on part of release
+version: devel

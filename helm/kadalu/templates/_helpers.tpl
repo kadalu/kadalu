@@ -36,8 +36,8 @@ Common labels
 {{- define "kadalu.labels" -}}
 helm.sh/chart: {{ include "kadalu.chart" . }}
 {{ include "kadalu.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- if .Chart.version }}
+app.kubernetes.io/version: {{ .Chart.version | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}

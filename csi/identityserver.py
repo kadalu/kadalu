@@ -1,12 +1,13 @@
 """
 Identity Server implementation
 """
+import os
+
 import csi_pb2
 import csi_pb2_grpc
 
-
 DRIVER_NAME = "kadalu"
-DRIVER_VERSION = "0.7.0"
+DRIVER_VERSION = os.environ.get("KADALU_VERSION", "latest")
 
 
 class IdentityServer(csi_pb2_grpc.IdentityServicer):
