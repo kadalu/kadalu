@@ -53,7 +53,7 @@ jobs:
           CONTAINERS_FOR=TESTING
         fi
         # In build script, only test containers will be built if this variable is set
-        [[ "$CONTAINERS_FOR" == "TESTING" ]] && CONTAINERS_FOR=TESTING make build-containers
+        [[ "$CONTAINERS_FOR" == "TESTING" ]] && CONTAINERS_FOR=TESTING make test-containers
     - name: Generate Manifests
       run: VERBOSE="yes" make gen-manifest
     - name: Setup Minikube
