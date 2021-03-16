@@ -156,7 +156,7 @@ function install_kubectl() {
 function run_io(){
 
   # Deploy io-app deployment with 2 replicas
-  kubectl apply -f tests/io-app.yaml
+  kubectl apply -f tests/test-io/io-app.yaml
 
   # Compressed image is ~25MB and so it shouldn't take more than 30s to reach ready state
   kubectl wait --for=condition=ready pod -l app=io-app --timeout=30s
