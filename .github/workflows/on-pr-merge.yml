@@ -9,7 +9,6 @@ on:
       - '**.md'
       - 'extras/**'
       - 'helm/**'
-      - 'tests/**'
     branches:
       - devel
       - buildx_test
@@ -109,6 +108,40 @@ jobs:
           tags: |
             docker.io/kadalu/kadalu-server:${{ github.sha }}
             docker.io/kadalu/kadalu-server:devel
+          build-args: |
+            version==${{ github.sha }}
+            builddate=`date +%Y-%m-%d-%H:%M`
+          secrets: |
+            KADALU_VERSION=${{ github.sha }}
+
+      # What follows are basically building and pushing of tests images conditionally
+      -
+        name: Check for Dockerfile changes in tests folder
+        id: build_test
+        run: |
+          echo GITHUB_CONTEXT: "$GITHUB_CONTEXT"
+          build_test='no'
+          URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files"
+          FILES=$(curl -s -X GET -G $URL | jq -r '.[] | .filename')
+
+          if grep -e '^tests.*Dockerfile$' <<< "$FILES"; then
+            build_test='yes'
+          fi
+          echo ::set-output name=build_test::$build_test
+      -
+        name: Build test images used in CI
+        if: "contains(steps.build_test.outputs.build_test, 'yes')"
+        uses: docker/build-push-action@v2
+        timeout-minutes: 10
+        with:
+          context: .
+          file: tests/test-io/Dockerfile
+          platforms: linux/amd64
+          target: prod
+          push: true
+          tags: |
+            docker.io/kadalu/test-io:${{ github.sha }}
+            docker.io/kadalu/test-io:devel
           build-args: |
             version==${{ github.sha }}
             builddate=`date +%Y-%m-%d-%H:%M`

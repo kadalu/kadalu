@@ -156,7 +156,7 @@ function install_kubectl() {
 function run_io(){
 
   # Deploy io-app deployment with 2 replicas
-  kubectl apply -f tests/io-app.yaml
+  kubectl apply -f tests/test-io/io-app.yaml
 
   # Compressed image is ~25MB and so it shouldn't take more than 30s to reach ready state
   kubectl wait --for=condition=ready pod -l app=io-app --timeout=30s
@@ -165,14 +165,17 @@ function run_io(){
   pods=($(kubectl get pods -l app=io-app -o jsonpath={'..metadata.name'}))
 
   echo Run IO from first pod [~30s]
-  kubectl exec -it ${pods[0]} -- sh -c 'cd /mnt/alpha; mkdir -p io-1; for j in create rename chmod chown chgrp symlink hardlink truncate setxattr create; do crefi --multi -n 5 -b 5 -d 5 --max=10K --min=500 --random -t text -T=3 --fop=$j io-1/; done' > /dev/null
+  # 9 types of IO operations are performed
+  kubectl exec -i ${pods[0]} -- sh -c 'cd /mnt/alpha; mkdir -p io-1; for j in create rename chmod chown chgrp symlink hardlink truncate setxattr create; \
+  do crefi --multi -n 5 -b 5 -d 5 --max=10K --min=500 --random -t text -T=3 --fop=$j io-1/ 2>/dev/null; done'
 
   echo Run IO from second pod [~30s]
-  kubectl exec -it ${pods[1]} -- sh -c 'cd /mnt/alpha; mkdir -p io-2; for j in create rename chmod chown chgrp symlink hardlink truncate setxattr create; do crefi --multi -n 5 -b 5 -d 5 --max=10K --min=500 --random -t text -T=3 --fop=$j io-2/; done' > /dev/null
+  kubectl exec -i ${pods[1]} -- sh -c 'cd /mnt/alpha; mkdir -p io-2; for j in create rename chmod chown chgrp symlink hardlink truncate setxattr create; \
+  do crefi --multi -n 5 -b 5 -d 5 --max=10K --min=500 --random -t text -T=3 --fop=$j io-2/ 2>/dev/null; done'
 
   echo Collecting arequal-checksum from pods under io-pod deployment
-  first_sum=$(kubectl exec -it ${pods[0]} -- sh -c 'arequal-checksum /mnt/alpha') && echo "$first_sum"
-  second_sum=$(kubectl exec -it ${pods[1]} -- sh -c 'arequal-checksum /mnt/alpha') && echo "$second_sum"
+  first_sum=$(kubectl exec -i ${pods[0]} -- sh -c 'arequal-checksum /mnt/alpha') && echo "$first_sum"
+  second_sum=$(kubectl exec -i ${pods[1]} -- sh -c 'arequal-checksum /mnt/alpha') && echo "$second_sum"
 
   echo Validate checksum between first and second pod [Empty for checksum match]
   diff <(echo "$first_sum") <(echo "$second_sum")
@@ -183,7 +186,7 @@ function run_io(){
 # configure minikube
 MINIKUBE_VERSION=${MINIKUBE_VERSION:-"v1.15.1"}
 KUBE_VERSION=${KUBE_VERSION:-"v1.20.0"}
-SKIP_HELM=${SKIP_HELM:-"false"}
+COMMIT_MSG=${COMMIT_MSG:-""}
 MEMORY=${MEMORY:-"3000"}
 VM_DRIVER=${VM_DRIVER:-"none"}
 #configure image repo
@@ -243,7 +246,7 @@ ssh)
 kadalu_operator)
     docker images
 
-    if [ "$SKIP_HELM" == "false" ]; then
+    if [[ ! "$COMMIT_MSG" =~ 'helm skip' ]]; then
 
         # As per https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
         # `helm` is already part of github runner

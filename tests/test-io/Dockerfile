@@ -9,7 +9,7 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install git+https://github.com/vijaykumar-koppad/Crefi.git@7c17a353d19666f230100e92141b49c29546e870
 
-FROM frolvlad/alpine-python3 AS build
+FROM frolvlad/alpine-python3 AS prod
 
 ARG version="(unknown)"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')

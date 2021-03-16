@@ -60,6 +60,17 @@ if [ "x${KADALU_VERSION}" = "x" ]; then
     KADALU_VERSION=${VERSION}
 fi
 
+CONTAINERS_FOR=${CONTAINERS_FOR:-"DEVELOPMENT"}
+
+if [[ "$CONTAINERS_FOR" == "TESTING" ]]; then
+  echo "Building test containers"
+
+  # Test IO container to be used in CI
+  build_container "test-io" "tests/test-io/Dockerfile" ${KADALU_VERSION}
+
+  exit 0
+fi
+
 echo "Building base builder image - This may take a while"
 
 $RUNTIME_CMD $build \

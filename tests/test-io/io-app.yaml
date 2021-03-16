@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
       - name: io-pod
-        image: docker.io/leelavg/dark-side:latest
+        image: docker.io/kadalu/test-io:devel
         imagePullPolicy: IfNotPresent
         command: ['sh', '-c', 'echo "Ready!" && while true; do sleep 10; done;']
         volumeMounts:

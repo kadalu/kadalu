@@ -7,6 +7,7 @@ KADALU_LATEST?=latest
 help:
 	@echo "    make build-grpc        - To generate grpc Python Code"
 	@echo "    make build-containers  - To create server, csi and Operator containers"
+	@echo "    make test-containers   - To create test-io image used in CI"
 	@echo "    make gen-manifest      - To generate manifest files to deploy"
 	@echo "    make pylint            - To validate all Python code with Pylint"
 	@echo "    make prepare-release   - Generate Manifest file and build containers for specific version and latest"
@@ -19,6 +20,10 @@ build-grpc:
 	python3 -m grpc_tools.protoc -I./csi/protos --python_out=csi --grpc_python_out=csi ./csi/protos/csi.proto
 
 build-containers: cli-build
+	DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} bash build.sh
+
+# test-containers will be called on setting an environment variable 'CONTAINERS_FOR' as part of CI
+test-containers:
 	DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} bash build.sh
 
 gen-manifest:
