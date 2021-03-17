@@ -16,7 +16,7 @@ RUN apt-get update -yq && \
     (cd glusterfs && ./autogen.sh && ./configure --prefix=/opt >/dev/null && make install-strip >/dev/null && cd ..) && \
     curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`/kubectl -o /usr/bin/kubectl && \
     chmod +x /usr/bin/kubectl &&  \
-    python3 -m venv $VIRTUAL_ENV && cd /kadalu && \
+    python3 -m venv $VIRTUAL_ENV && cd $VIRTUAL_ENV && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools && \
     pip install prometheus-client jinja2 requests datetime xxhash

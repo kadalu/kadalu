@@ -1,0 +1,28 @@
+# This pod will be deploy as part of CI
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sanity-app
+  labels:
+    app: sanity-app
+spec:
+  # podAffinity isn't required as nodeplugin is deployed to every node and so
+  # the csi.sock file can be accessed without any issues
+  containers:
+    - name: sanity-app
+      image: docker.io/kadalu/test-csi:devel
+      imagePullPolicy: IfNotPresent
+      command: ['sh', '-c', 'echo "Ready!" && while true; do sleep 10; done;']
+      env:
+        - name: CSI_ENDPOINT
+          value: unix:/plugin/csi.sock
+      volumeMounts:
+        - name: csi-sock
+          mountPath: /plugin/csi.sock
+  restartPolicy: OnFailure
+  volumes:
+    - name: csi-sock
+      hostPath:
+        path: /var/lib/kubelet/plugins_registry/kadalu/csi.sock
+        type: Socket

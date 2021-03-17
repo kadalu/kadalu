@@ -7,7 +7,7 @@ KADALU_LATEST?=latest
 help:
 	@echo "    make build-grpc        - To generate grpc Python Code"
 	@echo "    make build-containers  - To create server, csi and Operator containers"
-	@echo "    make test-containers   - To create test-io image used in CI"
+	@echo "    make test-containers   - To create test-io, test-csi image used in CI"
 	@echo "    make gen-manifest      - To generate manifest files to deploy"
 	@echo "    make pylint            - To validate all Python code with Pylint"
 	@echo "    make prepare-release   - Generate Manifest file and build containers for specific version and latest"
