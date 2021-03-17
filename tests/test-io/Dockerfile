@@ -11,6 +11,7 @@ RUN pip install git+https://github.com/vijaykumar-koppad/Crefi.git@7c17a353d1966
 
 FROM frolvlad/alpine-python3 AS prod
 
+# Version supplied at build time
 ARG version="(unknown)"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')
 ARG builddate="(unknown)"

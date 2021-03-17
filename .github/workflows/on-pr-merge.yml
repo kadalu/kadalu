@@ -119,11 +119,9 @@ jobs:
         name: Check for Dockerfile changes in tests folder
         id: build_test
         run: |
-          echo GITHUB_CONTEXT: "$GITHUB_CONTEXT"
           build_test='no'
-          URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files"
-          FILES=$(curl -s -X GET -G $URL | jq -r '.[] | .filename')
-
+          # Get files part of the merge
+          FILES=$(git show --pretty="" --name-only)
           if grep -e '^tests.*Dockerfile$' <<< "$FILES"; then
             build_test='yes'
           fi
