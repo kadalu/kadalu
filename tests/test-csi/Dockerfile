@@ -8,8 +8,9 @@ ENV CGO_ENABLED=0
 RUN apk add --no-cache make && wget -q https://github.com/kubernetes-csi/csi-test/archive/$SANITYTGZ
 RUN tar xvf $SANITYTGZ && cd csi-test-"${VERSION/v/}" && make -C cmd/csi-sanity/ && cp cmd/csi-sanity/csi-sanity /opt/
 
-FROM busybox:stable
+FROM busybox:stable as prod
 
+# Version supplied at build time
 ARG version="(unknown)"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')
 ARG builddate="(unknown)"
@@ -23,6 +24,5 @@ LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="kadalu"
 LABEL version="${version}"
 
-# No CMD/ENTRYPOINT provide as to use this image in exec form of kubectl
 COPY --from=build /opt/csi-sanity /usr/local/sbin/csi-sanity
-
+CMD ["sh"]

@@ -3,16 +3,17 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: csi-sanity
+  name: sanity-app
   labels:
-    app: csi-sanity
+    app: sanity-app
 spec:
   # podAffinity isn't required as nodeplugin is deployed to every node and so
   # the csi.sock file can be accessed without any issues
   containers:
-    - name: csi-sanity
-      image: registry.localhost:5000/test-sanity
-      command: ['sh', '-c', 'echo "Ready to work" && while true; do sleep 60; done;']
+    - name: sanity-app
+      image: docker.io/kadalu/test-csi:devel
+      imagePullPolicy: IfNotPresent
+      command: ['sh', '-c', 'echo "Ready!" && while true; do sleep 10; done;']
       env:
         - name: CSI_ENDPOINT
           value: unix:/plugin/csi.sock

@@ -2,7 +2,7 @@
 # Only used for manually debugging KaDalu CSI Driver
 
 # Once this pod is deployed you can run below for communicating with CSI driver
-# In one prompt: `kubectl port-forward pods/csi-driver-debug :10000`
+# In one prompt: `kubectl port-forward pods/sanity-debug :10000`
 # In other prompt: `while true; do nc -vz 127.0.0.1 <port_from_above_op>; sleep 10; done` to keep port-forward alive
 
 # For communicating to CSI Driver you can use either https://github.com/fullstorydev/grpcurl or
@@ -12,9 +12,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: csi-driver-debug
+  name: sanity-debug
   labels:
-    app: csi-driver-debug
+    app: sanity-debug
 spec:
   # podAffinity isn't required as nodeplugin is deployed to every node and so
   # the csi.sock file can be accessed without any issues

@@ -68,6 +68,9 @@ if [[ "$CONTAINERS_FOR" == "TESTING" ]]; then
   # Test IO container to be used in CI
   build_container "test-io" "tests/test-io/Dockerfile" ${KADALU_VERSION}
 
+  # Test CSI Sanity container to be used in CI
+  build_container "test-csi" "tests/test-csi/Dockerfile" ${KADALU_VERSION}
+
   exit 0
 fi
 
