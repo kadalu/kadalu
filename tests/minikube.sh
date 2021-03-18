@@ -8,7 +8,7 @@ function wait_till_pods_start() {
     # give it some time
 
     cnt=0
-    local_timeout=200
+    local_timeout=${1:-200}
     while true; do
 	cnt=$((cnt + 1))
 	sleep 2
@@ -322,7 +322,9 @@ test_kadalu)
 
     sleep 5;
     echo "After modification"
-    wait_till_pods_start
+    # Observing intermittent failures due to timeout after modification with a
+    # difference of ~2 min
+    wait_till_pods_start 400
 
     #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 60
 
