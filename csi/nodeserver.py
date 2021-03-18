@@ -5,6 +5,8 @@ import os
 import logging
 import time
 
+import grpc
+
 import csi_pb2
 import csi_pb2_grpc
 from volumeutils import mount_volume, unmount_volume, mount_glusterfs, \
@@ -46,6 +48,27 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             pvpath=pvpath,
             pvtype=pvtype
         ))
+
+        if not request.volume_id:
+            errmsg = "Volume ID is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.NodePublishVolumeResponse()
+
+        if not request.target_path:
+            errmsg = "Target path is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.NodePublishVolumeResponse()
+
+        if not request.volume_capability:
+            errmsg = "Volume capability is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.NodePublishVolumeResponse()
 
         if voltype == "External":
             # If no separate PV Path, use the whole volume as PV
