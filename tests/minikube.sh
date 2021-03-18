@@ -8,7 +8,7 @@ function wait_till_pods_start() {
     # give it some time
 
     cnt=0
-    local_timeout=200
+    local_timeout=${1:-200}
     while true; do
 	cnt=$((cnt + 1))
 	sleep 2
@@ -178,9 +178,7 @@ function run_io(){
   second_sum=$(kubectl exec -i ${pods[1]} -- sh -c 'arequal-checksum /mnt/alpha') && echo "$second_sum"
 
   echo Validate checksum between first and second pod [Empty for checksum match]
-  set +e
   diff <(echo "$first_sum") <(echo "$second_sum") || fail=1
-  set -e
 
   return 0
 }
@@ -324,7 +322,9 @@ test_kadalu)
 
     sleep 5;
     echo "After modification"
-    wait_till_pods_start
+    # Observing intermittent failures due to timeout after modification with a
+    # difference of ~2 min
+    wait_till_pods_start 400
 
     #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 60
 
@@ -339,12 +339,10 @@ test_kadalu)
     # Current stats: Total: 73, Pass: 7, Fail: 26, Skipped (With features not implemented yet): 40
     # TODO (by intern?): Fix 30-40% of sanity tests between each CSI Spec refresh (current Spec v1.2)
     exp_pass=7
-    set +e
     kubectl exec sanity-app -i -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination' | tee /tmp/sanity-result.txt
-    set -e
 
     # Make sure no more failures than above stats
-    act_pass=$(grep -Po '(\d+)(?= Passed)' /tmp/sanity-result.txt)
+    act_pass=$(grep -Po '(\d+)(?= Passed)' /tmp/sanity-result.txt 2>/dev/null || echo 0)
     [ $act_pass -ge $exp_pass ] || fail=1
     echo Sanity [Pass %]: Expected: $exp_pass and Actual: $act_pass
 
