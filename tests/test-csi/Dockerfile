@@ -26,3 +26,4 @@ LABEL version="${version}"
 
 COPY --from=build /opt/csi-sanity /usr/local/sbin/csi-sanity
 CMD ["sh"]
+

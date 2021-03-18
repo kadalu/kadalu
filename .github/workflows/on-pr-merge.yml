@@ -157,8 +157,8 @@ jobs:
           target: prod
           push: true
           tags: |
-            docker.io/kadalu/test-io:${{ github.sha }}
-            docker.io/kadalu/test-io:devel
+            docker.io/kadalu/test-csi:${{ github.sha }}
+            docker.io/kadalu/test-csi:devel
           build-args: |
             version==${{ github.sha }}
             builddate=`date +%Y-%m-%d-%H:%M`
