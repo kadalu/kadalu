@@ -285,8 +285,58 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         return csi_pb2.DeleteVolumeResponse()
 
     def ValidateVolumeCapabilities(self, request, context):
-        # TODO
-        pass
+
+        if not search_volume(request.volume_id):
+            errmsg = "Requested volume does not exist"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            return csi_pb2.ValidateVolumeCapabilitiesResponse()
+
+        if not request.volume_id:
+            errmsg = "Volume ID is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.ValidateVolumeCapabilitiesResponse()
+
+        if not request.volume_capabilities:
+            errmsg = "Volume Capabilities is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.ValidateVolumeCapabilitiesResponse()
+
+        volume_id = request.volume_id
+        volume_capabilities = request.volume_capabilities
+
+        logging.info(logf(
+            "Validating Volume capabilities for volume",
+            volume_id=volume_id,
+            volume_capabilities=volume_capabilities
+        ))
+
+        single_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
+                                "SINGLE_NODE_WRITER")
+
+        multi_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
+                                "MULTI_NODE_WRITER")
+
+        modes = [single_node_writer, multi_node_writer]
+
+        for volume_capability in volume_capabilities:
+            if volume_capability.access_mode.mode not in modes:
+                logging.error(logf(
+                    "Requested volume capability not supported"
+                ))
+
+        return csi_pb2.ValidateVolumeCapabilitiesResponse(
+            Confirmed={
+                "volume_capabilities": volume_capabilities,
+            },
+            confirmed=True
+        )
+
 
     def ListVolumes(self, request, context):
         # TODO
