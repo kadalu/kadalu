@@ -38,6 +38,21 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             "Create Volume request",
             request=request
         ))
+
+        if not request.name:
+            errmsg = "Volume name is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.CreateVolumeResponse()
+
+        if not request.volume_capabilities:
+            errmsg = "Volume Capabilities is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.CreateVolumeResponse()
+
         pvsize = request.capacity_range.required_bytes
 
         pvtype = PV_TYPE_SUBVOL
@@ -253,6 +268,14 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
     def DeleteVolume(self, request, context):
         start_time = time.time()
+
+        if not request.volume_id:
+            errmsg = "Volume ID is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.DeleteVolumeResponse()
+
         delete_volume(request.volume_id)
         logging.info(logf(
             "Volume deleted",
@@ -303,6 +326,14 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         """
 
         start_time = time.time()
+
+        if not request.volume_id:
+            errmsg = "Volume ID is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.ControllerExpandVolumeResponse()
+
         expansion_requested_pvsize = request.capacity_range.required_bytes
 
         # Get existing volume
