@@ -115,6 +115,21 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
 
     def NodeUnpublishVolume(self, request, context):
         # TODO: Validation and handle target_path failures
+
+        if not request.volume_id:
+            errmsg = "Volume ID is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.NodeUnpublishVolumeResponse()
+
+        if not request.target_path:
+            errmsg = "Target path is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.NodeUnpublishVolumeResponse()
+
         logging.debug(logf(
             "Received the unmount request",
             volume=request.volume_id,
