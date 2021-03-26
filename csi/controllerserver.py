@@ -297,7 +297,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             errmsg = "Volume ID is empty and must be provided"
             logging.error(errmsg)
             context.set_details(errmsg)
-            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_code(grpc.StatusCode.NOT_FOUND)
             return csi_pb2.ValidateVolumeCapabilitiesResponse()
 
         if not request.volume_capabilities:
@@ -319,23 +319,26 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         single_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
                                 "SINGLE_NODE_WRITER")
 
-        multi_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
-                                "MULTI_NODE_WRITER")
+        multi_node_multi_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
+                                    "MULTI_NODE_MULTI_WRITER")
 
-        modes = [single_node_writer, multi_node_writer]
+        modes = [single_node_writer, multi_node_multi_writer]
 
         for volume_capability in volume_capabilities:
             if volume_capability.access_mode.mode not in modes:
-                logging.error(logf(
-                    "Requested volume capability not supported"
-                ))
+
+                errmsg = "Requested volume capability not supported"
+                logging.error(errmsg)
+                context.set_details(errmsg)
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                return csi_pb2.ValidateVolumeCapabilitiesResponse()
 
         return csi_pb2.ValidateVolumeCapabilitiesResponse(
-            Confirmed={
+            confirmed={
                 "volume_capabilities": volume_capabilities,
-            },
-            confirmed=True
+            }
         )
+
 
 
     def ListVolumes(self, request, context):
