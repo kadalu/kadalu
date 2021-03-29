@@ -2,34 +2,83 @@
 # Only used for manually debugging KaDalu CSI Driver
 
 # Once this pod is deployed you can run below for communicating with CSI driver
-# In one prompt: `kubectl port-forward pods/sanity-debug :10000`
+# In one prompt: `kubectl port-forward pods/sanity-ds :10000`
 # In other prompt: `while true; do nc -vz 127.0.0.1 <port_from_above_op>; sleep 10; done` to keep port-forward alive
 
 # For communicating to CSI Driver you can use either https://github.com/fullstorydev/grpcurl or
 # more specific to CSI https://github.com/rexray/gocsi/tree/master/csc
 
 ---
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: DaemonSet
 metadata:
-  name: sanity-debug
+  namespace: kadalu
+  name: sanity-ds
   labels:
-    app: sanity-debug
+    name: sanity-ds
 spec:
-  # podAffinity isn't required as nodeplugin is deployed to every node and so
-  # the csi.sock file can be accessed without any issues
-  containers:
-    - name: socat
-      image: alpine/socat:1.0.5
-      args:
-        - tcp-listen:10000,fork,reuseaddr
-        - unix-connect:/plugin/csi.sock
-      volumeMounts:
+  selector:
+    matchLabels:
+      name: sanity-ds
+  template:
+    metadata:
+      labels:
+        name: sanity-ds
+    spec:
+      containers:
+        - name: socat
+          image: alpine/socat:1.0.5
+          args:
+            - tcp-listen:10000,fork,reuseaddr
+            - unix-connect:/plugin/csi.sock
+          volumeMounts:
+            - name: csi-sock
+              mountPath: /plugin/csi.sock
+      volumes:
         - name: csi-sock
-          mountPath: /plugin/csi.sock
-  restartPolicy: OnFailure
-  volumes:
-    - name: csi-sock
-      hostPath:
-        path: /var/lib/kubelet/plugins_registry/kadalu/csi.sock
-        type: Socket
+          hostPath:
+            path: /var/lib/kubelet/plugins_registry/kadalu/csi.sock
+            type: Socket
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kadalu
+  name: sanity-dp
+  labels:
+    name: sanity-dp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: sanity-dp
+  template:
+    metadata:
+      labels:
+        name: sanity-dp
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - kadalu-csi-provisioner
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+        - name: socat
+          image: alpine/socat:1.0.5
+          args:
+            - tcp-listen:10001,fork,reuseaddr
+            - unix-connect:/plugin/csi.sock
+          volumeMounts:
+            - name: csi-sock
+              mountPath: /plugin/csi.sock
+      volumes:
+        - name: csi-sock
+          hostPath:
+            # UID of the POD should be replaced before deployment
+            path: '/var/lib/kubelet/pods/POD_UID/volumes/kubernetes.io~empty-dir/socket-dir/csi.sock'
+            type: Socket
