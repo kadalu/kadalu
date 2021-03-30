@@ -337,7 +337,7 @@ test_kadalu)
 
     # Intention is to slowly fix Sanity tests which are failing
     # TODO (by intern?): Fix 30-40% of sanity tests between each CSI Spec refresh (current Spec v1.2)
-    exp_pass=20
+    exp_pass=33
     kubectl exec sanity-app -i -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination' | tee /tmp/sanity-result.txt
 
     # Make sure no more failures than above stats

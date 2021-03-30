@@ -7,9 +7,10 @@ import os
 import random
 import time
 
+import grpc
+
 import csi_pb2
 import csi_pb2_grpc
-import grpc
 from kadalulib import logf, send_analytics_tracker
 from volumeutils import (HOSTVOL_MOUNTDIR, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
                          check_external_volume, create_subdir_volume,
@@ -303,15 +304,15 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
     def ValidateVolumeCapabilities(self, request, context):
 
-        if not search_volume(request.volume_id):
-            errmsg = "Requested volume does not exist"
-            logging.error(errmsg)
-            context.set_details(errmsg)
-            context.set_code(grpc.StatusCode.NOT_FOUND)
-            return csi_pb2.ValidateVolumeCapabilitiesResponse()
-
         if not request.volume_id:
             errmsg = "Volume ID is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.ValidateVolumeCapabilitiesResponse()
+
+        if not search_volume(request.volume_id):
+            errmsg = "Requested volume does not exist"
             logging.error(errmsg)
             context.set_details(errmsg)
             context.set_code(grpc.StatusCode.NOT_FOUND)
