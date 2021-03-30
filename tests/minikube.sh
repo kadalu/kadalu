@@ -13,7 +13,7 @@ function wait_till_pods_start() {
 	cnt=$((cnt + 1))
 	sleep 2
 	ret=$(kubectl get pods -nkadalu -o wide | grep 'Running' | wc -l)
-	if [[ $ret -ge 11 ]]; then
+	if [[ $ret -ge 9 ]]; then
 	    echo "Successful after $cnt seconds"
 	    break
 	fi
@@ -336,9 +336,8 @@ test_kadalu)
     kubectl wait --for=condition=ready pod -l app=sanity-app --timeout=15s
 
     # Intention is to slowly fix Sanity tests which are failing
-    # Current stats: Total: 73, Pass: 7, Fail: 26, Skipped (With features not implemented yet): 40
     # TODO (by intern?): Fix 30-40% of sanity tests between each CSI Spec refresh (current Spec v1.2)
-    exp_pass=7
+    exp_pass=20
     kubectl exec sanity-app -i -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination' | tee /tmp/sanity-result.txt
 
     # Make sure no more failures than above stats

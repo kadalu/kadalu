@@ -16,22 +16,21 @@ spec:
 
 
 ## ------------------------------------------------------------
----
-apiVersion: kadalu-operator.storage/v1alpha1
-kind: KadaluStorage
-metadata:
-  name: storage-pool-2
-spec:
-  type: Replica2
-  storage:
-    - node: minikube
-      device: /mnt/DISK/file2.1
-    - node: minikube
-      device: /mnt/DISK/file2.2
-  tiebreaker:
-    node: tie-breaker.kadalu.io
-    path: /mnt
-
+# ---
+# apiVersion: kadalu-operator.storage/v1alpha1
+# kind: KadaluStorage
+# metadata:
+#   name: storage-pool-2
+# spec:
+#   type: Replica2
+#   storage:
+#     - node: minikube
+#       device: /mnt/DISK/file2.1
+#     - node: minikube
+#       device: /mnt/DISK/file2.2
+#   tiebreaker:
+#     node: tie-breaker.kadalu.io
+#     path: /mnt
 
 
 ## ------------------------------------------------------------
