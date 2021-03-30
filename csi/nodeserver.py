@@ -28,27 +28,6 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
     """
     def NodePublishVolume(self, request, context):
         start_time = time.time()
-        hostvol = request.volume_context.get("hostvol", "")
-        pvpath = request.volume_context.get("path", "")
-        pvtype = request.volume_context.get("pvtype", "")
-        voltype = request.volume_context.get("type", "")
-        gserver = request.volume_context.get("gserver", None)
-        gvolname = request.volume_context.get("gvolname", None)
-        options = request.volume_context.get("options", None)
-
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
-
-        pvpath_full = os.path.join(mntdir, pvpath)
-
-        logging.debug(logf(
-            "Received the mount request",
-            volume=request.volume_id,
-            voltype=voltype,
-            hostvol=hostvol,
-            pvpath=pvpath,
-            pvtype=pvtype
-        ))
-
         if not request.volume_id:
             errmsg = "Volume ID is empty and must be provided"
             logging.error(errmsg)
@@ -69,6 +48,34 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             context.set_details(errmsg)
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             return csi_pb2.NodePublishVolumeResponse()
+
+        if not request.volume_context:
+            errmsg = "Volume context is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.NodePublishVolumeResponse()
+
+        hostvol = request.volume_context.get("hostvol", "")
+        pvpath = request.volume_context.get("path", "")
+        pvtype = request.volume_context.get("pvtype", "")
+        voltype = request.volume_context.get("type", "")
+        gserver = request.volume_context.get("gserver", None)
+        gvolname = request.volume_context.get("gvolname", None)
+        options = request.volume_context.get("options", None)
+
+        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
+
+        pvpath_full = os.path.join(mntdir, pvpath)
+
+        logging.debug(logf(
+            "Received a valid mount request",
+            request=request,
+            voltype=voltype,
+            hostvol=hostvol,
+            pvpath=pvpath,
+            pvtype=pvtype
+        ))
 
         if voltype == "External":
             # If no separate PV Path, use the whole volume as PV

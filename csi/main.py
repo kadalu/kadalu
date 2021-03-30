@@ -6,8 +6,9 @@ import os
 import time
 from concurrent import futures
 
-import csi_pb2_grpc
 import grpc
+
+import csi_pb2_grpc
 from controllerserver import ControllerServer
 from identityserver import IdentityServer
 from kadalulib import CommandException, logf, logging_setup
