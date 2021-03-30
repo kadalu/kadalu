@@ -8,6 +8,8 @@
 # For communicating to CSI Driver you can use either https://github.com/fullstorydev/grpcurl or
 # more specific to CSI https://github.com/rexray/gocsi/tree/master/csc
 
+# For usage, please refer: https://thoughtexpo.com/exploring-kadalu-storage-in-k3d-cluster-csi-driver/#typical-implementation
+
 ---
 apiVersion: apps/v1
 kind: DaemonSet
