@@ -1,28 +1,35 @@
 """
 controller server implementation
 """
-import os
-import logging
-import time
-import random
 import json
-
-import grpc
+import logging
+import os
+import random
+import time
 
 import csi_pb2
 import csi_pb2_grpc
-from volumeutils import mount_and_select_hosting_volume, \
-    create_virtblock_volume, create_subdir_volume, delete_volume, \
-    get_pv_hosting_volumes, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, \
-    HOSTVOL_MOUNTDIR, check_external_volume, \
-    update_free_size, unmount_glusterfs, \
-    update_subdir_volume, update_virtblock_volume, \
-    search_volume, expand_volume, \
-    is_hosting_volume_free
+import grpc
 from kadalulib import logf, send_analytics_tracker
+from volumeutils import (HOSTVOL_MOUNTDIR, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
+                         check_external_volume, create_subdir_volume,
+                         create_virtblock_volume, delete_volume, expand_volume,
+                         get_pv_hosting_volumes, is_hosting_volume_free,
+                         mount_and_select_hosting_volume, search_volume,
+                         unmount_glusterfs, update_free_size,
+                         update_subdir_volume, update_virtblock_volume,
+                         yield_list_of_pvcs)
 
 VOLINFO_DIR = "/var/lib/gluster"
 KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
+
+# Generator to be used in ListVolumes
+GEN = None
+
+# Rate limiting number of PVCs returned per request of ListVolumes if CO
+# doesn't mention any max_entries
+LIMIT = 30
+
 
 class ControllerServer(csi_pb2_grpc.ControllerServicer):
     """
@@ -317,10 +324,10 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         ))
 
         single_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
-                                "SINGLE_NODE_WRITER")
+                                     "SINGLE_NODE_WRITER")
 
         multi_node_multi_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
-                                    "MULTI_NODE_MULTI_WRITER")
+                                          "MULTI_NODE_MULTI_WRITER")
 
         modes = [single_node_writer, multi_node_multi_writer]
 
@@ -342,11 +349,51 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
 
     def ListVolumes(self, request, context):
-        # TODO
-        # Mount hostvol
-        # Listdir and return the list
-        # Volume capacity need to be stored somewhere
-        pass
+        """Returns list of all PVCs with sizes existing in Kadalu Storage"""
+
+        logging.debug(logf("ListVolumes request received", request=request))
+        starting_token = request.starting_token or '0'
+        try:
+            starting_token = int(starting_token)
+        except ValueError as errmsg:
+            # We are using tokens which can be converted to integer's
+            errmsg = "Invalid starting token supplied"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.ABORTED)
+            return csi_pb2.ListVolumesResponse()
+
+        if not request.starting_token:
+            # This is the first call and so start the generator
+            global GEN
+            max_entries = request.max_entries or 0
+            if not max_entries:
+                # In worst case limit ourselves with custom max_entries and
+                # set next_token
+                max_entries = LIMIT
+            GEN = yield_list_of_pvcs(max_entries)
+
+        # Run and wait for 'send'
+        next(GEN)
+        try:
+            # Get list of PVCs limited at max_entries by suppling the token
+            pvcs, next_token = GEN.send(starting_token)
+        except StopIteration as errmsg:
+            errmsg = errmsg.args[0] or "Runtime Error while getting PVCs list"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.ABORTED)
+            return csi_pb2.ListVolumesResponse()
+
+        entries = [{
+            "volume": {
+                "volume_id": value[0],
+                "capacity_bytes": value[1]
+            }
+        } for value in pvcs]
+
+        return csi_pb2.ListVolumesResponse(entries=entries,
+                                           next_token=next_token)
 
     def ControllerGetCapabilities(self, request, context):
         # using getattr to avoid Pylint error

@@ -2,20 +2,20 @@
 Utility functions for Volume management
 """
 
-import os
 import json
-import time
 import logging
-import threading
+import os
 import shutil
+import threading
+import time
 from errno import ENOTCONN
 
 from jinja2 import Template
 
-from kadalulib import execute, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, \
-    get_volname_hash, get_volume_path, logf, makedirs, CommandException, \
-    retry_errors, is_gluster_mount_proc_running, SizeAccounting
-
+from kadalulib import (PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, CommandException,
+                       SizeAccounting, execute, get_volname_hash,
+                       get_volume_path, is_gluster_mount_proc_running, logf,
+                       makedirs, retry_errors)
 
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/usr/bin/mount"
@@ -29,6 +29,7 @@ VOLINFO_DIR = "/var/lib/gluster"
 
 statfile_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 mount_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
+
 
 class Volume():
     """Hosting Volume object"""
@@ -977,3 +978,93 @@ def check_external_volume(pv_request, host_volumes):
     ))
 
     return hvol
+
+
+def yield_hostvol_mount():
+    """Yields mount directory where hostvol is mounted"""
+    host_volumes = get_pv_hosting_volumes()
+    for volume in host_volumes:
+        hvol = volume['name']
+        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
+        try:
+            mount_glusterfs(volume, mntdir)
+        except CommandException as excep:
+            logging.error(
+                logf("Unable to mount volume", hvol=hvol, excep=excep.args))
+            return
+        logging.info(logf("Volume is mounted successfully", hvol=hvol))
+        # After mounting a hostvol, start looking for PVC from '/mntdir/info'
+        yield os.path.join(mntdir, 'info')
+
+
+def yield_pvc_from_mntdir(mntdir):
+    """Yields PVCs from a single mntdir"""
+    # Max recursion depth is two subdirs (/<mntdir>/x/y/<pvc-hash-.json>)
+    # If 'subvol' exist then max depth will be three subdirs
+    for child in os.listdir(mntdir):
+        name = os.path.join(mntdir, child)
+        if os.path.isdir(name):
+            yield from yield_pvc_from_mntdir(name)
+        elif name.endswith('json'):
+            # Base case we are interested in, the filename ending with '.json'
+            # is 'PVC' name and contains it's size
+            file_path = os.path.join(mntdir, name)
+            with open(file_path) as handle:
+                data = json.loads(handle.read().strip())
+            logging.debug(
+                logf("Found a PVC at", path=file_path, size=data.get("size")))
+            yield name[name.find("pvc"):name.find(".json")], data.get("size")
+
+
+def yield_pvc_from_hostvol():
+    """Yields a single PVC sequentially from all the hostvolumes"""
+    for mntdir in yield_hostvol_mount():
+        pvcs = yield_pvc_from_mntdir(mntdir)
+        yield from pvcs
+
+
+def wrap_pvc(pvc_gen):
+    """Yields a tuple consisting value from gen and bool for last element"""
+    # No need to get num of PVCs existing in Kadalu Storage, query them in real
+    # time and yield PVC, True if current entry is the last of the PVC list
+    # else yield PVC, False
+    gen = pvc_gen()
+    try:
+        prev = next(gen)
+    except StopIteration:
+        return
+    for value in gen:
+        yield prev, False
+        prev = value
+    yield prev, True
+
+
+def yield_list_of_pvcs(max_entries=0):
+    """Yields list of PVCs limited at 'max_entries'"""
+    # List of tuples containing PVC Name and Size
+    pvcs = []
+    for idx, value in enumerate(wrap_pvc(yield_pvc_from_hostvol)):
+        pvc, last = value
+        token = "" if last else str(idx)
+        pvcs.append(pvc)
+        # Main logic is to 'yield' values when one of the below is observed:
+        # 1. If max_entries is set and we collected max_entries of PVCs
+        # 2. If max_entries is set and we are at last PVC (unaligned total PVCs
+        # against max_entries)
+        # 3. No max_entries is set (~all) and we are at last PVC yield all
+        # pylint: disable=too-many-boolean-expressions
+        if (max_entries and len(pvcs) == max_entries) or (
+                max_entries and last) or (not max_entries and last):
+            # As per spec 'token' has to be string, we are simply using current
+            # PVC count as 'token' and validating the same
+            next_token = yield
+            logging.debug(logf("Received token", next_token=next_token))
+            if next_token and not last and (int(next_token) !=
+                                            int(token) - max_entries):
+                return
+            logging.debug(
+                logf("Yielding PVC set and next token is ",
+                     token=token,
+                     pvcs=pvcs))
+            yield pvcs, token
+            pvcs *= 0
