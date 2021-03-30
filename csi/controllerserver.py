@@ -53,6 +53,16 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             return csi_pb2.CreateVolumeResponse()
 
+        # Check for same name and different capacity
+        volume = search_volume(request.name)
+        if volume:
+            if volume.size != request.capacity_range.required_bytes:
+                errmsg = "Failed to create volume with same name with different capacity"
+                logging.error(errmsg)
+                context.set_details(errmsg)
+                context.set_code(grpc.StatusCode.ALREADY_EXISTS)
+                return csi_pb2.CreateVolumeResponse()
+
         pvsize = request.capacity_range.required_bytes
 
         pvtype = PV_TYPE_SUBVOL
