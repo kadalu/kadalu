@@ -390,6 +390,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            - name: SECRET_GLUSTERQUOTA_SSH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: glusterquota-ssh-secret
+                  key: glusterquota-ssh-username
+                  optional: true
             - name: CSI_ENDPOINT
               value: unix://plugin/csi.sock
             - name: KADALU_VERSION
@@ -409,6 +415,9 @@ spec:
               mountPath: "/dev"
             - name: varlog
               mountPath: "/var/log/gluster"
+            - name: secret-volume
+              readOnly: true
+              mountPath: "/etc/secret-volume"
         - name: kadalu-logging
           image: busybox
           command: ["/bin/sh"]
@@ -444,3 +453,8 @@ spec:
             path: "/dev"
         - name: varlog
           emptyDir: {}
+        - name: secret-volume
+          secret:
+            secretName: glusterquota-ssh-secret
+            defaultMode: 384
+            optional: true

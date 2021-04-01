@@ -314,7 +314,7 @@ def save_pv_metadata(hostvol_mnt, pvpath, pvsize):
         ))
 
 
-def create_subdir_volume(hostvol_mnt, volname, size):
+def create_subdir_volume(hostvol_mnt, volname, size, use_gluster_quota):
     """Create sub directory Volume"""
     volhash = get_volname_hash(volname)
     volpath = get_volume_path(PV_TYPE_SUBVOL, volhash, volname)
@@ -332,6 +332,15 @@ def create_subdir_volume(hostvol_mnt, volname, size):
         "Created PV directory",
         pvdir=volpath
     ))
+    if use_gluster_quota == True:
+        return Volume(
+            volname=volname,
+            voltype=PV_TYPE_SUBVOL,
+            volhash=volhash,
+            hostvol=os.path.basename(hostvol_mnt),
+            size=size,
+            volpath=volpath,
+        )
 
     # Write info file so that Brick's quotad sidecar
     # container picks it up.
