@@ -309,7 +309,7 @@ test_kadalu)
     get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 90
 
     get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 90
-    
+
     #get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 60
 
     #get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 2 90
@@ -345,10 +345,15 @@ test_kadalu)
     [ $act_pass -ge $exp_pass ] || fail=1
     echo Sanity [Pass %]: Expected: $exp_pass and Actual: $act_pass
 
-    # Log everything so we are sure if things are as expected
+
+    # Unless there is a failure or COMMIT_MSG contains 'full log' just log last 100 lines
+    lines=100
+    if [[ $fail == 1 || $COMMIT_MSG =~ 'full log' ]]; then
+        lines=1000
+    fi
     for p in $(kubectl -n kadalu get pods -o name); do
 	echo "====================== Start $p ======================"
-	kubectl -nkadalu --all-containers=true --tail 1000 logs $p
+	kubectl -nkadalu --all-containers=true --tail $lines logs $p
 	echo "======================= End $p ======================="
     done
 
