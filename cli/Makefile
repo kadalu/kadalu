@@ -26,6 +26,7 @@ release: gen-version
 	@cd build/src && zip -r ../${PROGNAME}.zip *
 	@echo '#!/usr/bin/env ${PYTHON}' | cat - build/${PROGNAME}.zip > build/${PROGNAME}
 	@chmod +x build/${PROGNAME}
+	@cd build && tar -czvf ${PROGNAME}.tar.gz ${PROGNAME}
 	@rm -rf build/src
 	@rm -f build/${PROGNAME}.zip
 	@echo "Single deployment file is ready: build/${PROGNAME}"
