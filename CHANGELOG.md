@@ -6,6 +6,114 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2021-03-12
+### Added
+- volfile: add 'read-fail-log' option to brick volfile.
+- Fix issues related to container name changes in 0.8.0 release.
+- Fix sqlite3 dependency issues in server container image.
+- Mount all available volume before starting the CSI provisioner.
+- Quotad is removed from the server image with the introduction of
+  Simple Quota in 0.8.0 release.
+- Enabled a few self-heal related options by default.
+
+## [0.8.0] - 2021-03-02
+### Added
+- Introduced service monitor utility to manage multiple processes
+  within the container.
+- Prometheus exporter added to CSI driver.
+- Documentation added for where to look for logs.
+- New sub-command to `kubectl-kadalu` to fetch logs from
+  all containers of Kadalu namespace.
+- Use kadalu-storage (glusterfs fork of kadalu, which adds features like simple-quota etc).
+- Changes in templates to accomodate distribute volumes
+- Remove usage of -oprjquota on mount
+- Use simple quota limit feature to set the quota
+- Simplify the brick volfile generation, and make it uniform across
+- Provide 'client-pid' to clients mounted in csi controller (for simple-quota)
+- Fix the template files
+- Include quota-crawler with provisioner
+- Added support for self heal info into CLI - can be checked with `kubectl kadalu healinfo`
+- Container images size optimizations.
+- Fix the traceback when no hosting volumes are available.
+- Helm charts are now part of tests and Release.
+- cli: storage_list fix the issue due to container changes in server pod
+
+## [0.7.7] - 2021-02-04
+### Added
+- Fixed an issue while doing `mkfs` while starting server pods.
+- Fixed the crash when storage class name not specified with external Gluster volume.
+- Fixed the device name parsing issues when device is specified using ID.
+- GlusterFS version upgraded to `v8`.
+
+## [0.7.6] - 2021-01-18
+### Added
+- Support added for Pods upgrade
+- PV Resize support added.
+- Kadalu Operator CRD version upgraded to `v1`
+- Backup volfile servers option added for External
+  Gluster volume configuration.
+- Default log level is changed to `INFO`
+- Arm64 and Armv7 support added to release scripts.
+
+## [0.7.5] - 2020-12-23
+### Added
+- Fixed a few issues related automated build scripts.
+
+## [0.7.4] - 2020-12-23
+### Added
+- Helm chart support added.
+- [Breaking change](https://github.com/kadalu/kadalu/issues/380#issuecomment-749534332)
+  related to mount dir introduced in k8s,
+  Fixed by creating mount directory before doing bind mount.
+- Fixed crash while running `storage-list` sub-command.
+- Base image changed to Ubuntu(20.04)
+
+## [0.7.3] - 2020-12-18
+### Added
+- Base image upgraded to Fedora 33
+- Implemented Storage remove functionality via `kubectl-kadalu`
+- Fix kubelet path related issues in RKE deployment.
+- Fixed issue while marking failure when external Gluster
+  volume is not reachable.
+
+## [0.7.2] - 2020-11-23
+### Added
+- Updated `kubectl-kadalu` usage instructions.
+- Removed Google analytics tracking.
+- Added `--kubectl-cmd` argument to `kubectl-kadalu` to support
+  variants like `k3s kubectl`.
+- Fixed mount issues in GKE.
+- Documentation updated to install kadalu Operator without
+  using `kubectl-kadalu`(using yaml).
+- Fixed xfs project id assignment overflow with Gluster's
+  64bit inode numbers.
+- Operator enhanced to check the external Gluster volume is reachable.
+- Fixed an issue while handling JSON in Quotad.
+- Replace Storage(Replace brick in GlusterFS) support added.
+- Enhanced Quotad to fetch local brick paths of a Volume automatically.
+- Included `kubectl-kadalu` in Operator container image. So that
+  this command will be available via `kubectl exec`.
+- Fixed a crash when hostvol_type is not specified while
+  defining new Storage class.
+
+## [0.7.1] - 2020-09-22
+### Added
+- Fixed issue while doing cleanup of backend directory after PV delete.
+- Documentation updated for CentOS 7.x series.
+- Intelligence added to download architecture specific `kubectl`
+- PV Size accounting rewrite to fix false accounting.
+- Microk8s support added.
+- Fixed Storage Class override issue on Operator restart.
+- Rancher (RKE) support added.
+- Version sub-command added to `kubectl-kadalu`
+- Single file deployment support added to `kubectl-kadalu`
+- Storage add prompt, Script mode and Dry run options
+  added to `kubectl-kadalu`
+- `storage-list` sub-command added to `kubectl-kadalu`
+- CSI proto files and sidecar containers updated to v1.2.0
+- Improvements to Arm support and build scripts.
+- Latest k8s integrated with CI.
+
 ## [0.7.0] - 2020-05-11
 ### Added
 - New documentation added for Storage Classes
@@ -103,7 +211,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.7.0...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.1...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
@@ -111,3 +219,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.5.0]: https://github.com/kadalu/kadalu/compare/0.4.0...0.5.0
 [0.6.0]: https://github.com/kadalu/kadalu/compare/0.5.0...0.6.0
 [0.7.0]: https://github.com/kadalu/kadalu/compare/0.6.0...0.7.0
+[0.7.1]: https://github.com/kadalu/kadalu/compare/0.7.0...0.7.1
+[0.7.2]: https://github.com/kadalu/kadalu/compare/0.7.1...v0.7.2
+[0.7.3]: https://github.com/kadalu/kadalu/compare/v0.7.2...0.7.3
+[0.7.4]: https://github.com/kadalu/kadalu/compare/0.7.3...0.7.4
+[0.7.5]: https://github.com/kadalu/kadalu/compare/0.7.4...0.7.5
+[0.7.6]: https://github.com/kadalu/kadalu/compare/0.7.5...0.7.6
+[0.7.7]: https://github.com/kadalu/kadalu/compare/0.7.6...0.7.7
+[0.8.0]: https://github.com/kadalu/kadalu/compare/0.7.7...0.8.0
+[0.8.1]: https://github.com/kadalu/kadalu/compare/0.8.0...0.8.1
