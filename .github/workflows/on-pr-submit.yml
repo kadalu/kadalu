@@ -41,6 +41,7 @@ jobs:
     - name: Install Docker Dependencies
       run: sudo apt-get install -y conntrack
     - name: Build locally
+      id: build_local
       run: |
         make build-containers;
 
@@ -57,15 +58,22 @@ jobs:
           CONTAINERS_FOR=TESTING make test-containers
         fi
         echo Completed building containers
+        echo ::set-output name=files::$FILES
     - name: Generate Manifests
       run: VERBOSE="yes" make gen-manifest
     - name: Setup Minikube
       run: tests/setup.sh $KUBE_VERSION
     - name: Run tests
-      run: tests/travis-test.sh $KUBE_VERSION
+      run: |
+        tests/travis-test.sh $KUBE_VERSION
+
+        if grep -e '^cli' <<< "$FILES"; then
+          tests/travis-test.sh $KUBE_VERSION cli
+        fi
       env:
         # Current conditions in minikube.sh which are using commit message:
         # [helm skip]: If contained in COMMIT MESSAGE, validating helm is skipped
         COMMIT_MSG: ${{ github.event.head_commit.message }}
+        FILES: ${{join(steps.build_local.outputs.files, '\n')}}
     - name: Cleanup
       run: tests/cleanup.sh $KUBE_VERSION

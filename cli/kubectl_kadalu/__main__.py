@@ -6,14 +6,22 @@ from __future__ import print_function
 
 from argparse import ArgumentParser
 
-import logs
-import install
 import healinfo
+import install
+import logs
 import storage_add
 import storage_list
 import storage_remove
-
 from version import VERSION
+
+cmds = {
+    "install": install,
+    "storage-add": storage_add,
+    "storage-list": storage_list,
+    "storage-remove": storage_remove,
+    "logs": logs,
+    "healinfo": healinfo,
+}
 
 
 def get_args():
@@ -46,26 +54,12 @@ def main():
     """Handle Commands"""
     try:
         args = get_args()
-        if args.mode == "install":
-            install.validate(args)
-            install.run(args)
-        elif args.mode == "storage-add":
-            storage_add.validate(args)
-            storage_add.run(args)
-        elif args.mode == "storage-list":
-            storage_list.validate(args)
-            storage_list.run(args)
-        elif args.mode == 'storage-remove':
-            storage_remove.validate(args)
-            storage_remove.run(args)
+        func = cmds.get(args.mode)
+        if func:
+            func.validate(args)
+            func.run(args)
         elif args.mode == "version":
             show_version()
-        if args.mode == "logs":
-            logs.validate(args)
-            logs.run(args)
-        if args.mode == "healinfo":
-            healinfo.validate(args)
-            healinfo.run(args)
     except KeyboardInterrupt:
         return
 
