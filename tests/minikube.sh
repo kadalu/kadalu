@@ -158,8 +158,11 @@ function run_io(){
   # Deploy io-app deployment with 2 replicas
   kubectl apply -f tests/test-io/io-app.yaml
 
-  # Compressed image is ~25MB and so it shouldn't take more than 30s to reach ready state
-  kubectl wait --for=condition=ready pod -l app=io-app --timeout=30s
+  # Compressed image is ~25MB and so it shouldn't take much time to reach ready state
+  kubectl wait --for=condition=ready pod -l app=io-app --timeout=45s || fail=1
+  if [ $fail == 1 ]; then
+      return 0
+  fi
 
   # Store pod names
   pods=($(kubectl get pods -l app=io-app -o jsonpath={'..metadata.name'}))
