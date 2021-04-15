@@ -5,3 +5,5 @@ twine
 xxhash
 grpcio
 pyxattr
+pytest
+mypy
