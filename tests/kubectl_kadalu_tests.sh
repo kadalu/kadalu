@@ -38,9 +38,9 @@ function test_storage_add() {
     cli/build/kubectl-kadalu storage-add storage-pool-1 --script-mode --device ${HOSTNAME}:/mnt/${DISK}/file1 || return 1
 
     # Check for external storage
-    # TODO: (For now, keep the name as 'ext-config' as PVC should use this
-    # to send request.
-    cli/build/kubectl-kadalu storage-add ext-config --script-mode --external gluster1.kadalu.io:/kadalu || return 1
+    # TODO: For now, keep the name as 'ext-config' as PVC should use this to send request.
+    # TODO: Enable this test after we start testing external gluster cluster
+    # cli/build/kubectl-kadalu storage-add ext-config --script-mode --external gluster1.kadalu.io:/kadalu || return 1
 }
 
 function main() {
