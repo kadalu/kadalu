@@ -67,13 +67,13 @@ jobs:
       run: |
         tests/travis-test.sh $KUBE_VERSION
 
-        if grep -e '^cli' <<< "$FILES"; then
+        if grep -e '\bcli' <<< "$FILES"; then
           tests/travis-test.sh $KUBE_VERSION cli
         fi
       env:
         # Current conditions in minikube.sh which are using commit message:
         # [helm skip]: If contained in COMMIT MESSAGE, validating helm is skipped
         COMMIT_MSG: ${{ github.event.head_commit.message }}
-        FILES: ${{join(steps.build_local.outputs.files, '\n')}}
+        FILES: ${{steps.build_local.outputs.files}}
     - name: Cleanup
       run: tests/cleanup.sh $KUBE_VERSION
