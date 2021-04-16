@@ -9,12 +9,32 @@ on:
       - 'extras/**'
       - '**.md'
 
+# Skip based on commit msg is inbuilt into Github Runner
+# Visit: https://github.blog/changelog/2021-02-08-github-actions-skip-pull-request-and-push-workflows-with-skip-ci/
+
 jobs:
+  # Primarily used to save info required for any jobs/steps
+  get-info:
+    name: Save required info
+    runs-on: ubuntu-latest
+    outputs:
+      files: ${{ steps.files.outputs.out }}
+      msg: ${{ steps.msg.outputs.out }}
+    steps:
+      - id: files
+        run: |
+          URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files"
+          FILES=$(curl -s -X GET -G $URL | jq -r '.[] | .filename')
+          echo ::set-output name=out::$FILES
+      - id: msg
+        run: |
+          URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/commits"
+          MSG=$(curl -s -X GET -G $URL | jq -r '.[] | .commit.message')
+          echo ::set-output name=out::$MSG
+
   pylint:
     name: Run pylint
     runs-on: ubuntu-latest
-    # Skip based on commit message
-    if: "!contains(github.event.head_commit.message, '[ci skip]')"
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python
@@ -36,9 +56,8 @@ jobs:
       KUBE_VERSION: v1.20.0
       # Current conditions in minikube.sh which are using commit message:
       # [helm skip]: If contained in COMMIT MESSAGE, validating helm is skipped
-      COMMIT_MSG: ${{ github.event.head_commit.message }}
-    # Skip based on commit message
-    if: "!contains(github.event.head_commit.message, '[ci skip]')"
+      COMMIT_MSG: ${{needs.get-info.outputs.msg}}
+      FILES: ${{needs.get-info.outputs.files}}
     steps:
 
     # Build Containers
@@ -52,10 +71,7 @@ jobs:
 
         # Conditionally build test containers if PR includes tests/**/Dockerfile
         CONTAINERS_FOR=''
-        URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files"
-        FILES=$(curl -s -X GET -G $URL | jq -r '.[] | .filename')
-
-        if grep -e '^tests.*Dockerfile$' <<< "$FILES"; then
+        if grep -e '\btests.*Dockerfile$' <<< "$FILES"; then
           CONTAINERS_FOR=TESTING
         fi
         # In build script, only test containers will be built if this variable is set
@@ -63,7 +79,6 @@ jobs:
           CONTAINERS_FOR=TESTING make test-containers
         fi
         echo Completed building containers
-        echo ::set-output name=files::$FILES
     - name: Generate Manifests
       run: VERBOSE="yes" make gen-manifest
 
@@ -80,10 +95,10 @@ jobs:
       run: |
         sudo sysctl fs.protected_regular=0
         tests/setup.sh $KUBE_VERSION
-      if: "contains(steps.build_local.outputs.files, 'cli')"
+      if: "contains(needs.get-info.outputs.files, 'cli')"
     - name: Run tests (CLI Test)
-      run:  tests/travis-test.sh $KUBE_VERSION cli
-      if: "contains(steps.build_local.outputs.files, 'cli')"
+      run: tests/travis-test.sh $KUBE_VERSION cli
+      if: "contains(needs.get-info.outputs.files, 'cli')"
     - name: Cleanup (CLI Test)
       run: tests/cleanup.sh $KUBE_VERSION
-      if: "contains(steps.build_local.outputs.files, 'cli')"
+      if: "contains(needs.get-info.outputs.files, 'cli')"
