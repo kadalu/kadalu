@@ -13,7 +13,7 @@ Try it in few minutes to understand more!
 
 ## Documentation
 
-Start with our [Quick Start Guide](doc/quick-start.md). More documentation is at [`doc/` folder](doc/).
+Start with our [Quick Start Guide](doc/quick-start.adoc). More documentation is at [`doc/` folder](doc/).
 
 If you made some errors in setup, and want to start fresh, check this [cleanup script](extras/scripts/cleanup), and run it to remove kadalu namespace completely.
 

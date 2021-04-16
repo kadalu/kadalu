@@ -1,4 +1,4 @@
-# Introduction
+= Introduction
 
 Kadalu project started with a goal of keeping minimum layers to provide Persistent Volumes in k8s eco system. kadalu uses 'GlusterFS' as soul to provide storage, but strips off 'gluster' project's management layer.
 
