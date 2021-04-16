@@ -6,6 +6,16 @@ DISK="$1"
 
 HOSTNAME="$2"
 
+function delete_pods() {
+  # Delete custom pods
+  kubectl delete -f tests/test-io/io-app.yaml --grace-period=0 --force
+  kubectl delete -f tests/test-csi/sanity-app.yaml --grace-period=0 --force
+
+  # Run Kadalu Cleanup script
+  bash extras/scripts/cleanup
+  return $?
+}
+
 function install_cli_package() {
     # install kubectl kadalu
     KADALU_VERSION="0.0.1canary" make cli-build
@@ -26,6 +36,7 @@ function test_storage_add() {
     sleep 1
     cli/build/kubectl-kadalu storage-add storage-pool-3 --script-mode --type Replica3 --device ${HOSTNAME}:/mnt/${DISK}/file3.1 --path ${HOSTNAME}:/mnt/${DISK}/dir3.2 --pvc local-pvc || return 1
 
+    # TODO: Enable this test after we resume testing Replica2 gluster cluster
     # Test Replica2 option
     cli/build/kubectl-kadalu storage-add storage-pool-2 --script-mode --type Replica2 --device ${HOSTNAME}:/mnt/${DISK}/file2.1 --device ${HOSTNAME}:/mnt/${DISK}/file2.2 || return 1
 
@@ -39,11 +50,12 @@ function test_storage_add() {
 
     # Check for external storage
     # TODO: For now, keep the name as 'ext-config' as PVC should use this to send request.
-    # TODO: Enable this test after we start testing external gluster cluster
+    # TODO: Enable this test after we resume testing external gluster cluster
     # cli/build/kubectl-kadalu storage-add ext-config --script-mode --external gluster1.kadalu.io:/kadalu || return 1
 }
 
 function main() {
+    delete_pods || (echo "deletion of pods failed" && exit 1)
     install_cli_package || (echo "install failed" && exit 1)
     test_install || (echo "CLI operator install failed" && exit 1)
     test_storage_add || (echo "Storage add commands failed" && exit 1)
