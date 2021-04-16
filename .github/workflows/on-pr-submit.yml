@@ -77,7 +77,9 @@ jobs:
 
     # CLI Tests (run conditionally)
     - name: Setup Minikube (CLI Test)
-      run: tests/setup.sh $KUBE_VERSION
+      run: |
+        sudo sysctl fs.protected_regular=0
+        tests/setup.sh $KUBE_VERSION
       if: "contains(steps.build_local.outputs.files, 'cli')"
     - name: Run tests (CLI Test)
       run:  tests/travis-test.sh $KUBE_VERSION cli
