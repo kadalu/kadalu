@@ -6,4 +6,3 @@ xxhash
 grpcio
 pyxattr
 pytest
-mypy

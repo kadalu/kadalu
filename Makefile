@@ -89,7 +89,7 @@ pylint:
 	@rm operator/utils.py
 	@rm server/quotad.py
 	@rm server/glusterutils.py
-	@cd cli && make gen-version pylint pytest mypy --keep-going
+	@cd cli && make gen-version pylint pytest --keep-going
 
 ifeq ($(KADALU_VERSION), latest)
 prepare-release-manifests:
