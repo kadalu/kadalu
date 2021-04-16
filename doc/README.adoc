@@ -1,31 +1,31 @@
-# Kadalu Documentation
+= Kadalu Documentation
 
-## User Guide
+== User Guide
 
-* [Quick Start](quick-start.md)
-* [Introduction](introduction.md)
-* [Setup](setup.md)
-* [Setup Storage](setup-storage.md)
-* [CSI to claim Persistent Volumes](csi-to-claim-persistent-volumes.md)
-* [Try Kadalu](try-kadalu.md)
-* [External Gluster Storage](external-gluster-storage.md)
-* [Storage Config Options](storage-config-options.md)
-* [Storage Classes](storage-classes.md)
-* [Troubleshooting](troubleshooting.md)
+* link:quick-start.adoc[Quick Start]
+* link:introduction.adoc[Introduction]
+* link:setup.adoc[Setup]
+* link:setup-storage.adoc[Setup Storage]
+* link:csi-to-claim-persistent-volumes.adoc[CSI to claim Persistent Volumes]
+* link:try-kadalu.adoc[Try Kadalu]
+* link:external-gluster-storage.adoc[External Gluster Storage]
+* link:storage-config-options.adoc[Storage Config Options]
+* link:storage-classes.adoc[Storage Classes]
+* link:troubleshooting.adoc[Troubleshooting]
 
 
-## Use Cases
+== Use Cases
 
-* [Running a Webserver](running-a-webserver.md)
-* [Running Minio](running-minio.md)
+* link:running-a-webserver.adoc[Running a Webserver]
+* link:running-minio.adoc[Running Minio]
 
-## Articles
+== Articles
 
-* [How it Works?](how-it-works.md)
-* [Gluster and Kadalu](gluster-and-kadalu.md)
+* link:how-it-works.adoc[How it Works?]
+* link:gluster-and-kadalu.adoc[Gluster and Kadalu]
 
-## Developer Guide
+== Developer Guide
 
-* [Get Involved](get-involved.md)
-* [Testing Kadalu](testing-kadalu.md)
-* [Release Management](release-management.md)
+* link:get-involved.adoc[Get Involved]
+* link:testing-kadalu.adoc[Testing Kadalu]
+* link:release-management.adoc[Release Management]

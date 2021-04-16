@@ -1,11 +1,11 @@
-# Use external gluster volume as PV in kadalu
+= Use external gluster volume as PV in kadalu
 
 You can still use kadalu even when you have your storage nodes outside
 of the kubernetes (k8s) cluster. We describe this `kind` of setup as
 'External'. Such a description is intended to indicate that the storage
 server processes are not managed by kadalu operator.
 
-## Using external gluster in kadalu native way
+== Using external gluster in kadalu native way
 
 In this mode, we expect gluster volume to be created and is in 'Started' state.
 kadalu storage config takes one of the node IP/hostname, and gluster volume name
@@ -17,7 +17,8 @@ In order for resources.requests.storage requests to be honored please read [the 
 The best example for this is, what we use in our CI. Checkout this
 sample yaml file
 
-```yaml
+[source,yaml]
+----
 # file: external-config.yaml
 ---
 apiVersion: kadalu-operator.storage/v1alpha
@@ -49,32 +50,33 @@ spec:
       # This needs to be set using 'kadalu-quotad'
       storage: 500Mi
 
-```
+----
 
 Please edit 'gluster_host' and 'gluster_volname' parameters in config section.
 
 You can also setup the external storage through our `kubectl kadalu` CLI.
 
-```console
+[source,console]
+----
 $ kubectl kadalu storage-add store-name --external gluster.kadalu.io:/kadalu
-```
+----
 
 After this, just use `kadalu.external.store-name` (note that 'store-name' is
 name used for `storage-add`) in PVC yaml, like below:
 
-```
+----
 ...
 spec:
   storageClassName: kadalu.external.store-name
   ...
-```
+----
 
 Note that, if you have an existing gluster setup inside the k8s cluster, you can
 treat that also as 'External' and use kadalu to manage it. In this case, you
 will need to provide the pre-created gluster volume name for the config.
 
 
-## Using external storage directly
+== Using external storage directly
 
 In this mode, 1 Gluster Volume would be 1 PV. Something very similar to how heketi
 project allocates PVs. We don't encourage using this mode, nor recommend it in a
@@ -85,7 +87,8 @@ to be still consumed.
 In this mode, you don't need storage config, but all you need is to have a sample
 like below
 
-```yaml
+[source,yaml]
+----
 # file: external-gluster-as-pv.yaml
 ---
 kind: StorageClass
@@ -111,9 +114,9 @@ spec:
   resources:
     requests:
       storage: 200Mi # This gets ignored in this case.
-```
+----
 
-Please edit 'gluster_host' and 'gluster_volname' parameters in Storage Class.
+Please edit `gluster_host` and `gluster_volname` parameters in Storage Class.
 
 Then run `kubectl apply -f ./external-gluster-as-pv.yaml`
 
