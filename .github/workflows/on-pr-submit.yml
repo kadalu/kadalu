@@ -34,9 +34,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       KUBE_VERSION: v1.20.0
+      # Current conditions in minikube.sh which are using commit message:
+      # [helm skip]: If contained in COMMIT MESSAGE, validating helm is skipped
+      COMMIT_MSG: ${{ github.event.head_commit.message }}
     # Skip based on commit message
     if: "!contains(github.event.head_commit.message, '[ci skip]')"
     steps:
+
+    # Build Containers
     - uses: actions/checkout@v2
     - name: Install Docker Dependencies
       run: sudo apt-get install -y conntrack
@@ -61,19 +66,22 @@ jobs:
         echo ::set-output name=files::$FILES
     - name: Generate Manifests
       run: VERBOSE="yes" make gen-manifest
+
+    # Operator Tests
     - name: Setup Minikube
       run: tests/setup.sh $KUBE_VERSION
     - name: Run tests
-      run: |
-        tests/travis-test.sh $KUBE_VERSION
-
-        if grep -e '\bcli' <<< "$FILES"; then
-          tests/travis-test.sh $KUBE_VERSION cli
-        fi
-      env:
-        # Current conditions in minikube.sh which are using commit message:
-        # [helm skip]: If contained in COMMIT MESSAGE, validating helm is skipped
-        COMMIT_MSG: ${{ github.event.head_commit.message }}
-        FILES: ${{steps.build_local.outputs.files}}
+      run: tests/travis-test.sh $KUBE_VERSION
     - name: Cleanup
       run: tests/cleanup.sh $KUBE_VERSION
+
+    # CLI Tests (run conditionally)
+    - name: Setup Minikube (CLI Test)
+      run: tests/setup.sh $KUBE_VERSION
+      if: "contains(steps.build_local.outputs.files, 'cli')"
+    - name: Run tests (CLI Test)
+      run:  tests/travis-test.sh $KUBE_VERSION cli
+      if: "contains(steps.build_local.outputs.files, 'cli')"
+    - name: Cleanup (CLI Test)
+      run: tests/cleanup.sh $KUBE_VERSION
+      if: "contains(steps.build_local.outputs.files, 'cli')"
