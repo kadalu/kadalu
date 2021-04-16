@@ -54,7 +54,8 @@ def main():
     try:
         args = get_args()
         if args.mode == "version":
-            return show_version()
+            show_version()
+            sys.exit(0)
         try:
             mod = __import__(args.mode.replace("-", "_"))
             mod.validate(args)
