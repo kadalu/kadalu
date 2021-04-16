@@ -36,7 +36,7 @@ function test_storage_add() {
     # cli/build/kubectl-kadalu storage-add storage-pool-2-1 --script-mode --type Replica2 --device ${HOSTNAME}:/mnt/${DISK}/file2.10 --device ${HOSTNAME}:/mnt/${DISK}/file2.20 --tiebreaker tie-breaker.kadalu.io:/mnt || return 1
 
     # Check if the type default is Replica1
-    cli/build/kubectl-kadalu storage-add storage-pool-1 --script-mode --device ${HOSTNAME}:/mnt/${DISK}/file1.1 || return 1
+    cli/build/kubectl-kadalu storage-add storage-pool-1 --script-mode --device ${HOSTNAME}:/mnt/${DISK}/file1.1 --device ${HOSTNAME}:/mnt/${DISK}/file1.2 --device ${HOSTNAME}:/mnt/${DISK}/file1.3 || return 1
 
     # Check for external storage
     # TODO: For now, keep the name as 'ext-config' as PVC should use this to send request.
