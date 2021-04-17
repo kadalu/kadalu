@@ -28,8 +28,8 @@ jobs:
           pip install -r requirements.txt
           KADALU_VERSION=${{ env.kadalu_version }} TWINE_PASSWORD=${{ secrets.TWINE_PASSWORD }} make pypi-upload
 
-  publish-kadalu-cli:
-    name: Publish kubectl-kadalu
+  publish-artifacts:
+    name: Publish kubectl-kadalu, manifest files and helm charts
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -61,23 +61,31 @@ jobs:
         tag: ${{ github.ref }}
         overwrite: true
         file_glob: true
-
-  publish-helm-chart:
-    name: Publish Helm Chart
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Generate tgz archive of Helm Chart
-        run: |
-          KADALU_VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') make helm-chart
-      - name: Upload Helm Chart archive to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: helm/kadalu-helm-chart.tgz
-          tag: ${{ github.ref }}
-          overwrite: true
-          file_glob: true
+    - name: Copy manifests and kubectl-kadalu to output dir
+      run: |
+          mkdir -p output/downloads
+          cp -r cli/build/kubectl-kadalu* output/downloads/
+          cp -r manifests/* output/downloads/
+    - uses: actions/checkout@v2
+    - name: Generate tgz archive of Helm Chart
+      run: |
+        KADALU_VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') make helm-chart
+    - name: Upload Helm Chart archive to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.GITHUB_TOKEN }}
+        file: helm/kadalu-helm-chart.tgz
+        tag: ${{ github.ref }}
+        overwrite: true
+        file_glob: true
+    - name: Copy helm chart to output directory
+      run: |
+          cp helm/kadalu-helm-chart.tgz output/downloads/helm-chart.tgz
+    - name: Deploy
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./output
 
   multi-arch-build-for-release:
     runs-on: ubuntu-latest
