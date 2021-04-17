@@ -44,7 +44,7 @@ For example:
 ```yaml
 # File: storage-config.yaml
 ---
-apiVersion: kadalu-operator.storage/v1
+apiVersion: kadalu-operator.storage/v1alpha1
 kind: KadaluStorage
 metadata:
   # This will be used as name of PV Hosting Volume
@@ -69,7 +69,7 @@ The answer we have is, providing kadalu-config using 3 nodes, and using gluster 
 ```yaml
 # File: storage-config.yaml
 ---
-apiVersion: kadalu-operator.storage/v1
+apiVersion: kadalu-operator.storage/v1alpha1
 kind: KadaluStorage
 metadata:
   # This will be used as name of PV Hosting Volume
