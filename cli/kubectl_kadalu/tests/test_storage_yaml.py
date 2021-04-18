@@ -19,7 +19,7 @@ PATH_3 = "/exports/kadalu/storage3"
 PVC_1 = "pvc1"
 PVC_2 = "pvc2"
 PVC_3 = "pvc3"
-EXTERNAL_HOSTS = ["gluster1.kadalu.io" , "test"]
+EXTERNAL_HOSTS = ["gluster1.kadalu.io", "test"]
 EXTERNAL_HOST = ["gluster1.kadalu.io"]
 EXTERNAL_VOLNAME = "kadalu"
 EXTERNAL_OPTIONS = "log-level=DEBUG"
@@ -63,6 +63,7 @@ spec:
       device: "{DEVICE_3}"
 """
 
+
 def test_replica1_storage_device():
     content = {
         "metadata": {
@@ -70,12 +71,10 @@ def test_replica1_storage_device():
         },
         "spec": {
             "type": REPLICA_1,
-            "storage": [
-                {
-                    "node": NODE_1,
-                    "device": DEVICE_1
-                }
-            ]
+            "storage": [{
+                "node": NODE_1,
+                "device": DEVICE_1
+            }]
         }
     }
     assert (to_storage_yaml(content) == REPLICA1_DEVICE_OUTPUT)
@@ -87,17 +86,15 @@ def test_replica2_storage_device():
             "name": STORAGE_POOL_NAME
         },
         "spec": {
-            "type": REPLICA_2,
-            "storage": [
-                {
-                    "node": NODE_1,
-                    "device": DEVICE_1
-                },
-                {
-                    "node": NODE_2,
-                    "device": DEVICE_2
-                }
-            ]
+            "type":
+            REPLICA_2,
+            "storage": [{
+                "node": NODE_1,
+                "device": DEVICE_1
+            }, {
+                "node": NODE_2,
+                "device": DEVICE_2
+            }]
         }
     }
     assert (to_storage_yaml(content) == REPLICA2_DEVICE_OUTPUT)
@@ -109,21 +106,18 @@ def test_replica3_storage_device():
             "name": STORAGE_POOL_NAME
         },
         "spec": {
-            "type": REPLICA_3,
-            "storage": [
-                {
-                    "node": NODE_1,
-                    "device": DEVICE_1
-                },
-                {
-                    "node": NODE_2,
-                    "device": DEVICE_2
-                },
-                {
-                    "node": NODE_3,
-                    "device": DEVICE_3
-                }
-            ]
+            "type":
+            REPLICA_3,
+            "storage": [{
+                "node": NODE_1,
+                "device": DEVICE_1
+            }, {
+                "node": NODE_2,
+                "device": DEVICE_2
+            }, {
+                "node": NODE_3,
+                "device": DEVICE_3
+            }]
         }
     }
     assert (to_storage_yaml(content) == REPLICA3_DEVICE_OUTPUT)
@@ -168,6 +162,7 @@ spec:
       path: "{PATH_3}"
 """
 
+
 def test_replica1_storage_path():
     content = {
         "metadata": {
@@ -175,12 +170,10 @@ def test_replica1_storage_path():
         },
         "spec": {
             "type": REPLICA_1,
-            "storage": [
-                {
-                    "node": NODE_1,
-                    "path": PATH_1
-                }
-            ]
+            "storage": [{
+                "node": NODE_1,
+                "path": PATH_1
+            }]
         }
     }
     assert (to_storage_yaml(content) == REPLICA1_PATH_OUTPUT)
@@ -192,17 +185,15 @@ def test_replica2_storage_path():
             "name": STORAGE_POOL_NAME
         },
         "spec": {
-            "type": REPLICA_2,
-            "storage": [
-                {
-                    "node": NODE_1,
-                    "path": PATH_1
-                },
-                {
-                    "node": NODE_2,
-                    "path": PATH_2
-                }
-            ]
+            "type":
+            REPLICA_2,
+            "storage": [{
+                "node": NODE_1,
+                "path": PATH_1
+            }, {
+                "node": NODE_2,
+                "path": PATH_2
+            }]
         }
     }
     assert (to_storage_yaml(content) == REPLICA2_PATH_OUTPUT)
@@ -214,21 +205,18 @@ def test_replica3_storage_path():
             "name": STORAGE_POOL_NAME
         },
         "spec": {
-            "type": REPLICA_3,
-            "storage": [
-                {
-                    "node": NODE_1,
-                    "path": PATH_1
-                },
-                {
-                    "node": NODE_2,
-                    "path": PATH_2
-                },
-                {
-                    "node": NODE_3,
-                    "path": PATH_3
-                }
-            ]
+            "type":
+            REPLICA_3,
+            "storage": [{
+                "node": NODE_1,
+                "path": PATH_1
+            }, {
+                "node": NODE_2,
+                "path": PATH_2
+            }, {
+                "node": NODE_3,
+                "path": PATH_3
+            }]
         }
     }
     assert (to_storage_yaml(content) == REPLICA3_PATH_OUTPUT)
@@ -271,6 +259,7 @@ spec:
     - pvc: "{PVC_3}"
 """
 
+
 def test_replica1_storage_pvc():
     content = {
         "metadata": {
@@ -278,11 +267,9 @@ def test_replica1_storage_pvc():
         },
         "spec": {
             "type": REPLICA_1,
-            "storage": [
-                {
-                    "pvc": PVC_1
-                }
-            ]
+            "storage": [{
+                "pvc": PVC_1
+            }]
         }
     }
     assert (to_storage_yaml(content) == REPLICA1_PVC_OUTPUT)
@@ -295,14 +282,11 @@ def test_replica2_storage_pvc():
         },
         "spec": {
             "type": REPLICA_2,
-            "storage": [
-                {
-                    "pvc": PVC_1
-                },
-                {
-                    "pvc": PVC_2
-                }
-            ],
+            "storage": [{
+                "pvc": PVC_1
+            }, {
+                "pvc": PVC_2
+            }],
             "tiebreaker": {
                 "node": "tie-breaker.kadalu.io",
                 "port": 24007,
@@ -320,17 +304,13 @@ def test_replica3_storage_pvc():
         },
         "spec": {
             "type": REPLICA_3,
-            "storage": [
-                {
-                    "pvc": PVC_1
-                },
-                {
-                    "pvc": PVC_2
-                },
-                {
-                    "pvc": PVC_3
-                }
-            ]
+            "storage": [{
+                "pvc": PVC_1
+            }, {
+                "pvc": PVC_2
+            }, {
+                "pvc": PVC_3
+            }]
         }
     }
     assert (to_storage_yaml(content) == REPLICA3_PVC_OUTPUT)
@@ -349,6 +329,7 @@ spec:
     gluster_options: "{EXTERNAL_OPTIONS}"
 """
 
+
 def test_external_storage():
     content = {
         "metadata": {
@@ -356,13 +337,11 @@ def test_external_storage():
         },
         "spec": {
             "type": EXTERNAL,
-            "details": [
-                {
-                    "gluster_hosts": EXTERNAL_HOSTS,
-                    "gluster_volname": EXTERNAL_VOLNAME,
-                    "gluster_options": EXTERNAL_OPTIONS
-                }
-            ]
+            "details": {
+                "gluster_hosts": EXTERNAL_HOSTS,
+                "gluster_volname": EXTERNAL_VOLNAME,
+                "gluster_options": EXTERNAL_OPTIONS
+            }
         }
     }
     assert (to_storage_yaml(content) == EXTERNAL_OUTPUT)

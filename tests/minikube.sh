@@ -158,8 +158,11 @@ function run_io(){
   # Deploy io-app deployment with 2 replicas
   kubectl apply -f tests/test-io/io-app.yaml
 
-  # Compressed image is ~25MB and so it shouldn't take more than 30s to reach ready state
-  kubectl wait --for=condition=ready pod -l app=io-app --timeout=30s
+  # Compressed image is ~25MB and so it shouldn't take much time to reach ready state
+  kubectl wait --for=condition=ready pod -l app=io-app --timeout=45s || fail=1
+  if [ $fail == 1 ]; then
+      return 0
+  fi
 
   # Store pod names
   pods=($(kubectl get pods -l app=io-app -o jsonpath={'..metadata.name'}))
@@ -219,9 +222,10 @@ up)
     if [[ "${VM_DRIVER}" != "none" ]]; then
 	wait_for_ssh
 	# shellcheck disable=SC2086
-	minikube ssh "sudo mkdir -p /mnt/${DISK}; sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1}; sudo mkdir -p /mnt/${DISK}/{dir3.2,dir3.2_modified,pvc}"
+	minikube ssh "sudo mkdir -p /mnt/${DISK};sudo rm -rf /mnt/${DISK}/*; sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1}; sudo mkdir -p /mnt/${DISK}/{dir3.2,dir3.2_modified,pvc}"
     else
 	sudo mkdir -p /mnt/${DISK}
+  sudo rm -rf /mnt/${DISK}/*
 	sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1}
 	sudo mkdir -p /mnt/${DISK}/dir3.2
 	sudo mkdir -p /mnt/${DISK}/dir3.2_modified
@@ -335,8 +339,6 @@ test_kadalu)
     kubectl apply -f tests/test-csi/sanity-app.yaml
     kubectl wait --for=condition=ready pod -l app=sanity-app --timeout=15s
 
-    # Intention is to slowly fix Sanity tests which are failing
-    # TODO (by intern?): Fix 30-40% of sanity tests between each CSI Spec refresh (current Spec v1.2)
     exp_pass=33
     kubectl exec sanity-app -i -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination' | tee /tmp/sanity-result.txt
 
@@ -345,16 +347,15 @@ test_kadalu)
     [ $act_pass -ge $exp_pass ] || fail=1
     echo Sanity [Pass %]: Expected: $exp_pass and Actual: $act_pass
 
-
     # Unless there is a failure or COMMIT_MSG contains 'full log' just log last 100 lines
     lines=100
-    if [[ $fail == 1 || $COMMIT_MSG =~ 'full log' ]]; then
+    if [[ $fail -eq 1 || $COMMIT_MSG =~ 'full log' ]]; then
         lines=1000
     fi
     for p in $(kubectl -n kadalu get pods -o name); do
-	echo "====================== Start $p ======================"
-	kubectl -nkadalu --all-containers=true --tail $lines logs $p
-	echo "======================= End $p ======================="
+      echo "====================== Start $p ======================"
+      kubectl logs -nkadalu --all-containers=true --tail=$lines $p
+      echo "======================= End $p ======================="
     done
 
     date
@@ -370,7 +371,7 @@ test_kadalu)
     ;;
 
 cli_tests)
-    output=$(kubectl get nodes -o=name)    
+    output=$(kubectl get nodes -o=name)
     # output will be in format 'node/hostname'. We need 'hostname'
     HOSTNAME=$(basename $output)
     echo "Hostname is ${HOSTNAME}"

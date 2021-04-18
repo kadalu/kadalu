@@ -8,10 +8,10 @@
 #To prevent Py2 to interpreting print(val) as a tuple.
 from __future__ import print_function
 
-import os
-import tempfile
-import sys
 import json
+import os
+import sys
+import tempfile
 
 import utils
 from storage_yaml import to_storage_yaml
@@ -22,47 +22,43 @@ def set_args(name, subparsers):
     parser = subparsers.add_parser(name)
     arg = parser.add_argument
 
-    arg(
-        "name",
-        help="Storage Name"
-    )
-    arg(
-        "--type",
+    arg("name", help="Storage Name")
+    arg("--type",
         help="Storage Type",
         choices=["Replica1", "Replica3", "External", "Replica2"],
-        default=None
-    )
-    arg(
-        "--device",
+        default=None)
+    arg("--device",
         help=("Storage device in <node>:<device> format, "
               "Example: --device kube1.example.com:/dev/vdc"),
         default=[],
-        action="append"
-    )
-    arg(
-        "--path",
+        action="append")
+    arg("--path",
         help=("Storage path in <node>:<path> format, "
               "Example: --path kube1.example.com:/exports/data"),
         default=[],
-        action="append"
-    )
-    arg(
-        "--pvc",
+        action="append")
+    arg("--pvc",
         help="Storage from pvc, Example: --pvc local-pvc-1",
         default=[],
-        action="append"
-    )
-    arg(
-        "--external",
-        help="Storage from external gluster, Example: --external gluster-node:/gluster-volname",
-        default=None
-    )
-    arg(
-        "--tiebreaker",
-        help="If type is 'Replica2', one can have a tiebreaker node along "
-        "with it. like '--tiebreaker tie-breaker-node-name:/data/tiebreaker'",
-        default=None
-    )
+        action="append")
+    arg("--external",
+        help=("Storage from external gluster, "
+              "Example: --external gluster-node:/gluster-volname"),
+        default=None)
+    arg("--tiebreaker",
+        help=
+        ("If type is 'Replica2', one can have a tiebreaker node along "
+         "with it. like '--tiebreaker tie-breaker-node-name:/data/tiebreaker'"
+         ),
+        default=None)
+    arg("--gluster-options",
+        help=(
+            "Can only be used in conjunction with '--external' argument. "
+            "Supply options to be used while mounting external gluster cluster"
+            "Example: --gluster-options backup-volfile-servers=volfile_server2:"
+            "volfile_server3,log-level=WARNING,reader-thread-count=2,"
+            "log-file=/var/log/gluster.log"),
+        default=None)
     utils.add_global_flags(parser)
 
 
@@ -75,21 +71,32 @@ def validate(args):
             sys.exit(1)
 
         if ":" not in args.external:
-            print("Invalid external storage details. Please specify "
-                  "details in the format <node>:/<volname>", file=sys.stderr)
+            print(
+                "Invalid external storage details. Please specify "
+                "details in the format <node>:/<volname>",
+                file=sys.stderr)
             sys.exit(1)
 
         # Set type to External as '--external' option is provided
         args.type = "External"
 
+    if args.external is not None and args.gluster_options:
+        print("'--gluster-options' is used only with '--type External'",
+                file=sys.stderr)
+        sys.exit(1)
+
     if args.tiebreaker:
         if args.type != "Replica2":
-            print("'--tiebreaker' option should be used only with "
-                  "type 'Replica2'", file=sys.stderr)
+            print(
+                "'--tiebreaker' option should be used only with "
+                "type 'Replica2'",
+                file=sys.stderr)
             sys.exit(1)
         if ":" not in args.tiebreaker:
-            print("Invalid tiebreaker details. Please specify details "
-                  "in the format <node>:/<path>", file=sys.stderr)
+            print(
+                "Invalid tiebreaker details. Please specify details "
+                "in the format <node>:/<path>",
+                file=sys.stderr)
             sys.exit(1)
     else:
         args.tiebreaker = "tie-breaker.kadalu.io:/mnt"
@@ -105,8 +112,8 @@ def validate(args):
         sys.exit(1)
 
     # pylint: disable=too-many-boolean-expressions
-    if ((args.type == "Replica2" and num_storages % 2 != 0) or
-            (args.type == "Replica3" and num_storages % 3 != 0)):
+    if ((args.type == "Replica2" and num_storages % 2 != 0)
+            or (args.type == "Replica3" and num_storages % 3 != 0)):
         print("Number of storages not matching for type=%s" % args.type,
               file=sys.stderr)
         sys.exit(1)
@@ -115,8 +122,10 @@ def validate(args):
 
     for dev in args.device:
         if ":" not in dev:
-            print("Invalid storage device details. Please specify device "
-                  "details in the format <node>:<device>", file=sys.stderr)
+            print(
+                "Invalid storage device details. Please specify device "
+                "details in the format <node>:<device>",
+                file=sys.stderr)
             sys.exit(1)
         if (not args.dry_run) and (dev.split(":")[0] not in kube_nodes):
             print("Node name does not appear to be valid: " + dev)
@@ -124,8 +133,10 @@ def validate(args):
 
     for path in args.path:
         if ":" not in path:
-            print("Invalid storage path details. Please specify path "
-                  "details in the format <node>:<path>", file=sys.stderr)
+            print(
+                "Invalid storage path details. Please specify path "
+                "details in the format <node>:<path>",
+                file=sys.stderr)
             sys.exit(1)
 
         if (not args.dry_run) and (path.split(":")[0] not in kube_nodes):
@@ -175,9 +186,16 @@ def storage_add_data(args):
     if args.external:
         node, vol = args.external.split(":", 1)
         nodes = node.split(',')
+        g_opts = ""
+        if args.gluster_options:
+            # Options are passed as a single string separated by commas (,) in
+            # 'key=value' format and can be used without any changes while
+            # mounting external gluster cluster
+            g_opts = args.gluster_options
         content["spec"]["details"] = {
             "gluster_hosts": nodes,
-            "gluster_volname": vol.strip("/")
+            "gluster_volname": vol.strip("/"),
+            "gluster_options": g_opts,
         }
         return content
 
@@ -189,32 +207,18 @@ def storage_add_data(args):
     if args.device:
         for devdata in args.device:
             node, dev = devdata.split(":", 1)
-            content["spec"]["storage"].append(
-                {
-                    "node": node,
-                    "device": dev
-                }
-            )
+            content["spec"]["storage"].append({"node": node, "device": dev})
 
     # If Path is specified
     if args.path:
         for pathdata in args.path:
             node, path = pathdata.split(":", 1)
-            content["spec"]["storage"].append(
-                {
-                    "node": node,
-                    "path": path
-                }
-            )
+            content["spec"]["storage"].append({"node": node, "path": path})
 
     # If PVC is specified
     if args.pvc:
         for pvc in args.pvc:
-            content["spec"]["storage"].append(
-                {
-                    "pvc": pvc
-                }
-            )
+            content["spec"]["storage"].append({"pvc": pvc})
 
     # TODO: Support for different port can be added later
     if args.type == "Replica2":

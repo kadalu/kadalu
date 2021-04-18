@@ -4,33 +4,34 @@
 # To prevent Py2 to interpreting print(val) as a tuple.
 from __future__ import print_function
 
-import sys
 import argparse
-import utils
+import sys
 
+import utils
 
 # TODO: provide 'hint' based on grepping error logs. That way, users get to
 #       check for few common errors easily
+
 
 def set_args(name, subparsers):
     """ add arguments to argparser """
     # TODO: provide options to pass options to kubectl logs (like tail, container name etc)
 
     parser = subparsers.add_parser(
-        name,
-        formatter_class=argparse.RawTextHelpFormatter
-    )
+        name, formatter_class=argparse.RawTextHelpFormatter)
 
     arg = parser.add_argument
 
-    arg("-p", "--podname",
-        help="Specify pod name to get log info")
+    arg("-p", "--podname", help="Specify pod name to get log info")
 
-    arg("-c", "--container",
+    arg("-c",
+        "--container",
         help="Specify container name to get log info.\n"
-             "To be used along with '--podname'")
+        "To be used along with '--podname'")
 
-    arg("-A", "--allcontainers", action="store_true",
+    arg("-A",
+        "--allcontainers",
+        action="store_true",
         help=("Show logs of all containers"
               "of a particular pod.\n"
               "To be used along with '--podname'"))
@@ -42,7 +43,7 @@ def validate(args):
     """Validate optional arguments"""
 
     if args.container and not args.podname:
-        print("Specify pod name for the container '%s'." %args.container)
+        print("Specify pod name for the container '%s'." % args.container)
         sys.exit(1)
 
     if args.allcontainers and not args.podname:
@@ -68,15 +69,17 @@ def run(args):
             container = '-c' + args.container
 
         if not args.podname:
-            cmd = utils.kubectl_cmd(args) + ["get", "pods", "-nkadalu", "-oname"]
+            cmd = utils.kubectl_cmd(args) + [
+                "get", "pods", "-nkadalu", "-oname"
+            ]
             resp = utils.execute(cmd)
             # Remove empty lines(pod-names) from command response
-            pods = resp.stdout.strip().split()
+            pods = resp.stdout.split()
 
         for pod in pods:
             log_cmd = utils.kubectl_cmd(args) + [
-                "logs", "-nkadalu",
-                pod, container]
+                "logs", "-nkadalu", pod, container
+            ]
             log_resp = utils.execute(log_cmd)
             print("----- (Kadalu Namespace) %s -----" % pod)
             print(log_resp.stdout)

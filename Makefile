@@ -89,8 +89,7 @@ pylint:
 	@rm operator/utils.py
 	@rm server/quotad.py
 	@rm server/glusterutils.py
-	@cd cli && make gen-version
-	@cd cli/kubectl_kadalu && pylint --disable W0511,R0801 *.py
+	@cd cli && make gen-version pylint pytest --keep-going
 
 ifeq ($(KADALU_VERSION), latest)
 prepare-release-manifests:
