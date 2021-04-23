@@ -11,7 +11,7 @@ Let us look into below sample config file.
 [source,yaml]
 ----
 ---
-apiVersion: kadalu-operator.storage/v1alpha
+apiVersion: kadalu-operator.storage/v1alpha1
 kind: KadaluStorage
 metadata:
  # This will be used as name of PV Hosting Volume
@@ -24,7 +24,7 @@ spec:
 ----
 
 For now,
-* `apiVersion` will always be having value of `kadalu-operator.storage/v1alpha`.
+* `apiVersion` will always be having value of `kadalu-operator.storage/v1alpha1`.
 * `kind` will always be having value of `KadaluStorage`. kadalu operator only understands config of this **kind**.
 * `metadata` is required, and should have an entry for 'name', which will be used as 'gluster's volume name and pod names.
 * `spec` field should be required, and should have `type` field.
