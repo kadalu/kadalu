@@ -144,7 +144,12 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             if ext_volume:
                 mntdir = os.path.join(HOSTVOL_MOUNTDIR, ext_volume['name'])
 
-                if not filters.get('kadalu-format', None):
+                # By default 'kadalu_format' is set to 'native' as part of CRD
+                # definition
+                if filters.get('kadalu_format') == 'non-native':
+                    # If 'kadalu_format' is 'non-native', the request will be
+                    # considered as to map 1 PV to 1 Gluster volume
+
                     # No need to keep the mount on controller
                     unmount_glusterfs(mntdir)
 

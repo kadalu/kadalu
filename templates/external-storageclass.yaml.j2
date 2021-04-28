@@ -11,5 +11,6 @@ parameters:
 {%- if gluster_volname != "" %}
   gluster_options: {{ gluster_options }}
 {%- endif %}
-  # Subdir inside this volume would be a PV
-  kadalu-format: "true"
+  # Subdir inside this volume would be a PV if 'kadalu_format' is 'native'
+  # else whole volume is used as a single PV if it's 'non-native'
+  kadalu_format: {{ kadalu_format }}

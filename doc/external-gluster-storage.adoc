@@ -5,6 +5,10 @@ of the kubernetes (k8s) cluster. We describe this `kind` of setup as
 'External'. Such a description is intended to indicate that the storage
 server processes are not managed by kadalu operator.
 
+In both the ways please note `metadata.name` (let's say `e-vol`) in
+`kind: KadaluStorage` will create a StorageClass with name
+`kadalu.external.<volname>` (`volname` will be replaces with `e-vol`).
+
 == Using external gluster in kadalu native way
 
 In this mode, we expect gluster volume to be created and is in 'Started' state.
@@ -32,7 +36,9 @@ spec:
     gluster_host: gluster1.kadalu.io
     gluster_volname: kadalu
     gluster_options: log-level=DEBUG
-
+    # Omitting 'kadalu_format' or using 'native' as a value will create
+    # 1 PV : 1 Subdir in external gluster volume
+    kadalu_format: native
 
 # file: pvc-from-external-gluster.yaml
 ---
@@ -84,23 +90,25 @@ new setup. This mode is provided just as an option for those who are consuming
 gluster volumes in this mode. This helps to use the PVs used in other deployments
 to be still consumed.
 
-In this mode, you don't need storage config, but all you need is to have a sample
-like below
+You'll be needing something similar to below config to use whole gluster
+volume as a single PV
 
 [source,yaml]
 ----
 # file: external-gluster-as-pv.yaml
 ---
-kind: StorageClass
-apiVersion: storage.k8s.io/v1
+apiVersion: kadalu-operator.storage/v1alpha1
+kind: KadaluStorage
 metadata:
-  name: kadalu.external.pv-ext # Keep changing the name for different volumes
-provisioner: kadalu
-parameters:
-  hostvol_type: "External"
-  gluster_host: gluster1.kadalu.io   # Change to your gluster host
-  gluster_volname: test              # Change to existing gluster volume
-  gluster_options: log-level=DEBUG   # Comma separated options
+  name: pv-ext # Keep changing the name for different volumes
+spec:
+  type: External
+  details:
+    gluster_host: gluster1.kadalu.io   # Change to your gluster host
+    gluster_volname: test              # Change to existing gluster volume
+    gluster_options: log-level=DEBUG   # Comma separated options
+    # Setting 'kadalu_format' as 'non-native' is important
+    kadalu_format: non-native          # Will map 1 Gluster Volume : 1 PV
 
 ---
 kind: PersistentVolumeClaim

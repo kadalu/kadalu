@@ -173,6 +173,7 @@ def get_pv_hosting_volumes(filters={}, iteration=0):
                 "g_volname": data.get("gluster_volname", None),
                 "g_host": data.get("gluster_hosts", None),
                 "g_options": data.get("gluster_options", None),
+                "k_format": data.get("kadalu_format", None),
             }
 
             volumes.append(volume)
@@ -952,9 +953,10 @@ def check_external_volume(pv_request, host_volumes):
         if vol["type"] != "External":
             continue
 
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, vol["name"])
-        hvol = vol
-        break
+        if vol["k_format"] == params["kadalu_format"]:
+            mntdir = os.path.join(HOSTVOL_MOUNTDIR, vol["name"])
+            hvol = vol
+            break
 
     if not mntdir:
         logging.warning("No host volume found to provide PV")
