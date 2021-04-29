@@ -68,10 +68,13 @@ def is_gluster_mount_proc_running(volname, mountpoint):
         r'| grep -w -q "%s"' % (volname, mountpoint)
     )
 
-    proc = subprocess.Popen(cmd, shell=True, stderr=None,
-                            stdout=None, universal_newlines=True)
-    proc.communicate()
-    return proc.returncode == 0
+    with subprocess.Popen(cmd,
+                          shell=True,
+                          stderr=None,
+                          stdout=None,
+                          universal_newlines=True) as proc:
+        proc.communicate()
+        return proc.returncode == 0
 
 
 def makedirs(dirpath):
@@ -113,13 +116,14 @@ def execute(*cmd):
     Execute command. Returns output and error.
     Raises CommandException on error
     """
-    proc = subprocess.Popen(cmd, stderr=subprocess.PIPE,
-                            stdout=subprocess.PIPE,
-                            universal_newlines=True)
-    out, err = proc.communicate()
-    if proc.returncode != 0:
-        raise CommandException(proc.returncode, out.strip(), err.strip())
-    return (out.strip(), err.strip())
+    with subprocess.Popen(cmd,
+                          stderr=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          universal_newlines=True) as proc:
+        out, err = proc.communicate()
+        if proc.returncode != 0:
+            raise CommandException(proc.returncode, out.strip(), err.strip())
+        return (out.strip(), err.strip())
 
 
 def logf(msg, **kwargs):
@@ -292,12 +296,13 @@ class ProcState:
 
     def start(self):
         """Start a Process"""
-        self.subproc = subprocess.Popen(
-            self.proc.with_args(),
-            stderr=sys.stderr,
-            universal_newlines=True,
-            env=os.environ
-        )
+        # Context Manager here would wait for subprocess to complete which we
+        # don't want and had to disable pylint error
+        # noqa # pylint: disable=consider-using-with
+        self.subproc = subprocess.Popen(self.proc.with_args(),
+                                        stderr=sys.stderr,
+                                        universal_newlines=True,
+                                        env=os.environ)
 
     def stop(self):
         """Stop a Process"""
