@@ -953,7 +953,13 @@ def check_external_volume(pv_request, host_volumes):
         if vol["type"] != "External":
             continue
 
-        if vol["k_format"] == params["kadalu_format"]:
+        # For external volume both k_format and g_volname should match
+        # Assumptions:
+        # 1. User will not ask a PV with same volname but from a different
+        # cluster
+        # 2. User will not reuse a gluster non-native volume
+        if (vol["k_format"] == params["kadalu_format"]
+                and vol["g_volname"] == params["gluster_volname"]):
             mntdir = os.path.join(HOSTVOL_MOUNTDIR, vol["name"])
             hvol = vol
             break
