@@ -33,6 +33,7 @@ COPY templates/storageclass-kadalu.yaml.j2  /kadalu/templates/storageclass-kadal
 COPY templates/storageclass-kadalu.replica1.yaml.j2  /kadalu/templates/storageclass-kadalu.replica1.yaml.j2
 COPY templates/storageclass-kadalu.replica2.yaml.j2  /kadalu/templates/storageclass-kadalu.replica2.yaml.j2
 COPY templates/storageclass-kadalu.replica3.yaml.j2  /kadalu/templates/storageclass-kadalu.replica3.yaml.j2
+COPY templates/storageclass-kadalu.disperse.yaml.j2  /kadalu/templates/storageclass-kadalu.disperse.yaml.j2
 COPY templates/external-storageclass.yaml.j2         /kadalu/templates/external-storageclass.yaml.j2
 COPY lib/kadalulib.py                       /kadalu/kadalulib.py
 COPY cli/kubectl_kadalu/utils.py            /kadalu/utils.py

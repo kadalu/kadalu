@@ -30,8 +30,19 @@ def generate_shd_volfile(client_volfile, volname, voltype):
         count = 3
         if data["type"] == "Replica2":
             count = 2
-        for i in range(0, int(len(data["bricks"]) / count)):
-            data["dht_subvol"].append("%s-replica-%d" % (data["volname"], i))
+
+        data["subvol_bricks_count"] = count
+        if data["type"] == "Disperse":
+            data["subvol_bricks_count"] = data["disperse"]["data"] + \
+              data["disperse"]["redundancy"]
+            data["disperse_redundancy"] = data["disperse"]["redundancy"]
+
+        for i in range(0, int(len(data["bricks"]) / data["subvol_bricks_count"])):
+            data["dht_subvol"].append("%s-%s-%d" % (
+                data["volname"],
+                "disperse" if data["type"] == "Disperse" else "replica",
+                i
+            ))
 
     template_file_path = os.path.join(TEMPLATES_DIR,
                                       "%s.shd.vol.j2" % voltype)

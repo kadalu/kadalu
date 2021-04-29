@@ -1,0 +1,48 @@
+{% for brick in bricks %}
+volume {{ volname }}-client-{{ brick["brick_index"] }}
+    type protocol/client
+    option volfile-key /{{ volname }}
+    option transport.socket.read-fail-log false
+    option remote-subvolume {{ brick["brick_path"] }}
+    option remote-host {{ brick["node"] }}
+end-volume
+
+{% endfor %}
+
+{% for i in range(dht_subvol|length) %}
+volume {{ volname }}-disperse-{{ i }}
+    type cluster/disperse
+    option redundancy {{ disperse_redundancy }}
+    option data-self-heal on
+    option granular-entry-heal on
+    option iam-self-heal-daemon off
+    option metadata-self-heal on
+    option entry-self-heal on
+    option read-hash-mode 5
+    subvolumes {% for b in range(subvol_bricks_count) %} {{ volname }}-client-{{ (i * subvol_bricks_count) + b }}{% endfor %}
+end-volume
+
+{% endfor %}
+
+volume {{ volname }}-dht
+    type cluster/distribute
+    subvolumes {{ dht_subvol|join(' ') }}
+end-volume
+
+volume {{ volname }}-utime
+    type features/utime
+    option noatime on
+    subvolumes {{ volname }}-dht
+end-volume
+
+volume {{ volname }}-write-behind
+    type performance/write-behind
+    option flush-behind on
+    option write-behind on
+    subvolumes {{ volname }}-utime
+end-volume
+
+volume {{ volname }}
+    type debug/io-stats
+    subvolumes {{ volname }}-write-behind
+end-volume

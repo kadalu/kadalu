@@ -64,3 +64,22 @@ spec:
 #       - gluster1.kadalu.io
 #     gluster_volname: kadalu
 #     gluster_options: log-level=DEBUG
+
+# Disperse Volume
+---
+apiVersion: kadalu-operator.storage/v1alpha1
+kind: KadaluStorage
+metadata:
+  name: storage-pool-4
+spec:
+  type: Disperse
+  disperse:
+    data: 2
+    redundancy: 1
+  storage:
+    - node: minikube
+      device: /mnt/DISK/file4.1
+    - node: minikube
+      device: /mnt/DISK/file4.2
+    - node: minikube
+      device: /mnt/DISK/file4.3

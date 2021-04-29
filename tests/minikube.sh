@@ -13,7 +13,7 @@ function wait_till_pods_start() {
 	cnt=$((cnt + 1))
 	sleep 2
 	ret=$(kubectl get pods -nkadalu -o wide | grep 'Running' | wc -l)
-	if [[ $ret -ge 9 ]]; then
+	if [[ $ret -ge 12 ]]; then
 	    echo "Successful after $cnt seconds"
 	    break
 	fi
@@ -222,11 +222,11 @@ up)
     if [[ "${VM_DRIVER}" != "none" ]]; then
 	wait_for_ssh
 	# shellcheck disable=SC2086
-	minikube ssh "sudo mkdir -p /mnt/${DISK};sudo rm -rf /mnt/${DISK}/*; sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1}; sudo mkdir -p /mnt/${DISK}/{dir3.2,dir3.2_modified,pvc}"
+	minikube ssh "sudo mkdir -p /mnt/${DISK};sudo rm -rf /mnt/${DISK}/*; sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3}; sudo mkdir -p /mnt/${DISK}/{dir3.2,dir3.2_modified,pvc}"
     else
 	sudo mkdir -p /mnt/${DISK}
   sudo rm -rf /mnt/${DISK}/*
-	sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1}
+	sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3}
 	sudo mkdir -p /mnt/${DISK}/dir3.2
 	sudo mkdir -p /mnt/${DISK}/dir3.2_modified
 	sudo mkdir -p /mnt/${DISK}/pvc
@@ -313,6 +313,8 @@ test_kadalu)
     get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 90
 
     get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 90
+
+    get_pvc_and_check examples/sample-test-app4.yaml "Disperse" 2 90
 
     #get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 60
 
