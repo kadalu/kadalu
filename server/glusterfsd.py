@@ -31,8 +31,8 @@ def verify_brickdir_xattr_support(brick_path):
     test_xattr_name = "user.testattr"
     test_xattr_value = b"testvalue"
     try:
-        xattr.set(brick_path, test_xattr_name, test_xattr_value)
-        val = xattr.get(brick_path, test_xattr_name)
+        xattr.setxattr(brick_path, test_xattr_name, test_xattr_value)
+        val = xattr.getxattr(brick_path, test_xattr_name)
         if val != test_xattr_value:
             logging.error(logf("Xattr value mismatch.",
                                actual=val,
@@ -50,7 +50,7 @@ def set_volume_id_xattr(brick_path, volume_id):
 
     volume_id_bytes = uuid.UUID(volume_id).bytes
     try:
-        xattr.set(brick_path, VOLUME_ID_XATTR_NAME,
+        xattr.setxattr(brick_path, VOLUME_ID_XATTR_NAME,
                   volume_id_bytes, xattr.XATTR_CREATE)
     except FileExistsError:
         pass

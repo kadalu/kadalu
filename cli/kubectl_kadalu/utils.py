@@ -11,6 +11,7 @@ KUBECTL_CMD = "kubectl"
 # noqa # pylint: disable=useless-object-inheritance
 # noqa # pylint: disable=too-few-public-methods
 # noqa # pylint: disable=bad-option-value
+# noqa # pylint: disable=consider-using-with
 class CmdResponse(object):
     """ Class for checking the response """
     def __init__(self, returncode, out, err):

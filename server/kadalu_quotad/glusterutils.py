@@ -2,16 +2,15 @@
 Utilities for reading information from gluster for 'external' quotad
 """
 import os
-import importlib
 try:
     from glustercli.cli import volume
 except ImportError:
     volume = None
-    pass
 
 KADALU_PATHS = {'info', 'subvol'}
 UUID_FILE = "/var/lib/glusterd/glusterd.info"
 
+# noqa # pylint: disable=invalid-name,global-statement
 myuuid = None
 
 def get_node_id():

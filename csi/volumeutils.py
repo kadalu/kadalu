@@ -576,20 +576,16 @@ def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize):
     ))
 
     # Update existing PV contents
-    info_file = open(info_file_path + ".json", "r")
-    data = json.load(info_file)
-    # Close the file and cursor comes back to beginning of the file
-    # Alternatively can use seek(0)
-    info_file.close()
+    with open(info_file_path + ".json", "r") as info_file:
+        data = json.load(info_file)
 
     # Update PV contents
     data["size"] = expansion_requested_pvsize
     data["path_prefix"] = os.path.dirname(pvpath)
 
     # Save back the changes
-    info_file = open(info_file_path + ".json", "w+")
-    info_file.write(json.dumps(data))
-    info_file.close()
+    with open(info_file_path + ".json", "w+") as info_file:
+        info_file.write(json.dumps(data))
 
     logging.debug(logf(
         "Metadata updated",
