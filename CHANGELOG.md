@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2] - 2021-05-02
+### Added
+- Enhanced provisioner to check free space before provisioning from External Storage.
+- I/O tests added as part of CI.
+- CSI Sanity tests added as part of CI.
+- CSI "ValidateVolumeCapability" API is implemented.
+- CSI "ListVolumes" API is implemented.
+- Fixed an issue while creating a PV with same name but different size.
+- Documentation format is changed to Asciidoc.
+
 ## [0.8.1] - 2021-03-12
 ### Added
 - volfile: add 'read-fail-log' option to brick volfile.
@@ -211,7 +221,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.1...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.2...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
@@ -228,3 +238,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.7.7]: https://github.com/kadalu/kadalu/compare/0.7.6...0.7.7
 [0.8.0]: https://github.com/kadalu/kadalu/compare/0.7.7...0.8.0
 [0.8.1]: https://github.com/kadalu/kadalu/compare/0.8.0...0.8.1
+[0.8.2]: https://github.com/kadalu/kadalu/compare/0.8.1...0.8.2
