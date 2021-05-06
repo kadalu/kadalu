@@ -6,7 +6,8 @@ metadata:
 spec:
   type: External
   details:
-    gluster_hosts: gluster1.kadalu.io   # Change to your gluster host
+    gluster_hosts:
+      - gluster1.kadalu.io             # Change to your gluster host
     gluster_volname: test              # Change to existing gluster volume
     gluster_options: log-level=DEBUG   # Comma separated options
     kadalu_format: non-native          # Will map 1 Gluster Volume : 1 PV
