@@ -29,17 +29,15 @@ class CommandError(Exception):
 def execute(cmd):
     """ execute the CLI command """
 
-    proc = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True
-    )
-    out, err = proc.communicate()
-    if proc.returncode == 0:
-        return CmdResponse(proc.returncode, out, err)
+    with subprocess.Popen(cmd,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE,
+                          universal_newlines=True) as proc:
+        out, err = proc.communicate()
+        if proc.returncode == 0:
+            return CmdResponse(proc.returncode, out, err)
 
-    raise CommandError(proc.returncode, err)
+        raise CommandError(proc.returncode, err)
 
 
 def add_global_flags(parser):

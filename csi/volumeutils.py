@@ -173,6 +173,7 @@ def get_pv_hosting_volumes(filters={}, iteration=0):
                 "g_volname": data.get("gluster_volname", None),
                 "g_host": data.get("gluster_hosts", None),
                 "g_options": data.get("gluster_options", None),
+                "k_format": data.get("kadalu_format", None),
             }
 
             volumes.append(volume)
@@ -575,20 +576,16 @@ def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize):
     ))
 
     # Update existing PV contents
-    info_file = open(info_file_path + ".json", "r")
-    data = json.load(info_file)
-    # Close the file and cursor comes back to beginning of the file
-    # Alternatively can use seek(0)
-    info_file.close()
+    with open(info_file_path + ".json", "r") as info_file:
+        data = json.load(info_file)
 
     # Update PV contents
     data["size"] = expansion_requested_pvsize
     data["path_prefix"] = os.path.dirname(pvpath)
 
     # Save back the changes
-    info_file = open(info_file_path + ".json", "w+")
-    info_file.write(json.dumps(data))
-    info_file.close()
+    with open(info_file_path + ".json", "w+") as info_file:
+        info_file.write(json.dumps(data))
 
     logging.debug(logf(
         "Metadata updated",
@@ -952,9 +949,16 @@ def check_external_volume(pv_request, host_volumes):
         if vol["type"] != "External":
             continue
 
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, vol["name"])
-        hvol = vol
-        break
+        # For external volume both k_format, g_volname and hosts should match
+        # gluster_hosts is flattened to a string and can be compared as such
+        # Assumptions:
+        # 1. User will not reuse a gluster non-native volume
+        if (vol["k_format"] == params["kadalu_format"]
+                and vol["g_volname"] == params["gluster_volname"]
+                and vol["g_host"] == params["gluster_hosts"]):
+            mntdir = os.path.join(HOSTVOL_MOUNTDIR, vol["name"])
+            hvol = vol
+            break
 
     if not mntdir:
         logging.warning("No host volume found to provide PV")

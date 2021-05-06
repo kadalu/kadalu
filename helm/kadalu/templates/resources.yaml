@@ -62,3 +62,6 @@ spec:
                       type: string
                     gluster_options:
                       type: string
+                    kadalu_format:
+                      type: string
+                      default: native

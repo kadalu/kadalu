@@ -13,6 +13,7 @@ from kadalulib import execute, CommandException, logf, \
      send_analytics_tracker, Proc
 
 
+# noqa # pylint: disable=I1101
 VOLUME_ID_XATTR_NAME = "trusted.glusterfs.volume-id"
 VOLFILES_DIR = "/kadalu/volfiles"
 TEMPLATES_DIR = "/kadalu/templates"

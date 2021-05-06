@@ -403,7 +403,8 @@ def handle_external_storage_addition(core_v1_client, obj):
         "volname": volname,
         "volume_id": obj["spec"]["volume_id"],
         "type": VOLUME_TYPE_EXTERNAL,
-        "kadalu-format": True,
+        # CRD would set 'native' but just being cautious
+        "kadalu_format": details.get("kadalu_format", "native"),
         "gluster_hosts": ",".join(hosts),
         "gluster_volname": details["gluster_volname"],
         "gluster_options": details.get("gluster_options", "ignore-me"),
@@ -419,7 +420,6 @@ def handle_external_storage_addition(core_v1_client, obj):
         KADALU_CONFIG_MAP, NAMESPACE, configmap_data)
     logging.info(logf("Updated configmap", name=KADALU_CONFIG_MAP,
                       volname=volname))
-
     filename = os.path.join(MANIFESTS_DIR, "external-storageclass.yaml")
     template(filename, **data)
     lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
@@ -583,6 +583,9 @@ def handle_deleted(core_v1_client, obj):
         ))
 
     elif pv_count == 0:
+
+        # TODO: Delete custom storage classes created as part of External
+        # Storage (IMPORTANT)
 
         delete_server_pods(storage_info_data, obj)
         delete_config_map(core_v1_client, obj)

@@ -28,7 +28,11 @@ def mount_storage():
 
     host_volumes = get_pv_hosting_volumes({})
     for volume in host_volumes:
-        hvol = volume['name']
+        if volume["type"] == "External" and volume["k_format"] == "non-native":
+            # Need to skip mounting external non-native mounts in-order for
+            # kadalu-quotad not to set quota xattrs
+            continue
+        hvol = volume["name"]
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
         try:
             mount_glusterfs(volume, mntdir)
