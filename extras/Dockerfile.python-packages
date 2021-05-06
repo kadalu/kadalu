@@ -9,7 +9,7 @@ RUN apt-get update -yq && \
     python3-venv python3-wheel libffi-dev && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools && \
-    pip install xattr pyxattr grpcio 2>/dev/null >/dev/null && \
+    pip install pyxattr grpcio 2>/dev/null >/dev/null && \
     apt-get remove --purge -y build-essential g++ python3-dev libtool automake autoconf pkg-config libffi-dev && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
