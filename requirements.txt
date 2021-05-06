@@ -4,6 +4,5 @@ setuptools
 twine
 xxhash
 grpcio
-xattr
 pyxattr
 pytest
