@@ -25,7 +25,7 @@ def set_args(name, subparsers):
     arg("name", help="Storage Name")
     arg("--type",
         help="Storage Type",
-        choices=["Replica1", "Replica3", "External", "Replica2"],
+        choices=["Replica1", "Replica3", "External", "Replica2", "Disperse"],
         default=None)
     arg("--device",
         help=("Storage device in <node>:<device> format, "
@@ -59,9 +59,20 @@ def set_args(name, subparsers):
             "volfile_server3,log-level=WARNING,reader-thread-count=2,"
             "log-file=/var/log/gluster.log"),
         default=None)
+    arg("--data",
+        help="Number of Disperse data Storage units",
+        type=int,
+        dest="disperse_data",
+        default=0)
+    arg("--redundancy",
+        help="Number of Disperse Redundancy Storage units",
+        type=int,
+        dest="disperse_redundancy",
+        default=0)
     utils.add_global_flags(parser)
 
 
+# pylint: disable=too-many-statements
 def validate(args):
     """ validate arguments """
     if args.external is not None:
@@ -111,9 +122,38 @@ def validate(args):
         print("Please specify at least one storage", file=sys.stderr)
         sys.exit(1)
 
-    # pylint: disable=too-many-boolean-expressions
-    if ((args.type == "Replica2" and num_storages % 2 != 0)
-            or (args.type == "Replica3" and num_storages % 3 != 0)):
+    subvol_size = 1
+    if args.type.startswith("Replica"):
+        subvol_size = int(args.type.replace("Replica", ""))
+
+    if args.type == "Disperse":
+        if args.disperse_data == 0 or args.disperse_redundancy == 0:
+            print("Disperse data(`--data`) or redundancy(`--redundancy`) "
+                  "are not specified.", file=sys.stderr)
+            sys.exit(1)
+
+        subvol_size = args.disperse_data + args.disperse_redundancy
+
+        # redundancy must be greater than 0, and the total number
+        # of bricks must be greater than 2 * redundancy. This
+        # means that a dispersed volume must have a minimum of 3 bricks.
+        if subvol_size <= (2 * args.disperse_redundancy):
+            print("Invalid redundancy for the Disperse Storage",
+                  file=sys.stderr)
+            sys.exit(1)
+
+        # stripe_size = (bricks_count - redundancy) * 512
+        # Using combinations of #Bricks/redundancy that give a power
+        # of two for the stripe size will make the disperse volume
+        # perform better in most workloads because it's more typical
+        # to write information in blocks that are multiple of two
+        # https://docs.gluster.org/en/latest/Administrator-Guide
+        #    /Setting-Up-Volumes/#creating-dispersed-volumes
+        if args.disperse_data % 2 != 0:
+            print("Disperse Configuration is not Optimal", file=sys.stderr)
+            sys.exit(1)
+
+    if num_storages % subvol_size != 0:
         print("Number of storages not matching for type=%s" % args.type,
               file=sys.stderr)
         sys.exit(1)
@@ -227,6 +267,12 @@ def storage_add_data(args):
             "node": node,
             "path": path,
             "port": 24007
+        }
+
+    if args.type == "Disperse":
+        content["spec"]["disperse"] = {
+            "data": args.disperse_data,
+            "redundancy": args.disperse_redundancy
         }
 
     return content

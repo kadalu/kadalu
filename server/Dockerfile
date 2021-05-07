@@ -35,8 +35,10 @@ COPY server/stop-server.sh   /kadalu/stop-server.sh
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/
 COPY templates/Replica2.client.vol.j2 /kadalu/templates/
 COPY templates/Replica3.client.vol.j2 /kadalu/templates/
+COPY templates/Disperse.client.vol.j2 /kadalu/templates/
 COPY templates/Replica2.shd.vol.j2    /kadalu/templates/
 COPY templates/Replica3.shd.vol.j2    /kadalu/templates/
+COPY templates/Disperse.shd.vol.j2    /kadalu/templates/
 COPY templates/brick.vol.j2           /kadalu/templates/
 
 RUN chmod +x /usr/bin/mount-glustervol

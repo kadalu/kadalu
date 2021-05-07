@@ -27,12 +27,14 @@ KUBECTL_CMD = "/usr/bin/kubectl"
 KADALU_CONFIG_MAP = "kadalu-info"
 CSI_POD_PREFIX = "csi-"
 STORAGE_CLASS_NAME_PREFIX = "kadalu."
-# TODO: Add ThinArbiter and Disperse
-VALID_HOSTING_VOLUME_TYPES = ["Replica1", "Replica2", "Replica3", "External"]
+# TODO: Add ThinArbiter
+VALID_HOSTING_VOLUME_TYPES = ["Replica1", "Replica2", "Replica3",
+                              "Disperse", "External"]
 VOLUME_TYPE_REPLICA_1 = "Replica1"
 VOLUME_TYPE_REPLICA_2 = "Replica2"
 VOLUME_TYPE_REPLICA_3 = "Replica3"
 VOLUME_TYPE_EXTERNAL = "External"
+VOLUME_TYPE_DISPERSE = "Disperse"
 
 CREATE_CMD = "create"
 APPLY_CMD = "apply"
@@ -62,7 +64,8 @@ def bricks_validation(bricks):
 
         if brick.get("path", None) is None and \
            brick.get("device", None) is None:
-            logging.error(logf("Storage path/device not specified", number=idx+1))
+            logging.error(logf("Storage path/device not specified",
+                               number=idx+1))
             ret = False
 
         if brick.get("node", None) is None:
@@ -130,6 +133,7 @@ def validate_ext_details(obj):
 
 
 # pylint: disable=too-many-return-statements
+# pylint: disable=too-many-branches
 def validate_volume_request(obj):
     """Validate the Volume request for Replica options, number of bricks etc"""
     if not obj.get("spec", None):
@@ -154,8 +158,46 @@ def validate_volume_request(obj):
     if not bricks_validation(bricks):
         return False
 
-    if (voltype == VOLUME_TYPE_REPLICA_2) and (len(bricks) % 2 != 0) or \
-       ((voltype == VOLUME_TYPE_REPLICA_3) and (len(bricks) % 3 != 0)):
+    subvol_bricks_count = 1
+    if voltype == VOLUME_TYPE_REPLICA_2:
+        subvol_bricks_count = 2
+    elif voltype == VOLUME_TYPE_REPLICA_3:
+        subvol_bricks_count = 3
+
+    if voltype == VOLUME_TYPE_DISPERSE:
+        disperse_config = obj["spec"].get("disperse", None)
+        if disperse_config is None:
+            logging.error("Disperse Volume data and redundancy "
+                          "count is not specified")
+            return False
+
+        data_bricks = disperse_config.get("data", 0)
+        redundancy_bricks = disperse_config.get("redundancy", 0)
+        if data_bricks == 0 or redundancy_bricks == 0:
+            logging.error("Disperse Volume data or redundancy "
+                          "count is not specified")
+            return False
+
+        subvol_bricks_count = data_bricks + redundancy_bricks
+        # redundancy must be greater than 0, and the total number
+        # of bricks must be greater than 2 * redundancy. This
+        # means that a dispersed volume must have a minimum of 3 bricks.
+        if subvol_bricks_count <= (2 * redundancy_bricks):
+            logging.error("Invalid redundancy for the Disperse Volume")
+            return False
+
+        # stripe_size = (bricks_count - redundancy) * 512
+        # Using combinations of #Bricks/redundancy that give a power
+        # of two for the stripe size will make the disperse volume
+        # perform better in most workloads because it's more typical
+        # to write information in blocks that are multiple of two
+        # https://docs.gluster.org/en/latest/Administrator-Guide
+        #    /Setting-Up-Volumes/#creating-dispersed-volumes
+        if data_bricks % 2 != 0:
+            logging.error("Disperse Configuration is not Optimal")
+            return False
+
+    if len(bricks) % subvol_bricks_count != 0:
         logging.error("Invalid number of storage directories/devices"
                       " specified")
         return False
@@ -279,6 +321,7 @@ def update_config_map(core_v1_client, obj):
     volname = obj["metadata"]["name"]
     voltype = obj["spec"]["type"]
     volume_id = obj["spec"]["volume_id"]
+    disperse_config = obj["spec"].get("disperse", {})
 
     data = {
         "namespace": NAMESPACE,
@@ -287,6 +330,10 @@ def update_config_map(core_v1_client, obj):
         "volume_id": volume_id,
         "type": voltype,
         "bricks": [],
+        "disperse": {
+            "data": disperse_config.get("data", 0),
+            "redundancy": disperse_config.get("redundancy", 0)
+        },
         "options": obj["spec"].get("options", {})
     }
 
@@ -345,7 +392,8 @@ def deploy_server_pods(obj):
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
 
     shd_required = False
-    if voltype in (VOLUME_TYPE_REPLICA_3, VOLUME_TYPE_REPLICA_2):
+    if voltype in (VOLUME_TYPE_REPLICA_3, VOLUME_TYPE_REPLICA_2,
+                   VOLUME_TYPE_DISPERSE):
         shd_required = True
 
     template_args = {

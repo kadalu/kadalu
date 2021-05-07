@@ -38,6 +38,10 @@ function test_storage_add() {
     # Check if the type default is Replica1
     cli/build/kubectl-kadalu storage-add storage-pool-1 --script-mode --device ${HOSTNAME}:/mnt/${DISK}/file1.1 --device ${HOSTNAME}:/mnt/${DISK}/file1.2 --device ${HOSTNAME}:/mnt/${DISK}/file1.3 || return 1
 
+    # Check for Disperse Volume
+    sleep 1
+    cli/build/kubectl-kadalu storage-add storage-pool-4 --script-mode --type Disperse --data 2 --redundancy 1 --device ${HOSTNAME}:/mnt/${DISK}/file4.1 --device ${HOSTNAME}:/mnt/${DISK}/file4.2 --device ${HOSTNAME}:/mnt/${DISK}/file4.3 || return 1
+
     # Check for external storage
     # TODO: For now, keep the name as 'ext-config' as PVC should use this to send request.
     # TODO: Enable this test after we resume testing external gluster cluster

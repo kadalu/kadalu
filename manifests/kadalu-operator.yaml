@@ -56,6 +56,13 @@ spec:
             spec:
               type: object
               properties:
+                disperse:
+                  type: object
+                  properties:
+                    data:
+                      type: integer
+                    redundancy:
+                      type: integer
                 type:
                   type: string
                 storage:

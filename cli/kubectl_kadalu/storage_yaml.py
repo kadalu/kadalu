@@ -60,4 +60,9 @@ def to_storage_yaml(data):
     if data["spec"].get("tiebreaker", None) is not None:
         yaml += Template(TIEBREAKER_TMPL).substitute(**data["spec"]["tiebreaker"])
 
+    if data["spec"].get("disperse", None) is not None:
+        yaml += "  disperse:\n"
+        yaml += "    data: %d\n" % data["spec"]["disperse"]["data"]
+        yaml += "    redundancy: %d\n" % data["spec"]["disperse"]["redundancy"]
+
     return yaml
