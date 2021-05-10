@@ -10,6 +10,9 @@ end-volume
 volume {{ volname }}-dht
     type cluster/distribute
     subvolumes {{ dht_subvol|join(' ') }}
+{% if decommissioned != "" %}
+    option decommissioned-bricks {{ decommissioned }}
+{% endif %}
 end-volume
 
 volume {{ volname }}-utime

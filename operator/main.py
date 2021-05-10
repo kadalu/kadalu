@@ -165,6 +165,7 @@ def validate_volume_request(obj):
     if not bricks_validation(bricks):
         return False
 
+    decommissioned = ""
     subvol_bricks_count = 1
     if voltype == VOLUME_TYPE_REPLICA_2:
         subvol_bricks_count = 2
@@ -208,6 +209,24 @@ def validate_volume_request(obj):
         logging.error("Invalid number of storage directories/devices"
                       " specified")
         return False
+
+    if subvol_bricks_count > 1:
+        for i in range(0, int(len(bricks) / subvol_bricks_count)):
+            decommissioned = ""
+            for k in range(0, subvol_bricks_count):
+                brick_idx = (i * subvol_bricks_count) + k
+                brick = bricks[brick_idx]
+                decom = brick.get("decommissioned", "")
+                if k == 0:
+                    decommissioned = decom
+                    continue
+                if decom != decommissioned:
+                    logging.error(logf(
+                        "All of distribute subvolume should be marked decommissioned",
+                        brick=brick, brick_index=brick_idx))
+                    return False
+
+    # If we are here, decommissioned option is properly given.
 
     if voltype == VOLUME_TYPE_REPLICA_2:
         tiebreaker = obj["spec"].get("tiebreaker", None)
@@ -363,6 +382,7 @@ def update_config_map(core_v1_client, obj):
             "brick_device": storage.get("device", ""),
             "pvc_name": storage.get("pvc", ""),
             "brick_device_dir": get_brick_device_dir(storage),
+            "decommissioned": storage.get("decommissioned", ""),
             "brick_index": idx
         })
 
