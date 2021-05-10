@@ -81,6 +81,8 @@ spec:
                         type: string
                       pvc:
                         type: string
+                      decommissioned:
+                        type: string
                 tiebreaker:
                   type: object
                   properties:

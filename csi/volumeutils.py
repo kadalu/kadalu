@@ -837,27 +837,34 @@ def generate_client_volfile(volname):
 
     # Tricky to get this right, but this solves all the elements of distribute in code :-)
     data['dht_subvol'] = []
+    decommissioned = []
     if data["type"] == "Replica1":
         for brick in data["bricks"]:
-            data["dht_subvol"].append("%s-client-%d" % (data["volname"], brick["brick_index"]))
+            brick_name = "%s-client-%d" % (data["volname"], brick["brick_index"])
+            data["dht_subvol"].append(brick_name)
+            if brick.get("decommissioned", "") != "":
+                decommissioned.append(brick_name)
     else:
         count = 3
         if data["type"] == "Replica2":
             count = 2
 
-        data["subvol_bricks_count"] = count
         if data["type"] == "Disperse":
-            data["subvol_bricks_count"] = data["disperse"]["data"] + \
-              data["disperse"]["redundancy"]
+            count = data["disperse"]["data"] + data["disperse"]["redundancy"]
             data["disperse_redundancy"] = data["disperse"]["redundancy"]
 
-        for i in range(0, int(len(data["bricks"]) / data["subvol_bricks_count"])):
-            data["dht_subvol"].append("%s-%s-%d" % (
+        data["subvol_bricks_count"] = count
+        for i in range(0, int(len(data["bricks"]) / count)):
+            brick_name = "%s-%s-%d" % (
                 data["volname"],
                 "disperse" if data["type"] == "Disperse" else "replica",
                 i
-            ))
+            )
+            data["dht_subvol"].append(brick_name)
+            if data["bricks"][(i * count)].get("decommissioned", "") != "":
+                decommissioned.append(brick_name)
 
+    data['decommissioned'] = "" if decommissioned == [] else ",".join(decommissioned)
     template_file_path = os.path.join(
         TEMPLATES_DIR,
         "%s.client.vol.j2" % data["type"]
