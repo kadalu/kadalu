@@ -589,12 +589,12 @@ def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize):
 
     logging.debug(logf(
         "Metadata updated",
-        metadata_file=info_file_path
     ))
 
 
 def delete_volume(volname):
     """Delete virtual block, sub directory volume, or External"""
+
     vol = search_volume(volname)
     if vol is None:
         logging.warning(logf(
@@ -610,11 +610,65 @@ def delete_volume(volname):
         volhash=vol.volhash,
         hostvol=vol.hostvol
     ))
+
     # Check for mount availability before deleting the volume
     retry_errors(os.statvfs, [os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol)],
                  [ENOTCONN])
 
+    filename = vol.hostvol + ".info"
+    with open(os.path.join(VOLINFO_DIR, filename)) as info_file:
+        storage_data = json.load(info_file)
+
+    onDelete = storage_data.get("onDelete", "delete")
+
     volpath = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath)
+
+    # Get brick data
+    info_file_path = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info", vol.volpath)
+    with open(info_file_path + ".json", "r") as info_file:
+        brick_data = json.load(info_file)
+
+    path_prefix = brick_data["path_prefix"]
+
+    logging.info(logf(
+        "onDelete data",
+        hostvolume=vol.hostvol,
+        onDelete=onDelete,
+        volpath=volpath,
+        destination=os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath),
+        path_prefix=path_prefix
+    ))
+
+    if onDelete == "archive":
+        old_volname = vol.volname
+        vol.volname = "archived-" + vol.volname
+        vol.volpath = os.path.join(path_prefix, vol.volname)
+
+        # Rename directory
+        try:
+            os.rename(
+                os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, path_prefix, old_volname),
+                os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, path_prefix, vol.volname)
+            )
+
+            logging.info(logf(
+                "Volume has been archived",
+                old_volname=old_volname,
+                new_volname=vol.volname,
+                volpath=vol.volpath
+            ))
+
+        except OSError as err:
+            logging.info(logf(
+                "Error while archiving volume",
+                volname=vol.volname,
+                volpath=volpath,
+                voltype=vol.voltype,
+                error=err,
+            ))
+
+        return True
+
     try:
         if vol.voltype == PV_TYPE_SUBVOL:
             shutil.rmtree(volpath)
