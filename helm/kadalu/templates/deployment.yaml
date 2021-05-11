@@ -23,7 +23,7 @@ spec:
           securityContext:
             capabilities: {}
             privileged: true
-          image: docker.io/kadalu/kadalu-operator:devel
+          image: "docker.io/kadalu/kadalu-operator:{{ .Chart.Version | default "devel" }}"
           imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
@@ -39,7 +39,7 @@ spec:
             - name: DOCKER_USER
               value: "kadalu"
             - name: KADALU_VERSION
-              value: "devel"
+              value: "{{ .Chart.Version | default "devel" }}"
             - name: KADALU_NAMESPACE
               value: "{{ .Release.Namespace }}"
             - name: KUBELET_DIR
