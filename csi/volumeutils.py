@@ -589,6 +589,7 @@ def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize):
 
     logging.debug(logf(
         "Metadata updated",
+        metadata_file=info_file_path
     ))
 
 
@@ -615,40 +616,51 @@ def delete_volume(volname):
     retry_errors(os.statvfs, [os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol)],
                  [ENOTCONN])
 
-    filename = vol.hostvol + ".info"
-    with open(os.path.join(VOLINFO_DIR, filename)) as info_file:
+    storage_filename = vol.hostvol + ".info"
+    with open(os.path.join(VOLINFO_DIR, storage_filename)) as info_file:
         storage_data = json.load(info_file)
 
     onDelete = storage_data.get("onDelete", "delete")
 
     volpath = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath)
 
-    # Get brick data
-    info_file_path = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info", vol.volpath)
-    with open(info_file_path + ".json", "r") as info_file:
-        brick_data = json.load(info_file)
-
-    path_prefix = brick_data["path_prefix"]
+    # # Get brick data
+    # info_file_path = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info", vol.volpath)
+    # with open(info_file_path + ".json", "r") as info_file:
+    #     brick_data = json.load(info_file)
+    # path_prefix = brick_data["path_prefix"]
 
     logging.info(logf(
         "onDelete data",
         hostvolume=vol.hostvol,
         onDelete=onDelete,
         volpath=volpath,
-        destination=os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath),
-        path_prefix=path_prefix
+        #destination=os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath),
+        #path_prefix=path_prefix,
     ))
 
     if onDelete == "archive":
+
         old_volname = vol.volname
         vol.volname = "archived-" + vol.volname
+        path_prefix = os.path.dirname(vol.volpath)
         vol.volpath = os.path.join(path_prefix, vol.volname)
 
-        # Rename directory
+        # Rename directory & files that are to be archived
         try:
+
+            # Brick/PVC
             os.rename(
                 os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, path_prefix, old_volname),
                 os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, path_prefix, vol.volname)
+            )
+
+            # Info-File
+            old_info_file_name = old_volname + ".json"
+            info_file_name = vol.volname + ".json"
+            os.rename(
+                os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info", path_prefix, old_info_file_name),
+                os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info", path_prefix, info_file_name)
             )
 
             logging.info(logf(

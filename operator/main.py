@@ -587,11 +587,6 @@ def handle_modified(core_v1_client, obj):
     # Get volume-id from config map
     obj["spec"]["volume_id"] = cfgmap["volume_id"]
 
-    logging.logf(info(
-        "In handle modified",
-        onDelete = cfgmap.get("onDelete", "delete")
-    ))
-
     # Set re-configured onDelete value
     # obj["spec"]["onDelete"] = cfgmap.get("onDelete", "delete")
 
