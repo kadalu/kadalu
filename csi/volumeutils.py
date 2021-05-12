@@ -620,7 +620,7 @@ def delete_volume(volname):
     with open(os.path.join(VOLINFO_DIR, storage_filename)) as info_file:
         storage_data = json.load(info_file)
 
-    onDelete = storage_data.get("onDelete", "delete")
+    on_delete = storage_data.get("onDelete", "delete")
 
     volpath = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath)
 
@@ -633,13 +633,13 @@ def delete_volume(volname):
     logging.info(logf(
         "onDelete data",
         hostvolume=vol.hostvol,
-        onDelete=onDelete,
+        onDelete=on_delete,
         volpath=volpath,
         #destination=os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath),
         #path_prefix=path_prefix,
     ))
 
-    if onDelete == "archive":
+    if on_delete == "archive":
 
         old_volname = vol.volname
         vol.volname = "archived-" + vol.volname
@@ -659,8 +659,10 @@ def delete_volume(volname):
             old_info_file_name = old_volname + ".json"
             info_file_name = vol.volname + ".json"
             os.rename(
-                os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info", path_prefix, old_info_file_name),
-                os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info", path_prefix, info_file_name)
+                os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info",
+                    path_prefix, old_info_file_name),
+                os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info",
+                    path_prefix, info_file_name)
             )
 
             logging.info(logf(
