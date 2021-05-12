@@ -321,7 +321,7 @@ def update_config_map(core_v1_client, obj):
     """
     volname = obj["metadata"]["name"]
     voltype = obj["spec"]["type"]
-    onDelete = obj["spec"].get("onDelete", "delete")
+    on_delete = obj["spec"].get("onDelete", "delete")
     volume_id = obj["spec"]["volume_id"]
     disperse_config = obj["spec"].get("disperse", {})
 
@@ -331,7 +331,7 @@ def update_config_map(core_v1_client, obj):
         "volname": volname,
         "volume_id": volume_id,
         "type": voltype,
-        "onDelete" : onDelete,
+        "onDelete" : on_delete,
         "bricks": [],
         "disperse": {
             "data": disperse_config.get("data", 0),
@@ -392,7 +392,7 @@ def deploy_server_pods(obj):
     # Deploy server pod
     volname = obj["metadata"]["name"]
     voltype = obj["spec"]["type"]
-    onDelete = obj["spec"].get("onDelete", "delete")
+    on_delete = obj["spec"].get("onDelete", "delete")
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
 
     shd_required = False
@@ -406,6 +406,7 @@ def deploy_server_pods(obj):
         "docker_user": docker_user,
         "volname": volname,
         "voltype": voltype,
+        "onDelete": on_delete,
         "volume_id": obj["spec"]["volume_id"],
         "shd_required": shd_required
     }
@@ -442,7 +443,7 @@ def handle_external_storage_addition(core_v1_client, obj):
     """Deploy service(One service per Volume)"""
     volname = obj["metadata"]["name"]
     details = obj["spec"]["details"]
-    onDelete = obj["spec"].get("onDelete", "delete")
+    on_delete = obj["spec"].get("onDelete", "delete")
 
     hosts = []
     ghost = details.get("gluster_host", None)
@@ -456,7 +457,7 @@ def handle_external_storage_addition(core_v1_client, obj):
         "volname": volname,
         "volume_id": obj["spec"]["volume_id"],
         "type": VOLUME_TYPE_EXTERNAL,
-        "onDelete": onDelete,
+        "onDelete": on_delete,
         # CRD would set 'native' but just being cautious
         "kadalu_format": details.get("kadalu_format", "native"),
         "gluster_hosts": ",".join(hosts),
@@ -586,9 +587,6 @@ def handle_modified(core_v1_client, obj):
     cfgmap = json.loads(configmap_data.data[volname + ".info"])
     # Get volume-id from config map
     obj["spec"]["volume_id"] = cfgmap["volume_id"]
-
-    # Set re-configured onDelete value
-    # obj["spec"]["onDelete"] = cfgmap.get("onDelete", "delete")
 
     # Set Node ID for each storage device from configmap
     for idx, _ in enumerate(obj["spec"]["storage"]):
