@@ -620,26 +620,11 @@ def delete_volume(volname):
     with open(os.path.join(VOLINFO_DIR, storage_filename)) as info_file:
         storage_data = json.load(info_file)
 
-    on_delete = storage_data.get("onDelete", "delete")
+    pv_reclaim_policy = storage_data.get("pvReclaimPolicy", "delete")
 
     volpath = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath)
 
-    # # Get brick data
-    # info_file_path = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info", vol.volpath)
-    # with open(info_file_path + ".json", "r") as info_file:
-    #     brick_data = json.load(info_file)
-    # path_prefix = brick_data["path_prefix"]
-
-    logging.info(logf(
-        "onDelete data",
-        hostvolume=vol.hostvol,
-        onDelete=on_delete,
-        volpath=volpath,
-        #destination=os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath),
-        #path_prefix=path_prefix,
-    ))
-
-    if on_delete == "archive":
+    if pv_reclaim_policy == "archive":
 
         old_volname = vol.volname
         vol.volname = "archived-" + vol.volname
@@ -675,8 +660,8 @@ def delete_volume(volname):
         except OSError as err:
             logging.info(logf(
                 "Error while archiving volume",
-                volname=vol.volname,
-                volpath=volpath,
+                volname=old_volname,
+                volpath=os.path.join(path_prefix, old_volname),
                 voltype=vol.voltype,
                 error=err,
             ))

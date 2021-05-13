@@ -32,7 +32,7 @@ spec:
                       type: integer
                 type:
                   type: string
-                onDelete:
+                pvReclaimPolicy:
                   type: string
                   default: delete
                 storage:
