@@ -666,9 +666,9 @@ def delete_volume(volname):
             )
 
             logging.info(logf(
-                "Volume has been archived",
+                "Volume archived",
                 old_volname=old_volname,
-                new_volname=vol.volname,
+                new_archived_volname=vol.volname,
                 volpath=vol.volpath
             ))
 
@@ -696,7 +696,7 @@ def delete_volume(volname):
             error=err,
         ))
 
-    logging.debug(logf(
+    logging.info(logf(
         "Volume deleted",
         volpath=volpath,
         voltype=vol.voltype
