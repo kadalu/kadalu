@@ -30,6 +30,7 @@ STORAGE_CLASS_NAME_PREFIX = "kadalu."
 # TODO: Add ThinArbiter
 VALID_HOSTING_VOLUME_TYPES = ["Replica1", "Replica2", "Replica3",
                               "Disperse", "External"]
+VALID_PV_RECLAIM_POLICY_TYPES = ["delete", "archive"]
 VOLUME_TYPE_REPLICA_1 = "Replica1"
 VOLUME_TYPE_REPLICA_2 = "Replica2"
 VOLUME_TYPE_REPLICA_3 = "Replica3"
@@ -138,6 +139,11 @@ def validate_volume_request(obj):
     """Validate the Volume request for Replica options, number of bricks etc"""
     if not obj.get("spec", None):
         logging.error("Storage 'spec' not specified")
+        return False
+
+    pv_reclaim_policy = obj["spec"].get("pvReclaimPolicy", "delete")
+    if pv_reclaim_policy not in VALID_PV_RECLAIM_POLICY_TYPES:
+        logging.error("PV Reclaim Policy not valid")
         return False
 
     voltype = obj["spec"].get("type", None)
@@ -289,6 +295,7 @@ def upgrade_storage_pods(core_v1_client):
         obj["spec"] = {}
         obj["metadata"]["name"] = volname
         obj["spec"]["type"] = data['type']
+        obj["spec"]["pvReclaimPolicy"] = data.get("pvReclaimPolicy", "delete")
         obj["spec"]["volume_id"] = data["volume_id"]
         obj["spec"]["storage"] = []
 
@@ -320,6 +327,7 @@ def update_config_map(core_v1_client, obj):
     """
     volname = obj["metadata"]["name"]
     voltype = obj["spec"]["type"]
+    pv_reclaim_policy = obj["spec"].get("pvReclaimPolicy", "delete")
     volume_id = obj["spec"]["volume_id"]
     disperse_config = obj["spec"].get("disperse", {})
 
@@ -329,6 +337,7 @@ def update_config_map(core_v1_client, obj):
         "volname": volname,
         "volume_id": volume_id,
         "type": voltype,
+        "pvReclaimPolicy" : pv_reclaim_policy,
         "bricks": [],
         "disperse": {
             "data": disperse_config.get("data", 0),
@@ -389,6 +398,7 @@ def deploy_server_pods(obj):
     # Deploy server pod
     volname = obj["metadata"]["name"]
     voltype = obj["spec"]["type"]
+    pv_reclaim_policy = obj["spec"].get("pvReclaimPolicy", "delete")
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
 
     shd_required = False
@@ -402,6 +412,7 @@ def deploy_server_pods(obj):
         "docker_user": docker_user,
         "volname": volname,
         "voltype": voltype,
+        "pvReclaimPolicy": pv_reclaim_policy,
         "volume_id": obj["spec"]["volume_id"],
         "shd_required": shd_required
     }
@@ -438,6 +449,7 @@ def handle_external_storage_addition(core_v1_client, obj):
     """Deploy service(One service per Volume)"""
     volname = obj["metadata"]["name"]
     details = obj["spec"]["details"]
+    pv_reclaim_policy = obj["spec"].get("pvReclaimPolicy", "delete")
 
     hosts = []
     ghost = details.get("gluster_host", None)
@@ -451,6 +463,7 @@ def handle_external_storage_addition(core_v1_client, obj):
         "volname": volname,
         "volume_id": obj["spec"]["volume_id"],
         "type": VOLUME_TYPE_EXTERNAL,
+        "pvReclaimPolicy": pv_reclaim_policy,
         # CRD would set 'native' but just being cautious
         "kadalu_format": details.get("kadalu_format", "native"),
         "gluster_hosts": ",".join(hosts),

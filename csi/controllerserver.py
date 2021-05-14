@@ -301,7 +301,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         delete_volume(request.volume_id)
         logging.info(logf(
-            "Volume deleted",
+            "Delete Volume response completed",
             name=request.volume_id,
             duration_seconds=time.time() - start_time
         ))
