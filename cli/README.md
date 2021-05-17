@@ -61,6 +61,16 @@ $ kubectl kadalu storage-add storage-pool-3 \
     --pvc azure-disk-1
 ```
 
+To `archive` persistent volume claims,
+> Note:
+> PV Reclaim Policy is set to `delete` by default
+
+```
+$ kubectl kadalu storage-add storage-pool-1 \
+    --pvReclaimPolicy=archive
+```
+
+
 ### Remove Storage
 
 > Note:
