@@ -23,6 +23,7 @@ EXTERNAL_HOSTS = ["gluster1.kadalu.io", "test"]
 EXTERNAL_HOST = ["gluster1.kadalu.io"]
 EXTERNAL_VOLNAME = "kadalu"
 EXTERNAL_OPTIONS = "log-level=DEBUG"
+NON_NATIVE = "non-native"
 
 REPLICA1_DEVICE_OUTPUT = f"""apiVersion: "{API_VERSION}"
 kind: "{KIND}"
@@ -345,3 +346,35 @@ def test_external_storage():
         }
     }
     assert (to_storage_yaml(content) == EXTERNAL_OUTPUT)
+
+EXTERNAL_OUTPUT_NON_NATIVE = f"""apiVersion: "{API_VERSION}"
+kind: "{KIND}"
+metadata:
+  name: "{STORAGE_POOL_NAME}"
+spec:
+  type: "{EXTERNAL}"
+  storage: []
+  details:
+    gluster_hosts: "{EXTERNAL_HOSTS}"
+    gluster_volname: "{EXTERNAL_VOLNAME}"
+    gluster_options: "{EXTERNAL_OPTIONS}"
+    kadalu_format: "{NON_NATIVE}"
+"""
+
+
+def test_external_storage_non_native():
+    content = {
+        "metadata": {
+            "name": STORAGE_POOL_NAME
+        },
+        "spec": {
+            "type": EXTERNAL,
+            "details": {
+                "gluster_hosts": EXTERNAL_HOSTS,
+                "gluster_volname": EXTERNAL_VOLNAME,
+                "gluster_options": EXTERNAL_OPTIONS,
+                "kadalu_format": NON_NATIVE
+            }
+        }
+    }
+    assert (to_storage_yaml(content) == EXTERNAL_OUTPUT_NON_NATIVE)

@@ -54,13 +54,6 @@ $ kubectl kadalu storage-add storage-pool-1 \
     --path kube1.example.com:/export/data1
 ```
 
-To use available `pvc` as Kadalu storage,
-
-```
-$ kubectl kadalu storage-add storage-pool-3 \
-    --pvc azure-disk-1
-```
-
 To `archive` persistent volume claims,
 > Note:
 > PV Reclaim Policy is set to `delete` by default
@@ -70,6 +63,25 @@ $ kubectl kadalu storage-add storage-pool-1 \
     --pv-reclaim-policy=archive
 ```
 
+To use available `pvc` as Kadalu storage,
+
+```
+$ kubectl kadalu storage-add storage-pool-3 \
+    --pvc azure-disk-1
+```
+
+To use external gluster volumes,
+Native mode (default, 1 PV ==  1 Subdir under gluster volume):
+```
+$ kubectl kadalu storage-add ext-config-native --external \
+    external.example.com:/kadalu-native
+```
+
+Non native mode (1 PV == 1 Gluster Volume):
+```
+$ kubectl kadalu storage-add ext-config-non-native --external \
+    external.example.com:/kadalu-non-native --kadalu-format non-native
+```
 
 ### Remove Storage
 

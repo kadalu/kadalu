@@ -10,17 +10,16 @@ except ImportError:
 KADALU_PATHS = {'info', 'subvol'}
 UUID_FILE = "/var/lib/glusterd/glusterd.info"
 
-# noqa # pylint: disable=invalid-name,global-statement
-myuuid = None
+MYUUID = None
 
 def get_node_id():
     """
     Returns the local glusterd's UUID
     """
-    global myuuid
+    global MYUUID
 
-    if myuuid is not None:
-        return myuuid
+    if MYUUID is not None:
+        return MYUUID
 
     val = None
     with open(UUID_FILE) as uuid_file:
@@ -29,7 +28,7 @@ def get_node_id():
                 val = line.strip().split("=")[-1]
                 break
 
-    myuuid = val
+    MYUUID = val
     return val
 
 
