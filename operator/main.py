@@ -562,15 +562,6 @@ def handle_modified(core_v1_client, obj):
         ))
         return
 
-    # It doesn't make sense to support Replica1 also in this operation.
-    if voltype == VOLUME_TYPE_REPLICA_1:
-        # Modification of 'External' volume type is not supported
-        logging.info(logf(
-            "Modification of '%s' volume type is not supported" % VOLUME_TYPE_REPLICA_1,
-            storagename=volname
-        ))
-        return
-
     if not validate_volume_request(obj):
         logging.debug(logf(
             "validation of volume request failed",
