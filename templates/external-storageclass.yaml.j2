@@ -8,7 +8,7 @@ parameters:
   hostvol_type: "External"
   gluster_hosts: {{ gluster_hosts }}
   gluster_volname: {{ gluster_volname }}
-{%- if gluster_volname != "" %}
+{%- if gluster_options != "" %}
   gluster_options: {{ gluster_options }}
 {%- endif %}
   # Subdir inside this volume would be a PV if 'kadalu_format' is 'native'
