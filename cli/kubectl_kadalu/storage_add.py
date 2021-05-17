@@ -27,6 +27,10 @@ def set_args(name, subparsers):
         help="Storage Type",
         choices=["Replica1", "Replica3", "External", "Replica2", "Disperse"],
         default=None)
+    arg("--pvReclaimPolicy",
+        help="PV Reclaim Policy",
+        choices=["delete", "archive"],
+        default=None)
     arg("--device",
         help=("Storage device in <node>:<device> format, "
               "Example: --device kube1.example.com:/dev/vdc"),
@@ -221,6 +225,10 @@ def storage_add_data(args):
             "storage": []
         }
     }
+
+    # Pv Reclaim Policy is specified, add to either external or native type
+    if args.pvReclaimPolicy:
+        content["spec"]["pvReclaimPolicy"] = args.pvReclaimPolicy
 
     # External details are specified, no 'storage' section required
     if args.external:

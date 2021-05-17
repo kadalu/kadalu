@@ -38,6 +38,7 @@ def to_storage_yaml(data):
     """Convert Python dict to yaml format"""
     yaml = Template(YAML_TEMPLATE).substitute(name=data["metadata"]["name"],
                                               type=data["spec"]["type"])
+
     if len(data["spec"].get("storage", [])) == 0:
         yaml += " []\n"
     else:
@@ -64,5 +65,8 @@ def to_storage_yaml(data):
         yaml += "  disperse:\n"
         yaml += "    data: %d\n" % data["spec"]["disperse"]["data"]
         yaml += "    redundancy: %d\n" % data["spec"]["disperse"]["redundancy"]
+
+    if data["spec"].get("pvReclaimPolicy", None) is not None:
+        yaml +=  "  pvReclaimPolicy: %s\n" % data["spec"]["pvReclaimPolicy"]
 
     return yaml
