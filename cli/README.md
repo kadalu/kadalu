@@ -54,6 +54,15 @@ $ kubectl kadalu storage-add storage-pool-1 \
     --path kube1.example.com:/export/data1
 ```
 
+To `archive` persistent volume claims,
+> Note:
+> PV Reclaim Policy is set to `delete` by default
+
+```
+$ kubectl kadalu storage-add storage-pool-1 \
+    --pv-reclaim-policy=archive
+```
+
 To use available `pvc` as Kadalu storage,
 
 ```
