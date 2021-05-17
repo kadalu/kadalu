@@ -1,5 +1,5 @@
 """
-'storage-add ' sub command
+'storage-add' sub command
 """
 
 # noqa # pylint: disable=duplicate-code
@@ -19,6 +19,8 @@ from storage_yaml import to_storage_yaml
 
 def set_args(name, subparsers):
     """ add arguments, and their options """
+    # TODO: Sub group arguments to relax validation manually
+    # https://docs.python.org/3/library/argparse.html#argument-groups
     parser = subparsers.add_parser(name)
     arg = parser.add_argument
 
@@ -69,6 +71,16 @@ def set_args(name, subparsers):
         type=int,
         dest="disperse_redundancy",
         default=0)
+    # Default for 'kadalu-format' is set in CRD
+    arg("--kadalu-format",
+            help=(
+                "Can only be used in conjunction with '--external' argument. "
+                "Specifies whether the external cluster should be provisioned "
+                "in kadalu native (1 PV:1 Subdir) or non-native (1 PV: 1 Volu "
+                "me) format. Default: native"
+                ),
+            choices=["native", "non-native"],
+            default=None)
     utils.add_global_flags(parser)
 
 
@@ -91,10 +103,21 @@ def validate(args):
         # Set type to External as '--external' option is provided
         args.type = "External"
 
-    if args.external is not None and args.gluster_options:
-        print("'--gluster-options' is used only with '--type External'",
-                file=sys.stderr)
-        sys.exit(1)
+    if args.external is None:
+        fail = False
+
+        if args.gluster_options:
+            print("'--gluster-options' is used only with '--type External'",
+                    file=sys.stderr)
+            fail = True
+
+        if args.kadalu_format:
+            print("'--kadalu-format' is used only with '--type External'",
+                    file=sys.stderr)
+            fail = True
+
+        if fail:
+            sys.exit(1)
 
     if args.tiebreaker:
         if args.type != "Replica2":
@@ -237,6 +260,8 @@ def storage_add_data(args):
             "gluster_volname": vol.strip("/"),
             "gluster_options": g_opts,
         }
+        if args.kadalu_format:
+            content["spec"]["details"]["kadalu_format"] = args.kadalu_format
         return content
 
     # Everything below can be provided for a 'Replica3' setup.
