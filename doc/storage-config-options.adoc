@@ -80,6 +80,19 @@ $ kubectl kadalu storage-add storage-pool1 --type=Replica3 \
 +
 To create a PVC from this storage, you need to provide `storageClassName` option as `kadalu.replica3`.
 
+* **Disperse** Dispersed volumes are based on erasure codes. It stripes the encoded data of files, with some redundancy added, across multiple bricks in the volume. You can use dispersed volumes to have a configurable level of reliability with minimum space waste. This mode requires atleast 3 storages and increase the number of storages based on the requirement. Refer https://docs.gluster.org/en/latest/Administrator-Guide/Setting-Up-Volumes/#creating-dispersed-volumes[GlusterFS documentation] to know more about Disperse Volumes.
++
+[source,yaml]
+----
+$ kubectl kadalu storage-add storage-pool1 --type=Disperse \
+    --data 2 --redundancy 1          \
+    --device kube-nodename1:/dev/vdc \
+    --device kube-nodename2:/dev/vdc \
+    --device kube-nodename3:/dev/vdc \
+----
++
+To create a PVC from this storage, you need to provide `storageClassName` option as `kadalu.disperse`.
+
 === Storage
 
 The native mode storage can be provided by many different types in kadalu. Lets look into each of those, with samples.
