@@ -34,6 +34,7 @@ TIEBREAKER_TMPL = """  tiebreaker:
 """
 
 # noqa #pylint: disable=len-as-condition
+# noqa # pylint: disable=too-many-branches
 def to_storage_yaml(data):
     """Convert Python dict to yaml format"""
     yaml = Template(YAML_TEMPLATE).substitute(name=data["metadata"]["name"],
