@@ -67,7 +67,7 @@ To `archive` persistent volume claims,
 
 ```
 $ kubectl kadalu storage-add storage-pool-1 \
-    --pvReclaimPolicy=archive
+    --pv-reclaim-policy=archive
 ```
 
 
