@@ -13,8 +13,27 @@ on:
 # Visit: https://github.blog/changelog/2021-02-08-github-actions-skip-pull-request-and-push-workflows-with-skip-ci/
 
 jobs:
-  test-dir:
-    name: test dir
+  # Primarily used to save info required for any jobs/steps
+  get-info:
+    name: Save required info
+    runs-on: ubuntu-latest
+    outputs:
+      files: ${{ steps.files.outputs.out }}
+      msg: ${{ steps.msg.outputs.out }}
+    steps:
+      - id: files
+        run: |
+          URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files"
+          FILES=$(curl -s -X GET -G $URL | jq -r '.[] | .filename')
+          echo ::set-output name=out::$FILES
+      - id: msg
+        run: |
+          URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/commits"
+          MSG=$(curl -s -X GET -G $URL | jq -r '.[] | .commit.message')
+          echo ::set-output name=out::$MSG
+
+  pylint:
+    name: Run pylint
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -22,108 +41,64 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: '3.x'
-    - name: Install dependencies
+    - name: Install dependencies pylint
       run: |
           python -m pip install --upgrade pip
-          pip install jinja2
-    - name: gen manifest
+          pip install -r requirements.txt
+          pip install pylint glustercli
+    - name: Run pylint
+      run: make pylint
+
+  run-on-minikube:
+    name: kube 1.20.0
+    runs-on: ubuntu-latest
+    needs: get-info
+    env:
+      KUBE_VERSION: v1.20.0
+      # Current conditions in minikube.sh which are using commit message:
+      # [helm skip]: If contained in COMMIT MESSAGE, validating helm is skipped
+      COMMIT_MSG: ${{needs.get-info.outputs.msg}}
+      FILES: ${{needs.get-info.outputs.files}}
+    steps:
+    # Build Containers
+    - uses: actions/checkout@v2
+    - name: Install Docker Dependencies
+      run: sudo apt-get install -y conntrack
+    - name: Build locally
+      id: build_local
       run: |
-        VERBOSE="yes" make gen-manifest
-        mkdir -p $HOME/out
-        cp -r manifests/* $HOME/out/
-    - name: gen helm
+        make build-containers;
+
+        # Conditionally build test containers if PR includes tests/**/Dockerfile
+        CONTAINERS_FOR=''
+        if grep -e '\btests.*Dockerfile\b' <<< "$FILES"; then
+          CONTAINERS_FOR=TESTING
+        fi
+        # In build script, only test containers will be built if this variable is set
+        if [[ "$CONTAINERS_FOR" == "TESTING" ]]; then
+          CONTAINERS_FOR=TESTING make test-containers
+        fi
+        echo Completed building containers
+    - name: Generate Manifests
+      run: VERBOSE="yes" make gen-manifest
+
+    # Operator Tests
+    - name: Setup Minikube
+      run: tests/setup.sh $KUBE_VERSION
+    - name: Run tests
+      run: tests/travis-test.sh $KUBE_VERSION
+    - name: Cleanup
+      run: tests/cleanup.sh $KUBE_VERSION
+
+    # CLI Tests (run conditionally)
+    - name: Setup Minikube (CLI Test)
       run: |
-        KADALU_VERSION=0.8.3 make helm-chart
-        cp helm/kadalu-helm-chart.tgz $HOME/out/helm-chart.tgz
-    - name: list files
-      run: |
-        ls -lrt $HOME/out/
-  # # Primarily used to save info required for any jobs/steps
-  # get-info:
-  #   name: Save required info
-  #   runs-on: ubuntu-latest
-  #   outputs:
-  #     files: ${{ steps.files.outputs.out }}
-  #     msg: ${{ steps.msg.outputs.out }}
-  #   steps:
-  #     - id: files
-  #       run: |
-  #         URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files"
-  #         FILES=$(curl -s -X GET -G $URL | jq -r '.[] | .filename')
-  #         echo ::set-output name=out::$FILES
-  #     - id: msg
-  #       run: |
-  #         URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/commits"
-  #         MSG=$(curl -s -X GET -G $URL | jq -r '.[] | .commit.message')
-  #         echo ::set-output name=out::$MSG
-
-  # pylint:
-  #   name: Run pylint
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - uses: actions/checkout@v2
-  #   - name: Set up Python
-  #     uses: actions/setup-python@v1
-  #     with:
-  #       python-version: '3.x'
-  #   - name: Install dependencies pylint
-  #     run: |
-  #         python -m pip install --upgrade pip
-  #         pip install -r requirements.txt
-  #         pip install pylint glustercli
-  #   - name: Run pylint
-  #     run: make pylint
-
-  # run-on-minikube:
-  #   name: kube 1.20.0
-  #   runs-on: ubuntu-latest
-  #   needs: get-info
-  #   env:
-  #     KUBE_VERSION: v1.20.0
-  #     # Current conditions in minikube.sh which are using commit message:
-  #     # [helm skip]: If contained in COMMIT MESSAGE, validating helm is skipped
-  #     COMMIT_MSG: ${{needs.get-info.outputs.msg}}
-  #     FILES: ${{needs.get-info.outputs.files}}
-  #   steps:
-  #   # Build Containers
-  #   - uses: actions/checkout@v2
-  #   - name: Install Docker Dependencies
-  #     run: sudo apt-get install -y conntrack
-  #   - name: Build locally
-  #     id: build_local
-  #     run: |
-  #       make build-containers;
-
-  #       # Conditionally build test containers if PR includes tests/**/Dockerfile
-  #       CONTAINERS_FOR=''
-  #       if grep -e '\btests.*Dockerfile\b' <<< "$FILES"; then
-  #         CONTAINERS_FOR=TESTING
-  #       fi
-  #       # In build script, only test containers will be built if this variable is set
-  #       if [[ "$CONTAINERS_FOR" == "TESTING" ]]; then
-  #         CONTAINERS_FOR=TESTING make test-containers
-  #       fi
-  #       echo Completed building containers
-  #   - name: Generate Manifests
-  #     run: VERBOSE="yes" make gen-manifest
-
-  #   # Operator Tests
-  #   - name: Setup Minikube
-  #     run: tests/setup.sh $KUBE_VERSION
-  #   - name: Run tests
-  #     run: tests/travis-test.sh $KUBE_VERSION
-  #   - name: Cleanup
-  #     run: tests/cleanup.sh $KUBE_VERSION
-
-  #   # CLI Tests (run conditionally)
-  #   - name: Setup Minikube (CLI Test)
-  #     run: |
-  #       sudo sysctl fs.protected_regular=0
-  #       tests/setup.sh $KUBE_VERSION
-  #     if: "contains(needs.get-info.outputs.files, 'cli')"
-  #   - name: Run tests (CLI Test)
-  #     run: tests/travis-test.sh $KUBE_VERSION cli
-  #     if: "contains(needs.get-info.outputs.files, 'cli')"
-  #   - name: Cleanup (CLI Test)
-  #     run: tests/cleanup.sh $KUBE_VERSION
-  #     if: "contains(needs.get-info.outputs.files, 'cli')"
+        sudo sysctl fs.protected_regular=0
+        tests/setup.sh $KUBE_VERSION
+      if: "contains(needs.get-info.outputs.files, 'cli')"
+    - name: Run tests (CLI Test)
+      run: tests/travis-test.sh $KUBE_VERSION cli
+      if: "contains(needs.get-info.outputs.files, 'cli')"
+    - name: Cleanup (CLI Test)
+      run: tests/cleanup.sh $KUBE_VERSION
+      if: "contains(needs.get-info.outputs.files, 'cli')"
