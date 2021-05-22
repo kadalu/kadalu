@@ -878,6 +878,36 @@ def generate_client_volfile(volname):
     Template(content).stream(**data).dump(client_volfile)
     return True
 
+def reload_glusterfs(volume):
+    """Mount Glusterfs Volume"""
+    if volume["type"] == "External":
+        return False
+
+    volname = volume["name"]
+
+    if not VOL_DATA.get(volname, None):
+        return False
+
+    # Ignore if already glusterfs process running for that volume
+    with mount_lock:
+        if not generate_client_volfile(volname):
+            return False
+        pid = VOL_DATA[volname]["pid"]
+        cmd = ["kill", "-HUP", pid]
+
+        try:
+            execute(*cmd)
+        except CommandException as err:
+            logging.error(logf(
+                "error to execute command",
+                volume=volume,
+                cmd=cmd,
+                error=format(err)
+            ))
+            raise err
+
+    return True
+
 
 def mount_glusterfs(volume, mountpoint, is_client=False):
     """Mount Glusterfs Volume"""
@@ -888,6 +918,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
 
     # Ignore if already glusterfs process running for that volume
     if is_gluster_mount_proc_running(volname, mountpoint):
+        reload_glusterfs(volname)
         logging.debug(logf(
             "Already mounted",
             mount=mountpoint
@@ -896,6 +927,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
 
     # Ignore if already mounted
     if is_gluster_mount_proc_running(volname, mountpoint):
+        reload_glusterfs(volname)
         logging.debug(logf(
             "Already mounted (2nd try)",
             mount=mountpoint
@@ -948,36 +980,6 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             raise err
 
     return
-
-def reload_glusterfs(volume):
-    """Mount Glusterfs Volume"""
-    if volume["type"] == "External":
-        return False
-
-    volname = volume["name"]
-
-    if not VOL_DATA.get(volname, None):
-        return False
-
-    # Ignore if already glusterfs process running for that volume
-    with mount_lock:
-        if not generate_client_volfile(volname):
-            return False
-        pid = VOL_DATA[volname]["pid"]
-        cmd = ["kill", "-HUP", pid]
-
-        try:
-            execute(*cmd)
-        except CommandException as err:
-            logging.error(logf(
-                "error to execute command",
-                volume=volume,
-                cmd=cmd,
-                error=format(err)
-            ))
-            raise err
-
-    return True
 
 
 # noqa # pylint: disable=unused-argument
