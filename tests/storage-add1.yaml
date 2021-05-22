@@ -24,4 +24,4 @@ spec:
       storage: 300Mi
   selector:
     matchExpressions:
-      - { key: volname, operator: In, value: add-brick }
+      - { key: volname, operator: In, values: [add-brick] }
