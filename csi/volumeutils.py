@@ -27,6 +27,8 @@ VOLFILES_DIR = "/kadalu/volfiles"
 TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
 
+# This variable contains in-memory map of all glusterfs processes (hash of volfile and pid)
+# Used while sending SIGHUP during any modifcation to storage config
 VOL_DATA = {}
 
 statfile_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
@@ -826,6 +828,8 @@ def generate_client_volfile(volname):
     with open(info_file_path) as info_file:
         data = json.load(info_file)
 
+    # If the hash of configmap is same for the given volume, then there
+    # is no need to generate client volfile again.
     if not VOL_DATA.get(volname, None):
         VOL_DATA[volname] = {}
     hashval = VOL_DATA[volname].get("hash", 0)
