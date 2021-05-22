@@ -329,21 +329,6 @@ test_kadalu)
     sleep 5;
     echo "After modification"
 
-    cp tests/storage-add1.yaml /tmp/kadalu-storage.yaml
-    sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
-    sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
-    kubectl apply -f /tmp/kadalu-storage.yaml
-
-    echo "Setting up New Replica1 storage"
-
-    sleep 5;
-
-    cp tests/storage-add3.yaml /tmp/kadalu-storage.yaml
-    sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
-    sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
-    kubectl apply -f /tmp/kadalu-storage.yaml
-
-    sleep 5;
     # Observing intermittent failures due to timeout after modification with a
     # difference of ~2 min
     wait_till_pods_start 400
@@ -364,6 +349,22 @@ test_kadalu)
     act_pass=$(grep -Po '(\d+)(?= Passed)' /tmp/sanity-result.txt 2>/dev/null || echo 0)
     [ $act_pass -ge $exp_pass ] || fail=1
     echo Sanity [Pass %]: Expected: $exp_pass and Actual: $act_pass
+
+    echo "Setting up New Replica1 storage (For SIGHUP Test)"
+    
+    cp tests/storage-add1.yaml /tmp/kadalu-storage.yaml
+    sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
+    sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
+    kubectl apply -f /tmp/kadalu-storage.yaml
+
+    sleep 5;
+
+    cp tests/storage-add3.yaml /tmp/kadalu-storage.yaml
+    sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
+    sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
+    kubectl apply -f /tmp/kadalu-storage.yaml
+
+    sleep 5;
 
     # Unless there is a failure or COMMIT_MSG contains 'full log' just log last 100 lines
     lines=100
