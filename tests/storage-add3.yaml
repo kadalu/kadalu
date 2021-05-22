@@ -1,0 +1,15 @@
+# -*- mode: yaml -*-
+---
+apiVersion: kadalu-operator.storage/v1alpha1
+kind: KadaluStorage
+metadata:
+  name: add-brick
+spec:
+  type: Replica3
+  storage:
+    - node: minikube           # node name as shown in `kubectl get nodes`
+      device: /mnt/DISK/file10.1
+    - node: minikube           # node name as shown in `kubectl get nodes`
+      device: /mnt/DISK/file10.2
+    - node: minikube           # node name as shown in `kubectl get nodes`
+      device: /mnt/DISK/file10.3

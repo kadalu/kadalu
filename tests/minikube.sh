@@ -226,7 +226,7 @@ up)
     else
 	sudo mkdir -p /mnt/${DISK}
   sudo rm -rf /mnt/${DISK}/*
-	sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3}
+	sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3,10.1,10.2,10.3}
 	sudo mkdir -p /mnt/${DISK}/dir3.2
 	sudo mkdir -p /mnt/${DISK}/dir3.2_modified
 	sudo mkdir -p /mnt/${DISK}/pvc
@@ -328,6 +328,22 @@ test_kadalu)
 
     sleep 5;
     echo "After modification"
+
+    cp tests/storage-add1.yaml /tmp/kadalu-storage.yaml
+    sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
+    sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
+    kubectl apply -f /tmp/kadalu-storage.yaml
+
+    echo "Setting up New Replica1 storage"
+
+    sleep 5;
+
+    cp tests/storage-add3.yaml /tmp/kadalu-storage.yaml
+    sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
+    sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
+    kubectl apply -f /tmp/kadalu-storage.yaml
+
+    sleep 5;
     # Observing intermittent failures due to timeout after modification with a
     # difference of ~2 min
     wait_till_pods_start 400

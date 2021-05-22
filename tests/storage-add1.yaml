@@ -1,0 +1,27 @@
+# -*- mode: yaml -*-
+---
+apiVersion: kadalu-operator.storage/v1alpha1
+kind: KadaluStorage
+metadata:
+  name: add-brick
+spec:
+  type: Replica1
+  storage:
+    - node: minikube           # node name as shown in `kubectl get nodes`
+      device: /mnt/DISK/file10.1
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv10-1
+spec:
+  storageClassName: kadalu
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 300Mi
+  selector:
+    matchExpressions:
+      - { key: volname, operator: In, value: add-brick }
