@@ -587,7 +587,8 @@ def handle_modified(core_v1_client, obj):
 
     # Set Node ID for each storage device from configmap
     for idx, _ in enumerate(obj["spec"]["storage"]):
-        obj["spec"]["storage"][idx]["node_id"] = cfgmap["bricks"][idx]["node_id"]
+        if not obj["spec"]["storage"][idx].get("node_id", None):
+            obj["spec"]["storage"][idx]["node_id"] = str(uuid.uuid1())
 
     # Add new entry in the existing config map
     update_config_map(core_v1_client, obj)
