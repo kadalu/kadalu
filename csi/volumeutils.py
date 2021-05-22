@@ -27,6 +27,8 @@ VOLFILES_DIR = "/kadalu/volfiles"
 TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
 
+VOL_DATA = {}
+
 statfile_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 mount_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 
@@ -645,9 +647,9 @@ def delete_volume(volname):
             info_file_name = vol.volname + ".json"
             os.rename(
                 os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info",
-                    path_prefix, old_info_file_name),
+                             path_prefix, old_info_file_name),
                 os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info",
-                    path_prefix, info_file_name)
+                             path_prefix, info_file_name)
             )
 
             logging.info(logf(
@@ -824,6 +826,16 @@ def generate_client_volfile(volname):
     with open(info_file_path) as info_file:
         data = json.load(info_file)
 
+    if not VOL_DATA.get(volname, None):
+        VOL_DATA[volname] = {}
+    hashval = VOL_DATA[volname].get("hash", 0)
+    current_hash = hash(json.dumps(data))
+
+    if hashval == current_hash:
+        return False
+
+    VOL_DATA[volname]["hash"] = current_hash
+
     # Tricky to get this right, but this solves all the elements of distribute in code :-)
     data['dht_subvol'] = []
     if data["type"] == "Replica1":
@@ -860,6 +872,7 @@ def generate_client_volfile(volname):
         content = template_file.read()
 
     Template(content).stream(**data).dump(client_volfile)
+    return True
 
 
 def mount_glusterfs(volume, mountpoint, is_client=False):
@@ -919,7 +932,8 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             cmd.extend(["--client-pid", "-14"])
 
         try:
-            execute(*cmd)
+            (_, err, pid) = execute(*cmd)
+            VOL_DATA[volname]["pid"] = pid
         except CommandException as err:
             logging.error(logf(
                 "error to execute command",
@@ -930,6 +944,36 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             raise err
 
     return
+
+def reload_glusterfs(volume):
+    """Mount Glusterfs Volume"""
+    if volume["type"] == "External":
+        return False
+
+    volname = volume["name"]
+
+    if not VOL_DATA.get(volname, None):
+        return False
+
+    # Ignore if already glusterfs process running for that volume
+    with mount_lock:
+        if not generate_client_volfile(volname):
+            return False
+        pid = VOL_DATA[volname]["pid"]
+        cmd = ["kill", "-HUP", pid]
+
+        try:
+            execute(*cmd)
+        except CommandException as err:
+            logging.error(logf(
+                "error to execute command",
+                volume=volume,
+                cmd=cmd,
+                error=format(err)
+            ))
+            raise err
+
+    return True
 
 
 # noqa # pylint: disable=unused-argument
