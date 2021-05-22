@@ -298,23 +298,23 @@ kadalu_operator)
 
     # Prepare PVC also as a storage
     sed -i -e "s/DISK/${DISK}/g" tests/get-minikube-pvc.yaml
-    kubectl apply -f tests/get-minikube-pvc.yaml
+    #kubectl apply -f tests/get-minikube-pvc.yaml
 
     # Generally it needs some time for operator to get started, give it time, so some logs are reduced in tests
     sleep 15;
-    kubectl apply -f /tmp/kadalu-storage.yaml
+    #kubectl apply -f /tmp/kadalu-storage.yaml
 
-    wait_till_pods_start
+    #wait_till_pods_start
     ;;
 
 test_kadalu)
     date
 
-    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 90
+    #get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 90
 
-    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 90
+    #get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 90
 
-    get_pvc_and_check examples/sample-test-app4.yaml "Disperse" 2 90
+    #get_pvc_and_check examples/sample-test-app4.yaml "Disperse" 2 90
 
     #get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 60
 
@@ -324,30 +324,30 @@ test_kadalu)
     sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
     sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
     sed -i -e "s/dir3.2/dir3.2_modified/g" /tmp/kadalu-storage.yaml
-    kubectl apply -f /tmp/kadalu-storage.yaml
+    #kubectl apply -f /tmp/kadalu-storage.yaml
 
     sleep 5;
     echo "After modification"
 
     # Observing intermittent failures due to timeout after modification with a
     # difference of ~2 min
-    wait_till_pods_start 400
+    #wait_till_pods_start 400
 
     #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 60
 
     # Run minimal IO test
-    run_io
+    #run_io
 
     # Deploy and run CSI Sanity tests
-    kubectl apply -f tests/test-csi/sanity-app.yaml
-    kubectl wait --for=condition=ready pod -l app=sanity-app --timeout=15s
+    #kubectl apply -f tests/test-csi/sanity-app.yaml
+    #kubectl wait --for=condition=ready pod -l app=sanity-app --timeout=15s
 
     exp_pass=33
-    kubectl exec sanity-app -i -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination' | tee /tmp/sanity-result.txt
+    #kubectl exec sanity-app -i -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination' | tee /tmp/sanity-result.txt
 
     # Make sure no more failures than above stats
-    act_pass=$(grep -Po '(\d+)(?= Passed)' /tmp/sanity-result.txt 2>/dev/null || echo 0)
-    [ $act_pass -ge $exp_pass ] || fail=1
+    #act_pass=$(grep -Po '(\d+)(?= Passed)' /tmp/sanity-result.txt 2>/dev/null || echo 0)
+    #[ $act_pass -ge $exp_pass ] || fail=1
     echo Sanity [Pass %]: Expected: $exp_pass and Actual: $act_pass
 
     echo "Setting up New Replica1 storage (For SIGHUP Test)"
@@ -366,6 +366,7 @@ test_kadalu)
 
     sleep 5;
 
+    fail=1
     # Unless there is a failure or COMMIT_MSG contains 'full log' just log last 100 lines
     lines=100
     if [[ $fail -eq 1 || $COMMIT_MSG =~ 'full log' ]]; then

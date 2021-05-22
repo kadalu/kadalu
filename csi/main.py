@@ -43,7 +43,8 @@ def mount_storage():
         logging.info(logf("Volume is mounted successfully", hvol=hvol))
     return
 
-def reconfigure_mounts():
+
+def reconfigure_mounts(_signum, _frame):
     """
     Reconfigure the mounts by regenerating the volfiles.
     """
@@ -58,6 +59,7 @@ def reconfigure_mounts():
                 logging.info(logf("Volume reloaded successfully", hvol=hvol))
         except CommandException:
             logging.error(logf("Unable to mount volume", hvol=hvol))
+
 
 def main():
     """
