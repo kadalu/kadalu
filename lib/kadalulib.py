@@ -123,7 +123,7 @@ def execute(*cmd):
         out, err = proc.communicate()
         if proc.returncode != 0:
             raise CommandException(proc.returncode, out.strip(), err.strip())
-        return (out.strip(), err.strip())
+        return (out.strip(), err.strip(), proc.pid)
 
 
 def logf(msg, **kwargs):
