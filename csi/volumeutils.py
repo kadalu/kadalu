@@ -918,7 +918,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
 
     # Ignore if already glusterfs process running for that volume
     if is_gluster_mount_proc_running(volname, mountpoint):
-        reload_glusterfs(volname)
+        reload_glusterfs(volume)
         logging.debug(logf(
             "Already mounted",
             mount=mountpoint
@@ -927,7 +927,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
 
     # Ignore if already mounted
     if is_gluster_mount_proc_running(volname, mountpoint):
-        reload_glusterfs(volname)
+        reload_glusterfs(volume)
         logging.debug(logf(
             "Already mounted (2nd try)",
             mount=mountpoint
