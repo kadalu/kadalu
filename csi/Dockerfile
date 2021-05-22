@@ -7,7 +7,7 @@ RUN python3 -m pip install googleapis-common-protos
 FROM ubuntu:20.04 as prod
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends attr python3 libtirpc3 bash && \
+    apt-get install -y --no-install-recommends attr python3 libtirpc3 bash inotify-tools && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -38,6 +38,7 @@ COPY csi/nodeserver.py         /kadalu/
 COPY csi/volumeutils.py        /kadalu/
 COPY lib/startup.sh            /kadalu/
 COPY csi/quota-crawler.sh      /kadalu/
+COPY csi/watch-vol-changes.sh  /kadalu/
 COPY csi/heal-info.sh          /kadalu/
 
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/
