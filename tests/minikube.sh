@@ -364,7 +364,7 @@ test_kadalu)
     sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
     kubectl apply -f /tmp/kadalu-storage.yaml
 
-    sleep 5;
+    sleep 20;
 
     fail=1
     # Unless there is a failure or COMMIT_MSG contains 'full log' just log last 100 lines
