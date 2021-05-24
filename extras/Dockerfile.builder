@@ -14,7 +14,7 @@ RUN apt-get update -yq && \
     python3-venv python3-wheel libffi-dev && \
     git clone --depth 1 https://github.com/kadalu/glusterfs --branch ${branch} --single-branch glusterfs && \
     (cd glusterfs && ./autogen.sh && ./configure --prefix=/opt >/dev/null && make install >/dev/null && cd ..) && \
-    curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`/kubectl -o /usr/bin/kubectl && \
+    curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|' | sed 's|armv7l|arm|'`/kubectl -o /usr/bin/kubectl && \
     chmod +x /usr/bin/kubectl &&  \
     python3 -m venv $VIRTUAL_ENV && cd $VIRTUAL_ENV && \
     python3 -m pip install --upgrade pip && \
