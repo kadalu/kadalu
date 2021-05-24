@@ -325,7 +325,7 @@ spec:
   type: "{EXTERNAL}"
   storage: []
   details:
-    gluster_hosts: "{EXTERNAL_HOSTS}"
+    gluster_hosts: {EXTERNAL_HOSTS}
     gluster_volname: "{EXTERNAL_VOLNAME}"
     gluster_options: "{EXTERNAL_OPTIONS}"
 """
@@ -355,7 +355,7 @@ spec:
   type: "{EXTERNAL}"
   storage: []
   details:
-    gluster_hosts: "{EXTERNAL_HOSTS}"
+    gluster_hosts: {EXTERNAL_HOSTS}
     gluster_volname: "{EXTERNAL_VOLNAME}"
     gluster_options: "{EXTERNAL_OPTIONS}"
     kadalu_format: "{NON_NATIVE}"
