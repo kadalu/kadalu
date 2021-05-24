@@ -468,7 +468,7 @@ def handle_external_storage_addition(core_v1_client, obj):
         "kadalu_format": details.get("kadalu_format", "native"),
         "gluster_hosts": ",".join(hosts),
         "gluster_volname": details["gluster_volname"],
-        "gluster_options": details.get("gluster_options", "ignore-me"),
+        "gluster_options": details.get("gluster_options", ""),
     }
 
     # Add new entry in the existing config map
