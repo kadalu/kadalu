@@ -3,19 +3,20 @@ KaDalu Operator: Once started, deploys required CSI drivers,
 bootstraps the ConfigMap and waits for the CRD update to create
 Server pods
 """
-import os
-import uuid
 import json
 import logging
+import os
 import re
 import socket
+import uuid
+
 import urllib3
-
 from jinja2 import Template
+from kadalulib import execute as lib_execute
+from kadalulib import logf, logging_setup, send_analytics_tracker
 from kubernetes import client, config, watch
-
-from kadalulib import execute as lib_execute, logging_setup, logf, send_analytics_tracker
-from utils import execute as utils_execute, CommandError
+from utils import CommandError
+from utils import execute as utils_execute
 
 NAMESPACE = os.environ.get("KADALU_NAMESPACE", "kadalu")
 VERSION = os.environ.get("KADALU_VERSION", "latest")
@@ -620,45 +621,46 @@ def handle_deleted(core_v1_client, obj):
 
     storage_info_data = get_configmap_data(volname)
 
-    logging.info(logf(
-        "Delete requested",
-        volname=volname
-    ))
+    logging.info(logf("Delete requested", volname=volname))
 
     pv_count = get_num_pvs(storage_info_data)
 
     if pv_count == -1:
-        logging.error(logf(
-            "Storage delete failed. Failed to get PV count",
-            number_of_pvs=pv_count,
-            storage=volname
-        ))
+        logging.error(
+            logf("Storage delete failed. Failed to get PV count",
+                 number_of_pvs=pv_count,
+                 storage=volname))
         return
 
     if pv_count != 0:
 
-        logging.warning(logf(
-            "Storage delete failed. Storage is not empty",
-            number_of_pvs=pv_count,
-            storage=volname
-        ))
+        logging.warning(
+            logf("Storage delete failed. Storage is not empty",
+                 number_of_pvs=pv_count,
+                 storage=volname))
 
     elif pv_count == 0:
 
-        # TODO: Delete custom storage classes created as part of External
-        # Storage (IMPORTANT)
+        if storage_info_data.get("type") == "External":
+            # We can't delete external volume but cleanup StorageClass and
+            # Configmap
+            volname = "kadalu.external." + volname
+            lib_execute(KUBECTL_CMD, DELETE_CMD, "sc", volname)
+            logging.info(logf(
+                "Deleted Storage class",
+                volname=volname,
+            ))
+            delete_config_map(core_v1_client, obj)
 
-        delete_server_pods(storage_info_data, obj)
-        delete_config_map(core_v1_client, obj)
+        else:
+            delete_server_pods(storage_info_data, obj)
+            delete_config_map(core_v1_client, obj)
 
-        filename = os.path.join(MANIFESTS_DIR, "services.yaml")
-        template(filename, namespace=NAMESPACE, volname=volname)
-        lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
-        logging.info(logf(
-            "Deleted Service",
-            volname=volname,
-            manifest=filename
-        ))
+            filename = os.path.join(MANIFESTS_DIR, "services.yaml")
+            template(filename, namespace=NAMESPACE, volname=volname)
+            lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
+            logging.info(
+                logf("Deleted Service", volname=volname, manifest=filename))
 
     return
 
@@ -697,30 +699,37 @@ def get_num_pvs(storage_info_data):
     """
 
     volname = storage_info_data['volname']
-    bricks = storage_info_data['bricks']
-
-    dbpath = "/bricks/" + volname + "/data/brick/stat.db"
-    query = ("select count(pvname) from pv_stats;")
-
-    cmd = ["kubectl", "exec", "-i",
-           bricks[0]['node'].replace("." + volname, ""),
-           "-c", "server", "-nkadalu", "--", "sqlite3",
-           dbpath,
-           query]
+    cmd = None
+    if storage_info_data.get("type") == "External":
+        # We can't access external cluster and so query existing PVs which are
+        # using external storageclass
+        volname = "kadalu.external." + volname
+        jpath = ('jsonpath=\'{range .items[?(@.spec.storageClassName=="%s")]}'
+                 '{.spec.storageClassName}{"\\n"}{end}\'' % volname)
+        cmd = ["kubectl", "get", "pv", "-o", jpath]
+    else:
+        bricks = storage_info_data['bricks']
+        dbpath = "/bricks/" + volname + "/data/brick/stat.db"
+        query = ("select count(pvname) from pv_stats;")
+        cmd = [
+            "kubectl", "exec", "-i",
+            bricks[0]['node'].replace("." + volname, ""), "-c", "server",
+            "-nkadalu", "--", "sqlite3", dbpath, query
+        ]
 
     try:
         resp = utils_execute(cmd)
-        parts = resp.stdout.strip().split("\n")
-        pv_count = int(parts[0].strip())
-
+        parts = resp.stdout.strip("'").split()
+        if storage_info_data.get("type") == "External":
+            return len(parts)
+        pv_count = int(parts[0])
         return pv_count
 
     except CommandError as msg:
-        logging.error(logf(
-            "Failed to get size details of the "
-            "storage \"%s\"" % volname,
-            error=msg
-        ))
+        logging.error(
+            logf("Failed to get size details of the "
+                 "storage \"%s\"" % volname,
+                 error=msg))
         # Return error as its -1
         return -1
 
