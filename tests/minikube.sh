@@ -342,7 +342,9 @@ test_kadalu)
     kubectl wait --for=condition=ready pod -l app=sanity-app --timeout=15s
 
     exp_pass=33
-    kubectl exec sanity-app -i -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination' | tee /tmp/sanity-result.txt
+
+    # Set expand vol size to 10MB
+    kubectl exec sanity-app -i -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination -csi.testvolumesize 10485760 -csi.testvolumeexpandsize 10485760' | tee /tmp/sanity-result.txt
 
     # Make sure no more failures than above stats
     act_pass=$(grep -Po '(\d+)(?= Passed)' /tmp/sanity-result.txt 2>/dev/null || echo 0)
