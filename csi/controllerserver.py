@@ -7,10 +7,9 @@ import os
 import random
 import time
 
-import grpc
-
 import csi_pb2
 import csi_pb2_grpc
+import grpc
 from kadalulib import logf, send_analytics_tracker
 from volumeutils import (HOSTVOL_MOUNTDIR, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
                          check_external_volume, create_subdir_volume,
@@ -368,6 +367,18 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         """Returns list of all PVCs with sizes existing in Kadalu Storage"""
 
         logging.debug(logf("ListVolumes request received", request=request))
+        global GEN
+        # Need to check for no hostvol creation only once
+        if GEN is None:
+            # Handle no hostvol creation, with ~10s timeout
+            volumes = get_pv_hosting_volumes(iteration=3)
+            if not volumes:
+                errmsg = "No PV hosting volume is created yet"
+                logging.error(errmsg)
+                context.set_details(errmsg)
+                context.set_code(grpc.StatusCode.ABORTED)
+                return csi_pb2.ListVolumesResponse()
+
         starting_token = request.starting_token or '0'
         try:
             starting_token = int(starting_token)
@@ -381,7 +392,6 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         if not request.starting_token:
             # This is the first call and so start the generator
-            global GEN
             max_entries = request.max_entries or 0
             if not max_entries:
                 # In worst case limit ourselves with custom max_entries and
@@ -390,12 +400,21 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             GEN = yield_list_of_pvcs(max_entries)
 
         # Run and wait for 'send'
-        next(GEN)
+        try:
+            next(GEN)
+        except StopIteration:
+            # Handle no PVC created from a storage volume yet
+            errmsg = "No PVC found in any hostvol"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.ABORTED)
+            return csi_pb2.ListVolumesResponse()
+
         try:
             # Get list of PVCs limited at max_entries by suppling the token
             pvcs, next_token = GEN.send(starting_token)
-        except StopIteration as errmsg:
-            errmsg = errmsg.args[0] or "Runtime Error while getting PVCs list"
+        except StopIteration:
+            errmsg = "Runtime Error while getting PVCs list"
             logging.error(errmsg)
             context.set_details(errmsg)
             context.set_code(grpc.StatusCode.ABORTED)

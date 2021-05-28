@@ -11,7 +11,6 @@ import time
 from errno import ENOTCONN
 
 from jinja2 import Template
-
 from kadalulib import (PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, CommandException,
                        SizeAccounting, execute, get_volname_hash,
                        get_volume_path, is_gluster_mount_proc_running, logf,
@@ -121,15 +120,13 @@ def filter_supported_pvtype(volume, filters):
 # Disabled pylint here because filters argument is used as
 # readonly in all functions
 # noqa # pylint: disable=dangerous-default-value
-def get_pv_hosting_volumes(filters={}, iteration=0):
+def get_pv_hosting_volumes(filters={}, iteration=40):
     """Get list of pv hosting volumes"""
     volumes = []
     total_volumes = 0
 
     filter_funcs = [
-        filter_node_affinity,
-        filter_storage_type,
-        filter_supported_pvtype
+        filter_node_affinity, filter_storage_type, filter_supported_pvtype
     ]
 
     for filename in os.listdir(VOLINFO_DIR):
@@ -139,11 +136,10 @@ def get_pv_hosting_volumes(filters={}, iteration=0):
 
             filtered = filter_storage_name({"volname": volname}, filters)
             if filtered is None:
-                logging.debug(logf(
-                    "Volume doesn't match the filter",
-                    volname=volname,
-                    **filters
-                ))
+                logging.debug(
+                    logf("Volume doesn't match the filter",
+                         volname=volname,
+                         **filters))
                 continue
 
             data = {}
@@ -157,11 +153,10 @@ def get_pv_hosting_volumes(filters={}, iteration=0):
                 # Try other volumes
                 if filtered is None:
                     filtered_data = False
-                    logging.debug(logf(
-                        "Volume doesn't match the filter",
-                        volname=data["volname"],
-                        **filters
-                    ))
+                    logging.debug(
+                        logf("Volume doesn't match the filter",
+                             volname=data["volname"],
+                             **filters))
                     break
 
             if not filtered_data:
@@ -183,9 +178,9 @@ def get_pv_hosting_volumes(filters={}, iteration=0):
     # If volume file is not yet available, ConfigMap may not be ready
     # or synced. Wait for some time and try again
     # Lets just give maximum 2 minutes for the config map to come up!
-    if total_volumes == 0 and iteration < 40:
+    if total_volumes == 0 and iteration > 0:
         time.sleep(3)
-        iteration += 1
+        iteration -= 1
         return get_pv_hosting_volumes(filters, iteration)
 
     return volumes
