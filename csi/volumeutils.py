@@ -894,17 +894,21 @@ def reload_glusterfs(volume):
     with mount_lock:
         if not generate_client_volfile(volname):
             return False
-        pid = VOL_DATA[volname]["pid"]
         # TODO: ideally, keep the pid in structure for easier access
-        #cmd = ["kill", "-HUP", str(pid)]
-        cmd = ["ps", "aux", "|",
-               "grep", "glusterfs", "|",
-               "grep", "%s.client" % volname, "|",
-               "awk", "'{ print $2 }'", "|",
-               "xargs", "kill", "-HUP" ]
+        # pid = VOL_DATA[volname]["pid"]
+        # cmd = ["kill", "-HUP", str(pid)]
+        cmd = ["ps", "--no-header", "-ww", "-o", "pid,command", "-C", "glusterfs"]
 
         try:
-            execute(*cmd)
+            out, err, _ = execute(*cmd)
+            for line in out.split("\n"):
+                parts = line.split()
+                pid = parts[0]
+                for part in parts:
+                    if part.startswith("--volume-id="):
+                        if part.split("=")[-1] == volname:
+                            cmd1 = [ "kill", "-HUP", pid ]
+                            execute(*cmd1)
         except CommandException as err:
             logging.error(logf(
                 "error to execute command",
