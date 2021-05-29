@@ -524,7 +524,14 @@ def handle_added(core_v1_client, obj):
         return
 
     # Generate new Volume ID
-    obj["spec"]["volume_id"] = str(uuid.uuid1())
+    if obj["spec"].get("volume_id", None) is None:
+        obj["spec"]["volume_id"] = str(uuid.uuid1())
+    # Apply existing Volume ID to recreate storage pool from existing device/path
+    else:
+        logging.info(logf(
+            "Applying existing volume id",
+            volume_id=obj["spec"]["volume_id"]
+        ))
 
     voltype = obj["spec"]["type"]
     if voltype == VOLUME_TYPE_EXTERNAL:

@@ -68,6 +68,8 @@ spec:
                 pvReclaimPolicy:
                   type: string
                   default: delete
+                volume_id:
+                  type: string
                 storage:
                   type: array
                   items:
