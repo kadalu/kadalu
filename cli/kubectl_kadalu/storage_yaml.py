@@ -77,4 +77,7 @@ def to_storage_yaml(data):
     if data["spec"].get("pvReclaimPolicy", None) is not None:
         yaml +=  "  pvReclaimPolicy: %s\n" % data["spec"]["pvReclaimPolicy"]
 
+    if data["spec"].get("volume_id", None) is not None:
+        yaml +=  "  volume_id: %s\n" % data["spec"]["volume_id"]
+
     return yaml
