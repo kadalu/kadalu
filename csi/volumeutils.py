@@ -901,6 +901,38 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
                                       volume['g_host'],
                                       volume['g_options'],
                                       is_client)
+        use_gluster_quota = False
+        if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
+            and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
+            use_gluster_quota = True
+        secret_private_key = "/etc/secret-volume/ssh-privatekey"
+        secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
+        hostname = volume['g_host']
+        gluster_vol_name = volume['g_volname']
+        if use_gluster_quota is False:
+            logging.debug(logf("Do not set quota-deem-statfs"))
+        else:
+            logging.debug(logf("Set quota-deem-statfs for gluster directory Quota"))
+            quota_deem_cmd = [
+                "ssh",
+                "-oStrictHostKeyChecking=no",
+                "-i",
+                "%s" % secret_private_key, 
+                "%s@%s" % (secret_username, hostname),
+                "sudo",
+                "gluster",
+                "volume",
+                "set",
+                "%s" % gluster_vol_name,
+                "quota-deem-statfs",
+                "on"
+            ]
+            try:
+                execute(*quota_deem_cmd)
+            except CommandException as err:
+                errmsg = "Unable to set quota-deem-statfs via ssh"
+                logging.error(logf(errmsg, error=err))
+                raise err
         return
 
     with mount_lock:

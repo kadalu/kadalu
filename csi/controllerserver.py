@@ -198,7 +198,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                         mntdir, request.name, pvsize)
                 else:
                     use_gluster_quota = False
-                    if os.path.isfile("/etc/secret-volume/ssh-privatekey") and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ:
+                    if (os.path.isfile("/etc/secret-volume/ssh-privatekey") 
+                        and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
                         use_gluster_quota = True
                     secret_private_key = "/etc/secret-volume/ssh-privatekey"
                     secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
@@ -208,7 +209,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                         mntdir, request.name, pvsize, use_gluster_quota)
                     quota_size = pvsize
                     quota_path = vol.volpath
-                    if use_gluster_quota == False:
+                    if use_gluster_quota is False:
                         logging.debug(logf("Set Quota in the native way"))
                     else:
                         logging.debug(logf("Set Quota using gluster directory Quota"))
@@ -216,7 +217,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                             "ssh",
                             "-oStrictHostKeyChecking=no",
                             "-i",
-                            "%s" % secret_private_key, 
+                            "%s" % secret_private_key,
                             "%s@%s" % (secret_username, hostname),
                             "sudo",
                             "gluster",
@@ -227,24 +228,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                             "/%s" % quota_path,
                             "%s" % quota_size
                         ]
-                        
-                        quota_deem_cmd = [
-                            "ssh",
-                            "-oStrictHostKeyChecking=no",
-                            "-i",
-                            "%s" % secret_private_key, 
-                            "%s@%s" % (secret_username, hostname),
-                            "sudo",
-                            "gluster",
-                            "volume",
-                            "set",
-                            "%s" % gluster_vol_name,
-                            "quota-deem-statfs",
-                            "on"
-                        ]
                         try:
                             execute(*quota_cmd)
-                            execute(*quota_deem_cmd)
                         except CommandException as err:
                             errmsg = "Unable to set Gluster Quota via ssh"
                             logging.error(logf(errmsg, error=err))
