@@ -220,3 +220,33 @@ spec:
 $ kubectl kadalu storage-add storage-pool1 \
     --device kube1:/dev/vdc --pv-reclaim-policy=archive
 ----
+
+
+== Recreation of storage-pool with existing Volume ID
+
+Every storage-pool created with device/path/pvc/external volumes will be associated with a unique Volume ID. In case of cleanup of Kadalu namespace and referencing the same existing volume will throw error since it has already been attached with unique ID, to avoid this and recreate the storage-pool specify the `volume_id` in storage-config or `--volume-id` in Kadalu CLI.
+
+* Adding 'volume_id' through config file:
++
+[source,yaml]
+----
+apiVersion: kadalu-operator.storage/v1alpha1
+kind: KadaluStorage
+metadata:
+# This will be used as name of PV Hosting Volume
+  name: storage1
+spec:
+  type: Replica1
+  volume_id: example-1234-volumeid-7890
+  storage:
+    - node: kube1
+      device: /dev/vdc
+----
+
+* Adding 'volume_id' through Kadalu CLI:
++
+[source,console]
+----
+$ kubectl kadalu storage-add storage-pool1 \
+    --device kube1:/dev/vdc --volume-id=example-1234-volumeid-7890
+----
