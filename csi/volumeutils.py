@@ -26,6 +26,10 @@ VOLFILES_DIR = "/kadalu/volfiles"
 TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
 
+# This variable contains in-memory map of all glusterfs processes (hash of volfile and pid)
+# Used while sending SIGHUP during any modifcation to storage config
+VOL_DATA = {}
+
 statfile_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 mount_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 
@@ -640,9 +644,9 @@ def delete_volume(volname):
             info_file_name = vol.volname + ".json"
             os.rename(
                 os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info",
-                    path_prefix, old_info_file_name),
+                             path_prefix, old_info_file_name),
                 os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info",
-                    path_prefix, info_file_name)
+                             path_prefix, info_file_name)
             )
 
             logging.info(logf(
@@ -819,6 +823,18 @@ def generate_client_volfile(volname):
     with open(info_file_path) as info_file:
         data = json.load(info_file)
 
+    # If the hash of configmap is same for the given volume, then there
+    # is no need to generate client volfile again.
+    if not VOL_DATA.get(volname, None):
+        VOL_DATA[volname] = {}
+    hashval = VOL_DATA[volname].get("hash", 0)
+    current_hash = hash(json.dumps(data))
+
+    if hashval == current_hash:
+        return False
+
+    VOL_DATA[volname]["hash"] = current_hash
+
     # Tricky to get this right, but this solves all the elements of distribute in code :-)
     data['dht_subvol'] = []
     if data["type"] == "Replica1":
@@ -855,6 +871,68 @@ def generate_client_volfile(volname):
         content = template_file.read()
 
     Template(content).stream(**data).dump(client_volfile)
+    return True
+
+def send_signal_to_process(volname, out, sig):
+    """Sends the signal to one of the process"""
+
+    for line in out.split("\n"):
+        parts = line.split()
+        pid = parts[0]
+        for part in parts:
+            if part.startswith("--volume-id="):
+                if part.split("=")[-1] == volname:
+                    cmd = [ "kill", sig, pid ]
+                    try:
+                        execute(*cmd)
+                    except CommandException as err:
+                        logging.error(logf(
+                            "error to execute command",
+                            volume=volname,
+                            cmd=cmd,
+                            error=format(err)
+                        ))
+                    return
+
+    logging.debug(logf(
+        "Sent SIGHUP to glusterfs process",
+        volname=volname
+    ))
+    return
+
+
+def reload_glusterfs(volume):
+    """Mount Glusterfs Volume"""
+    if volume["type"] == "External":
+        return False
+
+    volname = volume["name"]
+
+    if not VOL_DATA.get(volname, None):
+        return False
+
+    # Ignore if already glusterfs process running for that volume
+    with mount_lock:
+        if not generate_client_volfile(volname):
+            return False
+        # TODO: ideally, keep the pid in structure for easier access
+        # pid = VOL_DATA[volname]["pid"]
+        # cmd = ["kill", "-HUP", str(pid)]
+        cmd = ["ps", "--no-header", "-ww", "-o", "pid,command", "-C", "glusterfs"]
+
+        try:
+            out, err, _ = execute(*cmd)
+            send_signal_to_process(volname, out, "-HUP")
+        except CommandException as err:
+            logging.error(logf(
+                "error to execute command",
+                volume=volume,
+                cmd=cmd,
+                error=format(err)
+            ))
+            return False
+
+    return True
 
 
 def mount_glusterfs(volume, mountpoint, is_client=False):
@@ -866,6 +944,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
 
     # Ignore if already glusterfs process running for that volume
     if is_gluster_mount_proc_running(volname, mountpoint):
+        reload_glusterfs(volume)
         logging.debug(logf(
             "Already mounted",
             mount=mountpoint
@@ -874,6 +953,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
 
     # Ignore if already mounted
     if is_gluster_mount_proc_running(volname, mountpoint):
+        reload_glusterfs(volume)
         logging.debug(logf(
             "Already mounted (2nd try)",
             mount=mountpoint
@@ -887,7 +967,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
         # Try to mount the Host Volume, handle failure if
         # already mounted
         with mount_lock:
-            mount_glusterfs_with_host(volume['g_volname'],
+            mount_glusterfs_with_host(volname,
                                       mountpoint,
                                       volume['g_host'],
                                       volume['g_options'],
@@ -895,7 +975,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
         return
 
     with mount_lock:
-        generate_client_volfile(volume['name'])
+        generate_client_volfile(volname)
         # Fix the log, so we can check it out later
         # log_file = "/var/log/gluster/%s.log" % mountpoint.replace("/", "-")
         log_file = "/var/log/gluster/gluster.log"
@@ -903,9 +983,9 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             GLUSTERFS_CMD,
             "--process-name", "fuse",
             "-l", log_file,
-            "--volfile-id", volume['name'],
-            "--fs-display-name", "kadalu:%s" % volume['name'],
-            "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volume['name']),
+            "--volfile-id", volname,
+            "--fs-display-name", "kadalu:%s" % volname,
+            "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volname),
             mountpoint
         ]
 
@@ -914,7 +994,8 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             cmd.extend(["--client-pid", "-14"])
 
         try:
-            execute(*cmd)
+            (_, err, pid) = execute(*cmd)
+            VOL_DATA[volname]["pid"] = pid
         except CommandException as err:
             logging.error(logf(
                 "error to execute command",

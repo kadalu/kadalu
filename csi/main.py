@@ -4,6 +4,8 @@ Starting point of CSI driver GRP server
 import logging
 import os
 import time
+import signal
+
 from concurrent import futures
 
 import grpc
@@ -14,7 +16,7 @@ from identityserver import IdentityServer
 from kadalulib import CommandException, logf, logging_setup
 from nodeserver import NodeServer
 from volumeutils import (HOSTVOL_MOUNTDIR, get_pv_hosting_volumes,
-                         mount_glusterfs)
+                         mount_glusterfs, reload_glusterfs)
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
@@ -42,6 +44,18 @@ def mount_storage():
     return
 
 
+def reconfigure_mounts(_signum, _frame):
+    """
+    Reconfigure the mounts by regenerating the volfiles.
+    """
+    host_volumes = get_pv_hosting_volumes({})
+    for volume in host_volumes:
+        if volume["type"] == "External":
+            # Need to skip remount external
+            continue
+        if reload_glusterfs(volume):
+            logging.info(logf("Volume reloaded successfully", volume=volume))
+
 def main():
     """
     Register Controller Server, Node server and Identity Server and start
@@ -51,6 +65,8 @@ def main():
 
     # If Provisioner pod reboots, mount volumes if they exist before reboot
     mount_storage()
+
+    signal.signal(signal.SIGHUP, reconfigure_mounts)
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     csi_pb2_grpc.add_ControllerServicer_to_server(ControllerServer(), server)
