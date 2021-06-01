@@ -29,6 +29,9 @@ def set_args(name, subparsers):
         help="Storage Type",
         choices=["Replica1", "Replica3", "External", "Replica2", "Disperse"],
         default=None)
+    arg("--volume-id",
+        help="Volume ID of previously created volume",
+        default=None)
     arg("--pv-reclaim-policy",
         help="PV Reclaim Policy",
         choices=["delete", "archive"],
@@ -252,6 +255,9 @@ def storage_add_data(args):
     # Pv Reclaim Policy is specified, add to either external or native type
     if args.pv_reclaim_policy:
         content["spec"]["pvReclaimPolicy"] = args.pv_reclaim_policy
+
+    if args.volume_id:
+        content["spec"]["volume_id"] = args.volume_id
 
     # External details are specified, no 'storage' section required
     if args.external:

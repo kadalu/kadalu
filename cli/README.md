@@ -60,7 +60,16 @@ To `archive` persistent volume claims,
 
 ```
 $ kubectl kadalu storage-add storage-pool-1 \
+    --device kube1.example.com:/dev/vdc
     --pv-reclaim-policy=archive
+```
+
+To re-create storage-pool from existing volume ID,
+
+```
+$ kubectl kadalu storage-add storage-pool-1 \
+    --device kube1.example.com:/dev/vdc
+    --volume-id=example-1234-volumeid-7890
 ```
 
 To use available `pvc` as Kadalu storage,
