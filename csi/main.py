@@ -53,13 +53,8 @@ def reconfigure_mounts(_signum, _frame):
         if volume["type"] == "External":
             # Need to skip remount external
             continue
-        hvol = volume["name"]
-        try:
-            if reload_glusterfs(volume):
-                logging.info(logf("Volume reloaded successfully", hvol=hvol))
-        except CommandException:
-            logging.error(logf("Unable to reload volume", hvol=hvol))
-
+        if reload_glusterfs(volume):
+            logging.info(logf("Volume reloaded successfully", volume=volume))
 
 def main():
     """
