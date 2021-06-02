@@ -318,7 +318,7 @@ def save_pv_metadata(hostvol_mnt, pvpath, pvsize):
         ))
 
 
-def create_subdir_volume(hostvol_mnt, volname, size):
+def create_subdir_volume(hostvol_mnt, volname, size, use_gluster_quota):
     """Create sub directory Volume"""
     volhash = get_volname_hash(volname)
     volpath = get_volume_path(PV_TYPE_SUBVOL, volhash, volname)
@@ -336,6 +336,15 @@ def create_subdir_volume(hostvol_mnt, volname, size):
         "Created PV directory",
         pvdir=volpath
     ))
+    if use_gluster_quota is True:
+        return Volume(
+            volname=volname,
+            voltype=PV_TYPE_SUBVOL,
+            volhash=volhash,
+            hostvol=os.path.basename(hostvol_mnt),
+            size=size,
+            volpath=volpath,
+        )
 
     # Write info file so that Brick's quotad sidecar
     # container picks it up.
@@ -972,6 +981,36 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
                                       volume['g_host'],
                                       volume['g_options'],
                                       is_client)
+        use_gluster_quota = False
+        if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
+            and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
+            use_gluster_quota = True
+        secret_private_key = "/etc/secret-volume/ssh-privatekey"
+        secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
+        if use_gluster_quota is False:
+            logging.debug(logf("Do not set quota-deem-statfs"))
+        else:
+            logging.debug(logf("Set quota-deem-statfs for gluster directory Quota"))
+            quota_deem_cmd = [
+                "ssh",
+                "-oStrictHostKeyChecking=no",
+                "-i",
+                "%s" % secret_private_key,
+                "%s@%s" % (secret_username, volume['g_host']),
+                "sudo",
+                "gluster",
+                "volume",
+                "set",
+                "%s" % volume['g_volname'],
+                "quota-deem-statfs",
+                "on"
+            ]
+            try:
+                execute(*quota_deem_cmd)
+            except CommandException as err:
+                errmsg = "Unable to set quota-deem-statfs via ssh"
+                logging.error(logf(errmsg, error=err))
+                raise err
         return
 
     with mount_lock:

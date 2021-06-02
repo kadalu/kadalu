@@ -7,7 +7,7 @@ RUN python3 -m pip install googleapis-common-protos
 FROM ubuntu:20.04 as prod
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends attr python3 libtirpc3 bash inotify-tools && \
+    apt-get install -y --no-install-recommends attr python3 libtirpc3 bash inotify-tools ssh && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 

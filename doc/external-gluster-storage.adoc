@@ -81,6 +81,30 @@ Note that, if you have an existing gluster setup inside the k8s cluster, you can
 treat that also as 'External' and use kadalu to manage it. In this case, you
 will need to provide the pre-created gluster volume name for the config.
 
+=== Using GlusterFS directory quota to set capacity limitation for external gluster volumes
+kadalu native way does not support distributed volumes on the external gluster. You could execute the following commands before installation to enable kadalu to achieve PV capacity limitation using the Gluster directory Quota.
+
+Create namespace in advance for using Secret
+
+----
+kubectl create namespace kadalu 
+----
+
+Specify the username and secret key of the external Gluster node in Secret for Quota setting.
+
+----
+kubectl create secret generic glusterquota-ssh-secret --from-literal=glusterquota-ssh-username=<username> --from-file=ssh-privatekey=<ssh_privatekey_path> -n kadalu
+----
+
+Then install as usual
+
+----
+ kubectl kadalu install
+----
+
+kadalu sets GlusterFS directory quota to the subdirectories assigned to PVs on the external gluster. kadalu connects to the server via ssh by using the secret key and username of the external gluster in K8s Secret. 
+
+If you use this configuration, you do not need to install kadalu-quotad to the external gluster server.
 
 == Using external storage directly
 

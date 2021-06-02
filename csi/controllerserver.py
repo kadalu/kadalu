@@ -10,7 +10,7 @@ import time
 import csi_pb2
 import csi_pb2_grpc
 import grpc
-from kadalulib import logf, send_analytics_tracker
+from kadalulib import CommandException, logf, send_analytics_tracker, execute
 from volumeutils import (HOSTVOL_MOUNTDIR, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
                          check_external_volume, create_subdir_volume,
                          create_virtblock_volume, delete_volume, expand_volume,
@@ -197,9 +197,45 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                     vol = create_virtblock_volume(
                         mntdir, request.name, pvsize)
                 else:
+                    use_gluster_quota = False
+                    if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
+                        and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
+                        use_gluster_quota = True
+                    secret_private_key = "/etc/secret-volume/ssh-privatekey"
+                    secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
+                    hostname = filters.get("gluster_hosts", None)
+                    gluster_vol_name = filters.get("gluster_volname", None)
                     vol = create_subdir_volume(
-                        mntdir, request.name, pvsize)
-
+                        mntdir, request.name, pvsize, use_gluster_quota)
+                    quota_size = pvsize
+                    quota_path = vol.volpath
+                    if use_gluster_quota is False:
+                        logging.debug(logf("Set Quota in the native way"))
+                    else:
+                        logging.debug(logf("Set Quota using gluster directory Quota"))
+                        quota_cmd = [
+                            "ssh",
+                            "-oStrictHostKeyChecking=no",
+                            "-i",
+                            "%s" % secret_private_key,
+                            "%s@%s" % (secret_username, hostname),
+                            "sudo",
+                            "gluster",
+                            "volume",
+                            "quota",
+                            "%s" % gluster_vol_name,
+                            "limit-usage",
+                            "/%s" % quota_path,
+                            "%s" % quota_size
+                        ]
+                        try:
+                            execute(*quota_cmd)
+                        except CommandException as err:
+                            errmsg = "Unable to set Gluster Quota via ssh"
+                            logging.error(logf(errmsg, error=err))
+                            context.set_details(errmsg)
+                            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                            return csi_pb2.CreateVolumeResponse()
                 logging.info(logf(
                     "Volume created",
                     name=request.name,
@@ -258,9 +294,9 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             vol = create_virtblock_volume(
                 mntdir, request.name, pvsize)
         else:
+            use_gluster_quota = False
             vol = create_subdir_volume(
-                mntdir, request.name, pvsize)
-
+                mntdir, request.name, pvsize, use_gluster_quota)
         logging.info(logf(
             "Volume created",
             name=request.name,
