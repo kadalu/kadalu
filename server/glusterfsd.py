@@ -103,6 +103,13 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
     try:
         execute("mount", brick_device, mountdir)
     except CommandException as err:
+        logging.info(logf(
+            "Failed to mount device, continuing with mkfs",
+            err=err,
+            fstype=brickfs,
+            device=brick_device,
+            mountdir=mountdir,
+        ))
         if 'wrong fs type' in err.err:
             # This error pops up when we do mount on an empty device or wrong fs
             # Try doing a mkfs and try mount
@@ -114,10 +121,16 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
                         "Failed to create file system",
                         fstype=brickfs,
                         device=brick_device,
+                        error=err,
                     ))
                     sys.exit(1)
                 else:
-                    pass
+                    logging.info(logf(
+                        "Failed to perform mkfs on device. continuing with mount",
+                        err=err,
+                        device=brick_device,
+                        mountdir=mountdir,
+                    ))
                 try:
                     execute("mount", brick_device, mountdir)
                 except CommandException as err:
