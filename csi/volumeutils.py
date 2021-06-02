@@ -336,7 +336,7 @@ def create_subdir_volume(hostvol_mnt, volname, size, use_gluster_quota):
         "Created PV directory",
         pvdir=volpath
     ))
-    if use_gluster_quota == True:
+    if use_gluster_quota is True:
         return Volume(
             volname=volname,
             voltype=PV_TYPE_SUBVOL,
@@ -987,8 +987,6 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             use_gluster_quota = True
         secret_private_key = "/etc/secret-volume/ssh-privatekey"
         secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
-        hostname = volume['g_host']
-        gluster_vol_name = volume['g_volname']
         if use_gluster_quota is False:
             logging.debug(logf("Do not set quota-deem-statfs"))
         else:
@@ -997,13 +995,13 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
                 "ssh",
                 "-oStrictHostKeyChecking=no",
                 "-i",
-                "%s" % secret_private_key, 
-                "%s@%s" % (secret_username, hostname),
+                "%s" % secret_private_key,
+                "%s@%s" % (secret_username, volume['g_host']),
                 "sudo",
                 "gluster",
                 "volume",
                 "set",
-                "%s" % gluster_vol_name,
+                "%s" % volume['g_volname'],
                 "quota-deem-statfs",
                 "on"
             ]
