@@ -198,7 +198,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                         mntdir, request.name, pvsize)
                 else:
                     use_gluster_quota = False
-                    if (os.path.isfile("/etc/secret-volume/ssh-privatekey") 
+                    if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
                         and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
                         use_gluster_quota = True
                     secret_private_key = "/etc/secret-volume/ssh-privatekey"
