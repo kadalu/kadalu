@@ -80,7 +80,7 @@ pylint:
 	@pylint --disable=W0511 -s n csi/main.py
 	@pylint --disable=W0511 -s n csi/nodeserver.py
 	@pylint --disable=W0511,C0302 -s n csi/volumeutils.py
-	@pylint --disable=W0511 -s n operator/main.py
+	@pylint --disable=W0511,C0302 -s n operator/main.py
 	@pylint --disable=W0511 -s n extras/scripts/gen_manifest.py
 	@rm csi/kadalulib.py
 	@rm server/kadalulib.py
