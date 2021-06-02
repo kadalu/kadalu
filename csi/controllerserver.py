@@ -505,6 +505,20 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             return csi_pb2.ControllerExpandVolumeResponse()
 
+        if not request.capacity_range:
+            errmsg = "Capacity Range is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.ControllerExpandVolumeResponse()
+
+        if not request.capacity_range.required_bytes:
+            errmsg = "Required Bytes is empty and must be provided"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.ControllerExpandVolumeResponse()
+
         expansion_requested_pvsize = request.capacity_range.required_bytes
 
         # Get existing volume
