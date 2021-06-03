@@ -1,5 +1,5 @@
-# Currently this pod is neither a part of production deployment nor used in CI.
-# Only used for manually debugging KaDalu CSI Driver
+# A shorter version of this is being deployed when 'deploy_socat' pod is set to 'yes' in operator manifest
+# This manifest is only used for manually debugging KaDalu CSI Driver
 
 # Once this pod is deployed you can run below for communicating with CSI driver
 # In one prompt: `kubectl port-forward pods/sanity-ds :10000`
@@ -34,13 +34,13 @@ spec:
             - tcp-listen:10000,fork,reuseaddr
             - unix-connect:/plugin/csi.sock
           volumeMounts:
-            - name: csi-sock
-              mountPath: /plugin/csi.sock
+            - name: plugin-dir
+              mountPath: /plugin
       volumes:
-        - name: csi-sock
+        - name: plugin-dir
           hostPath:
-            path: /var/lib/kubelet/plugins_registry/kadalu/csi.sock
-            type: Socket
+            path: /var/lib/kubelet/plugins_registry/kadalu
+            type: Directory
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -76,11 +76,11 @@ spec:
             - tcp-listen:10001,fork,reuseaddr
             - unix-connect:/plugin/csi.sock
           volumeMounts:
-            - name: csi-sock
-              mountPath: /plugin/csi.sock
+            - name: plugin-dir
+              mountPath: /plugin
       volumes:
-        - name: csi-sock
+        - name: plugin-dir
           hostPath:
             # UID of the POD should be replaced before deployment
-            path: '/var/lib/kubelet/pods/POD_UID/volumes/kubernetes.io~empty-dir/socket-dir/csi.sock'
-            type: Socket
+            path: '/var/lib/kubelet/pods/POD_UID/volumes/kubernetes.io~empty-dir/socket-dir'
+            type: Directory

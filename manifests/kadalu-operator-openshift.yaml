@@ -342,3 +342,5 @@ spec:
               value: "openshift"
             - name: VERBOSE
               value: "no"
+            - name: DEPLOY_SOCAT
+              value: "no"

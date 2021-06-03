@@ -5,6 +5,7 @@
 replicaCount: 1
 kubernetesDistro: kubernetes
 verbose: 'no'
+deploy_socat: 'no'
 
 image:
   repository: kadalu/kadalu-operator
