@@ -561,7 +561,7 @@ def handle_added(core_v1_client, obj):
 
     # Generate Node ID for each storage device.
     for idx, _ in enumerate(obj["spec"]["storage"]):
-        obj["spec"]["storage"][idx]["node_id"] = str(uuid.uuid1())
+        obj["spec"]["storage"][idx]["node_id"] = "node-%d" % idx
 
     update_config_map(core_v1_client, obj)
     deploy_server_pods(obj)
@@ -586,15 +586,6 @@ def handle_modified(core_v1_client, obj):
         # Modification of 'External' volume type is not supported
         logging.info(logf(
             "Modification of 'External' volume type is not supported",
-            storagename=volname
-        ))
-        return
-
-    # It doesn't make sense to support Replica1 also in this operation.
-    if voltype == VOLUME_TYPE_REPLICA_1:
-        # Modification of 'External' volume type is not supported
-        logging.info(logf(
-            "Modification of '%s' volume type is not supported" % VOLUME_TYPE_REPLICA_1,
             storagename=volname
         ))
         return
@@ -624,7 +615,7 @@ def handle_modified(core_v1_client, obj):
 
     # Set Node ID for each storage device from configmap
     for idx, _ in enumerate(obj["spec"]["storage"]):
-        obj["spec"]["storage"][idx]["node_id"] = cfgmap["bricks"][idx]["node_id"]
+        obj["spec"]["storage"][idx]["node_id"] = "node-%d" % idx
 
     # Add new entry in the existing config map
     update_config_map(core_v1_client, obj)
