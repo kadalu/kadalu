@@ -311,3 +311,5 @@ spec:
               value: "microk8s"
             - name: VERBOSE
               value: "no"
+            - name: DEPLOY_SOCAT
+              value: "no"
