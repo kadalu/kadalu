@@ -46,7 +46,7 @@ If you are interested in financial donation to the project, or to the developers
 
 ## Helm support
 
-`helm install kadalu --namespace kadalu --create-namespace https://github.com/kadalu/kadalu/releases/download/<release>/kadalu-helm-chart.tgz --set-string kubernetesDistro=$K8S_DIST`
+`helm install kadalu --namespace kadalu --create-namespace https://github.com/kadalu/kadalu/releases/latest/download/kadalu-helm-chart.tgz --set-string kubernetesDistro=$K8S_DIST`
 
 Where `K8S_DIST` can be one of below values:
 - kubernetes
