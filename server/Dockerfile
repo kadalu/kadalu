@@ -1,6 +1,10 @@
-FROM kadalu/builder:latest as builder
+ARG builder_version="latest"
+
+FROM kadalu/builder:${builder_version} as builder
 
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
+
+RUN python3 -m pip install pyxattr
 
 FROM ubuntu:20.04 as prod
 
@@ -18,7 +22,7 @@ RUN apt-get update -yq && \
     rm -rf /var/lib/apt/lists/*
 
 # copy pyxattr installed in pypi_source image
-COPY --from=kadalu/pypi_source:latest /usr/local/lib/python3.8/dist-packages /kadalu/lib/python3.8/site-packages/
+COPY --from=builder /usr/local/lib/python3.8/dist-packages /kadalu/lib/python3.8/site-packages/
 
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
 RUN mkdir -p /var/run/gluster /var/log/glusterfs

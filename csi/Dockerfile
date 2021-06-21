@@ -1,8 +1,10 @@
-FROM kadalu/builder:latest as builder
+ARG builder_version="latest"
+
+FROM kadalu/builder:${builder_version} as builder
 
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
 
-RUN python3 -m pip install googleapis-common-protos
+RUN python3 -m pip install googleapis-common-protos pyxattr grpcio
 
 FROM ubuntu:20.04 as prod
 ENV DEBIAN_FRONTEND=noninteractive
@@ -21,7 +23,7 @@ COPY --from=builder /opt /opt
 COPY --from=builder /kadalu /kadalu
 
 # copy grpcio installed in pypi_source image
-COPY --from=kadalu/pypi_source:latest /usr/local/lib/python3.8/dist-packages /kadalu/lib/python3.8/site-packages/
+COPY --from=builder /usr/local/lib/python3.8/dist-packages /kadalu/lib/python3.8/site-packages/
 
 RUN mkdir -p /kadalu/volfiles /kadalu/templates
 RUN mkdir -p /var/log/glusterfs /var/run/gluster
