@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.3] - 2021-06-21
+
+- Improvements to the External GlusterFS Volumes support.
+- Added support for Disperse Storage Type.
+- Added support for archiving the PVCs on delete.
+- kubectl-kadalu CLI enhanced to handle kadalu format.
+- kubectl-kadalu CLI enhanced to handle PVCs archive.
+- Fixed Armv7 kubectl binary issue.
+- Added support for Volume ID in Storage config to
+  enable reusing/migrating the Storage backend.
+- Fixed issue with listing Storages and deleting external volumes
+- Added support for decommisioning Storage units.
+- Added support for Distributed Volumes for external.
+  Volumes by enhancing quota integration over ssh.
+- Enabled migration support from Replica1 to Replica2/3.
+
 ## [0.8.2] - 2021-05-02
 ### Added
 - Enhanced provisioner to check free space before provisioning from External Storage.
@@ -221,7 +237,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.2...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.3...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
@@ -239,3 +255,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.8.0]: https://github.com/kadalu/kadalu/compare/0.7.7...0.8.0
 [0.8.1]: https://github.com/kadalu/kadalu/compare/0.8.0...0.8.1
 [0.8.2]: https://github.com/kadalu/kadalu/compare/0.8.1...0.8.2
+[0.8.3]: https://github.com/kadalu/kadalu/compare/0.8.2...0.8.3
