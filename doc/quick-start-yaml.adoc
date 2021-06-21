@@ -4,7 +4,7 @@
 
 [source,console]
 ----
-$ kubectl apply -f https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests/kadalu-operator.yaml
+$ kubectl apply -f https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator.yaml
 ----
 
 You have different flavors of operator yaml files available. Mainly for kubernetes (default), openshift, RKE, Microk8s. Find the relevant file from https://github.com/kadalu/kadalu/tree/devel/manifests[here]. Just remember to use the raw file as argument to `kubectl`.

@@ -34,11 +34,11 @@ DOCKER_USER=aravindavk KADALU_VERSION=0.7.0 make release
    release notes, update the Operator manifest file link as,
 +
 ----
-https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests/kadalu-operator-<version>.yaml
+https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator.yaml
 ----
 +
 For example,
 +
 ----
-kubectl apply -f https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests/kadalu-operator-0.7.0.yaml
+kubectl apply -f https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator.yaml
 ----

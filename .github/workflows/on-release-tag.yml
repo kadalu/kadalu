@@ -61,11 +61,6 @@ jobs:
         tag: ${{ github.ref }}
         overwrite: true
         file_glob: true
-    - name: Copy manifests and kubectl-kadalu to output dir
-      run: |
-          mkdir -p $HOME/output/downloads
-          cp -r cli/build/kubectl-kadalu* $HOME/output/downloads/
-          cp -r manifests/* $HOME/output/downloads/
     - uses: actions/checkout@v2
     - name: Generate tgz archive of Helm Chart
       run: |
@@ -78,14 +73,6 @@ jobs:
         tag: ${{ github.ref }}
         overwrite: true
         file_glob: true
-    - name: Copy helm chart to output directory
-      run: |
-          cp helm/kadalu-helm-chart.tgz $HOME/output/downloads/helm-chart.tgz
-    - name: Deploy
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./output
 
   multi-arch-build-for-release:
     runs-on: ubuntu-latest
