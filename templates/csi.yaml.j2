@@ -115,7 +115,7 @@ spec:
               mountPath: /var/log/gluster
 {% if deploy_socat == "yes" %}
         - name: csi-socat
-          image: alpine/socat:1.0.5
+          image: docker.io/alpine/socat:1.0.5
           args:
             - tcp-listen:10000,fork,reuseaddr
             - unix-connect:/plugin/csi.sock
@@ -126,7 +126,7 @@ spec:
               mountPath: /plugin
 {% endif %}
         - name: kadalu-logging
-          image: busybox
+          image: docker.io/library/busybox
           command: ["/bin/sh"]
           args: ["-c", "while true; do logcnt=$(/bin/ls /var/log/gluster/ | wc -l); if [ ${logcnt} -gt 0 ]; then break; fi; sleep 5; done; tail -f /var/log/gluster/*.log"]
           volumeMounts:
@@ -431,7 +431,7 @@ spec:
               readOnly: true
               mountPath: "/etc/secret-volume"
         - name: kadalu-logging
-          image: busybox
+          image: docker.io/library/busybox
           command: ["/bin/sh"]
           args: ["-c", "while true; do logcnt=$(/bin/ls /var/log/gluster/ | wc -l); if [ ${logcnt} -gt 0 ]; then break; fi; sleep 5; done; tail -f /var/log/gluster/*.log"]
           volumeMounts:
