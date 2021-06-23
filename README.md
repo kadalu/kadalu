@@ -7,28 +7,33 @@
 
 ## What is Kadalu ?
 
-[Kadalu](https://kadalu.io) is a project which started as an idea to make glusterfs's deployment and management simpler in kubernetes. The project contains operator to deploy CSI pods, and gluster storage nodes. All of gluster management is done natively in kubernetes without glusterfs's `glusterd` and `gluster` CLI tools.
+[Kadalu](https://kadalu.io) is a project to provide Persistent Storage in container ecosystem (like kubernetes, openshift, RKE, etc etc). Kadalu operator deploys CSI pods, and **gluster storage** pods as per the config. You would get your PVs served through APIs implemented in CSI.
 
-Try it in few minutes to understand more!
+## Get Started
 
-## Documentation
+Getting started is made easy to copy paste the below commands.
 
-Start with our [Quick Start Guide](doc/quick-start.adoc). More documentation is at [`doc/` folder](doc/).
+```console
+curl -LO https://github.com/kadalu/kadalu/releases/latest/download/kubectl-kadalu
+chmod +x ./kubectl-kadalu
+sudo mv ./kubectl-kadalu /usr/local/bin/kubectl-kadalu
+kubectl-kadalu version
+kubectl kadalu install
+```
+
+The above will deploy the kadalu operator and CSI pods. Once done, you can provide storage to kadalu operator to manage.
+
+```
+$ kubectl kadalu storage-add storage-pool-1 --device kube1:/dev/sdc
+```
+
+Note that, in above command, `kube1` is the node which is providing `/dev/sdc` as a storage to kadalu. In your setup, this may be different.
 
 If you made some errors in setup, and want to start fresh, check this [cleanup script](extras/scripts/cleanup), and run it to remove kadalu namespace completely.
 
-Links to blogs and news updates are provided in [our website](https://kadalu.io).
-
-## Talks and Blog posts
-
-1. [Blog] [Gluster’s management in k8s](https://medium.com/@tumballi/glusters-management-in-k8s-13020a561962)
-2. [Blog] [Gluster and Kubernetes - Portmap](https://aravindavk.in/blog/gluster-and-k8s-portmap/)
-3. [Talk] [DevConf India - Rethinking Gluster Management using k8s](https://devconfin19.sched.com/event/RVPw/rethinking-gluster-management-using-k8s) ([Check slides here](doc/rethinking-gluster-management-using-k8s.pdf))
-4. [Demo] Asciinema recording - [Kadalu Setup](https://asciinema.org/a/259949)
-5. [Demo] Asciinema recording - [KaDalu CSI to claim Persistent Volumes](https://asciinema.org/a/259951)
-6. [Blog] [kaDalu - Ocean of opportunities](https://medium.com/@tumballi/kadalu-ocean-of-potential-in-k8s-storage-a07be1b8b961?source=friends_link&sk=d2499bc1e7433fd18c93c34c796e1a11&utm_source=github)
-
-For more blog posts, see [kadalu.io/blog](https://kadalu.io/blog)
+```
+curl -s https://raw.githubusercontent.com/kadalu/kadalu/devel/extras/scripts/cleanup | bash
+```
 
 
 ## Reach out
@@ -61,9 +66,7 @@ NOTE: We are still evolving with Helm chart based development, and happy to get 
 
 ## Platform supports
 
-We support x86_64 (amd64) by default (all releases, `devel` and `latest` tags), and in release 0.7.7 tag arm64 and arm/v7 is supported. If you want to try arm64 or arm/v7 in latest form try below command to start the operator
-
-`kubectl apply -f https://raw.githubusercontent.com/kadalu/kadalu/arm/manifests/kadalu-operator.yaml`
+We support x86_64 (amd64) by default (all releases, `devel` and `latest` tags), and in release 0.8.3 tag arm64 and arm/v7 is supported.
 
 For any other platforms, we need users to confirm it works by building images locally. Once it works, we can include it in our automated scripts. You can confirm the build by command `make release` after checkout of the repository in the respective platform.
 
@@ -75,11 +78,7 @@ One is free to pronounce 'kaDalu' as they wish. Below is a sample of how we pron
 [<img src="https://raw.githubusercontent.com/kadalu/kadalu/devel/extras/assets/speaker.svg" width="64"/>](https://raw.githubusercontent.com/kadalu/kadalu/devel/extras/assets/kadalu_01.wav)
 
 
-## Stargazers over time
-
-[![Stargazers over time](https://starchart.cc/kadalu/kadalu.svg)](https://starchart.cc/kadalu/kadalu)
-
 >
->**Note 1:** If you like the project, give a github star :-)
+>**Request:** If you like the project, give a github star :-)
 >
 

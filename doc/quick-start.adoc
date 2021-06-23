@@ -8,41 +8,26 @@ Download the latest release of Kadalu Kubectl plugin using,
 ----
 
 curl -LO https://github.com/kadalu/kadalu/releases/latest/download/kubectl-kadalu
-----
-
-Make the kubectl binary executable.
-
-[source,console]
-----
-$ chmod +x ./kubectl-kadalu
-----
-
-Move the binary in to your PATH.
-
-[source,console]
-----
-$ sudo mv ./kubectl-kadalu /usr/local/bin/kubectl-kadalu
+chmod +x ./kubectl-kadalu
+sudo mv ./kubectl-kadalu /usr/local/bin/kubectl-kadalu
 ----
 
 Note: In the case of Openshift,
 
 [source,console]
 ----
-$ sudo mv ./kubectl-kadalu /usr/local/bin/oc-kadalu
+curl -LO https://github.com/kadalu/kadalu/releases/latest/download/kubectl-kadalu
+chmod +x ./kubectl-kadalu
+sudo mv ./kubectl-kadalu /usr/local/bin/oc-kadalu
 ----
 
-Test to ensure the version you installed is up-to-date
 
-[source,console]
-----
-$ kubectl-kadalu version
-----
-
-Deploy KaDalu Operator using,
+Test the version you installed is up-to-date and install Operator.
 
 [source,console]
 ----
-$ kubectl kadalu install
+kubectl kadalu version
+kubectl kadalu install
 ----
 
 In the case of OpenShift, deploy Kadalu Operator using,
@@ -65,12 +50,11 @@ $ sudo dd if=/dev/zero of=/dev/sdc bs=512 count=1
 $ sudo mkfs.xfs /dev/sdc
 ----
 
-Once the device is ready, add it to kadalu pool.
+Once the device is ready, add it to kadalu pool. (note: `kube1` below is hostname, check yours by `kubectl get nodes`).
 
 [source,console]
 ----
-$ kubectl kadalu storage-add storage-pool-1 \
-    --device kube1:/dev/sdc
+$ kubectl kadalu storage-add storage-pool-1 --device kube1:/dev/sdc
 ----
 
 
@@ -91,73 +75,5 @@ csi-provisioner-0                3/3     Running   0          30m
 operator-6dfb65dcdd-r664t        1/1     Running   0          30m
 ----
 
-== CSI to claim Persistent Volumes (PVC/PV)
 
-Now we are ready to create Persistent volumes and use them in application Pods.
-
-[source,yaml]
-----
-# File: sample-pvc.yaml
----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: pv1
-spec:
-  storageClassName: kadalu.replica1
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 1Gi
-----
-
-Create PVC using,
-
-[source,console]
-----
-$ kubectl apply -f sample-pvc.yaml
-persistentvolumeclaim/pv1 created
-----
-
-and check the status of PVC using,
-
-[source,console]
-----
-$ kubectl get pvc
-NAME   STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS     AGE
-pv1    Bound    pvc-8cbe80f1-428f-11e9-b31e-525400f59aef   1Gi        RWO            kadalu.replica1  42s
-----
-
-Now, this PVC is ready to be consumed in your application pod. You can see the sample usage of PVC in an application pod by below:
-
-[source,yaml]
-----
-# File: sample-app.yaml
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: pod1
-  labels:
-    app: sample-app
-spec:
-  containers:
-  - name: sample-app
-    image: docker.io/kadalu/sample-pv-check-app:latest
-    imagePullPolicy: IfNotPresent
-    volumeMounts:
-    - mountPath: "/mnt/pv"
-      name: csivol
-  volumes:
-  - name: csivol
-    persistentVolumeClaim:
-      claimName: pv1
-  restartPolicy: OnFailure
-----
-
-[source,console]
-----
-$ kubectl apply -f sample-app.yaml
-pod1 created
-----
+After this, go ahead and link:create-pvc.adoc[create your PVC and attach] it to other applications.
