@@ -9,7 +9,9 @@
 4. [Demo] link:https://asciinema.org/a/259949[Asciinema recording - Kadalu Setup]
 5. [Demo] link:https://asciinema.org/a/259951[Asciinema recording - KaDalu CSI to claim Persistent Volumes]
 
-Links to blogs and news updates are provided in link:https://kadalu.io[Our Website]
+Links to blogs and news updates are provided in link:https://kadalu.io[Our Website].
+
+One more blog to check is link:https://thoughtexpo.com/tags/kadalu/[Blogs @ ThoughtExpo]
 
 
 == User Guide
