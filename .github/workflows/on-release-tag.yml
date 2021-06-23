@@ -1,4 +1,4 @@
-name: Release
+name: "On Release"
 
 on:
   push:
@@ -112,6 +112,7 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: |
+            docker.io/kadalu/builder:${{ steps.vars.outputs.tag }}
             docker.io/kadalu/builder:latest
           build-args: |
             version=${{ steps.vars.outputs.tag }}
@@ -132,6 +133,7 @@ jobs:
             docker.io/kadalu/kadalu-csi:${{ steps.vars.outputs.tag }}
             docker.io/kadalu/kadalu-csi:latest
           build-args: |
+            builder_version=${{ steps.vars.outputs.tag }}
             version=${{ steps.vars.outputs.tag }}
             builddate=`date +%Y-%m-%d-%H:%M`
           secrets: |
@@ -150,6 +152,7 @@ jobs:
             docker.io/kadalu/kadalu-operator:${{ steps.vars.outputs.tag }}
             docker.io/kadalu/kadalu-operator:latest
           build-args: |
+            builder_version=${{ steps.vars.outputs.tag }}
             version=${{ steps.vars.outputs.tag }}
             builddate=`date +%Y-%m-%d-%H:%M`
           secrets: |
@@ -168,6 +171,7 @@ jobs:
             docker.io/kadalu/kadalu-server:${{ steps.vars.outputs.tag }}
             docker.io/kadalu/kadalu-server:latest
           build-args: |
+            builder_version=${{ steps.vars.outputs.tag }}
             version=${{ steps.vars.outputs.tag }}
             builddate=`date +%Y-%m-%d-%H:%M`
           secrets: |

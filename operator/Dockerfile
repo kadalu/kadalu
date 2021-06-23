@@ -1,4 +1,6 @@
-FROM kadalu/builder:latest as builder
+ARG builder_version="latest"
+
+FROM kadalu/builder:${builder_version} as builder
 
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
 
