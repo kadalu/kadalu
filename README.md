@@ -13,30 +13,27 @@
 
 Getting started is made easy to copy paste the below commands.
 
-[source,console]
-----
+```console
 curl -LO https://github.com/kadalu/kadalu/releases/latest/download/kubectl-kadalu
 chmod +x ./kubectl-kadalu
 sudo mv ./kubectl-kadalu /usr/local/bin/kubectl-kadalu
 kubectl-kadalu version
 kubectl kadalu install
-----
+```
 
 The above will deploy the kadalu operator and CSI pods. Once done, you can provide storage to kadalu operator to manage.
 
-[source,console]
-----
+```
 $ kubectl kadalu storage-add storage-pool-1 --device kube1:/dev/sdc
-----
+```
 
 Note that, in above command, `kube1` is the node which is providing `/dev/sdc` as a storage to kadalu. In your setup, this may be different.
 
 If you made some errors in setup, and want to start fresh, check this [cleanup script](extras/scripts/cleanup), and run it to remove kadalu namespace completely.
 
-[source,console]
-----
+```
 curl -s https://raw.githubusercontent.com/kadalu/kadalu/devel/extras/scripts/cleanup | bash
-----
+```
 
 
 ## Reach out
