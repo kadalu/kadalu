@@ -516,8 +516,6 @@ def handle_added(core_v1_client, obj):
     """
     New Volume is requested. Update the configMap and deploy
     """
-    # Storage Class
-    deploy_storage_class(obj)
 
     if not validate_volume_request(obj):
         # TODO: Delete Custom resource
@@ -526,6 +524,9 @@ def handle_added(core_v1_client, obj):
             yaml=obj
         ))
         return
+
+    # Storage Class
+    deploy_storage_class(obj)
 
     # Ignore if already deployed
     volname = obj["metadata"]["name"]
