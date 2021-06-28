@@ -214,13 +214,10 @@ def validate_volume_request(obj):
                       " specified")
         return False
 
-    # should'nt this come under disperse volume?? Not replica??
     if subvol_bricks_count > 1:
-        # Why not range(0, 1): since / is always == 1 ??
         for i in range(0, int(len(bricks) / subvol_bricks_count)):
             decommissioned = ""
             for k in range(0, subvol_bricks_count):
-                # why not brick_idx = k since value is always same, and i always 0
                 brick_idx = (i * subvol_bricks_count) + k
                 brick = bricks[brick_idx]
                 decom = brick.get("decommissioned", "")
@@ -587,11 +584,6 @@ def handle_modified(core_v1_client, obj):
     state is changed to maintenance
     """
     # TODO: Handle Volume maintenance mode
-
-    logging.info(logf(
-        "Inside handle modified",
-        obj=obj
-    ))
 
     volname = obj["metadata"]["name"]
 
@@ -1003,8 +995,10 @@ def deploy_storage_class(obj):
                          type=obj["spec"]["type"]))
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", custom_sc_filename)
         logging.info(logf("Deployed custom StorageClass", manifest=custom_sc_filename))
-    except:
-        utils.command_error(cmd, err.stderr)
+    except CommandError as err:
+        logging.error(logf(
+            "Failed to apply custom storag class",
+            error=err))
 
 
 def main():
@@ -1024,9 +1018,6 @@ def main():
 
     # CSI Pods
     deploy_csi_pods(core_v1_client)
-
-    # # Storage Class
-    # deploy_storage_class()
 
     if upgrade:
         logging.info(logf("Upgrading to ", version=VERSION))
