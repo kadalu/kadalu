@@ -3,7 +3,7 @@
 
 == Talks and Blog posts
 
-1. [Blog] link:https://medium.com/@tumballi/glusters-management-in-k8s-13020a561962[Gluster¡¯s management in k8s]
+1. [Blog] link:https://medium.com/@tumballi/glusters-management-in-k8s-13020a561962[Gluster's management in k8s]
 2. [Blog] link:https://aravindavk.in/blog/gluster-and-k8s-portmap/[Gluster and Kubernetes - Portmap]
 3. [Talk] link:rethinking-gluster-management-using-k8s.pdf[Rethinking Gluster Management using k8s]
 4. [Demo] link:https://asciinema.org/a/259949[Asciinema recording - Kadalu Setup]
