@@ -19,6 +19,7 @@ from kubernetes import client, config, watch
 from urllib3.exceptions import ProtocolError
 from utils import CommandError
 from utils import execute as utils_execute
+from scutils import to_sc_yaml
 
 NAMESPACE = os.environ.get("KADALU_NAMESPACE", "kadalu")
 VERSION = os.environ.get("KADALU_VERSION", "latest")
@@ -213,10 +214,13 @@ def validate_volume_request(obj):
                       " specified")
         return False
 
+    # should'nt this come under disperse volume?? Not replica??
     if subvol_bricks_count > 1:
+        # Why not range(0, 1): since / is always == 1 ??
         for i in range(0, int(len(bricks) / subvol_bricks_count)):
             decommissioned = ""
             for k in range(0, subvol_bricks_count):
+                # why not brick_idx = k since value is always same, and i always 0
                 brick_idx = (i * subvol_bricks_count) + k
                 brick = bricks[brick_idx]
                 decom = brick.get("decommissioned", "")
@@ -515,6 +519,8 @@ def handle_added(core_v1_client, obj):
     """
     New Volume is requested. Update the configMap and deploy
     """
+    # Storage Class
+    deploy_storage_class(obj)
 
     if not validate_volume_request(obj):
         # TODO: Delete Custom resource
@@ -581,6 +587,11 @@ def handle_modified(core_v1_client, obj):
     state is changed to maintenance
     """
     # TODO: Handle Volume maintenance mode
+
+    logging.info(logf(
+        "Inside handle modified",
+        obj=obj
+    ))
 
     volname = obj["metadata"]["name"]
 
@@ -955,9 +966,10 @@ def deploy_config_map(core_v1_client):
     return uid, upgrade
 
 
-def deploy_storage_class():
-    """Deploys the default storage class for KaDalu if not exists"""
+def deploy_storage_class(obj):
+    """Deploys the default and custom storage class for KaDalu if not exists"""
 
+    # Deploy defalut Storage Class
     api_instance = client.StorageV1Api()
     scs = api_instance.list_storage_class()
     sc_names = []
@@ -974,10 +986,25 @@ def deploy_storage_class():
             logging.info(logf("StorageClass already present, continuing with Apply",
                               manifest=filename))
 
-        # Deploy Storage Class
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
+
+    # Deploy custom Storage Class
+    try:
+        hostvol_name = obj["metadata"]["name"]
+        sc_yaml_content = to_sc_yaml(obj)
+        custom_sc_filename = os.path.join(MANIFESTS_DIR, "storageclass-%s.yaml" % hostvol_name)
+        with open(custom_sc_filename, "w") as sc_file_pointer:
+            sc_file_pointer.write(sc_yaml_content)
+
+        logging.info(logf("Applying custom StorageClass",
+                         hostvol=hostvol_name,
+                         type=obj["spec"]["type"]))
+        lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", custom_sc_filename)
+        logging.info(logf("Deployed custom StorageClass", manifest=custom_sc_filename))
+    except:
+        utils.command_error(cmd, err.stderr)
 
 
 def main():
@@ -998,8 +1025,8 @@ def main():
     # CSI Pods
     deploy_csi_pods(core_v1_client)
 
-    # Storage Class
-    deploy_storage_class()
+    # # Storage Class
+    # deploy_storage_class()
 
     if upgrade:
         logging.info(logf("Upgrading to ", version=VERSION))

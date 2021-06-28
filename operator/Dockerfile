@@ -41,6 +41,7 @@ COPY lib/kadalulib.py                       /kadalu/kadalulib.py
 COPY cli/kubectl_kadalu/utils.py            /kadalu/utils.py
 COPY operator/main.py                       /kadalu/
 COPY operator/start.py                      /kadalu/
+COPY operator/scutils.py                    /kadalu/
 COPY cli/build/kubectl-kadalu               /usr/bin/kubectl-kadalu
 COPY lib/startup.sh                         /kadalu/startup.sh
 
