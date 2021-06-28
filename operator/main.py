@@ -666,18 +666,16 @@ def handle_deleted(core_v1_client, obj):
 
     elif pv_count == 0:
 
-        if storage_info_data.get("type") == "External":
+        hostvol_type = storage_info_data.get("type")
+
+        if hostvol_type == "External":
             # We can't delete external volume but cleanup StorageClass and
             # Configmap
-            volname = "kadalu.external." + volname
-            lib_execute(KUBECTL_CMD, DELETE_CMD, "sc", volname)
-            logging.info(logf(
-                "Deleted Storage class",
-                volname=volname,
-            ))
+            delete_storage_class(volname, hostvol_type)
             delete_config_map(core_v1_client, obj)
 
         else:
+            delete_storage_class(volname, hostvol_type)
             delete_server_pods(storage_info_data, obj)
             delete_config_map(core_v1_client, obj)
 
@@ -844,6 +842,26 @@ def delete_config_map(core_v1_client, obj):
         volname=volname
     ))
 
+def delete_storage_class(hostvol_name, hostvol_type):
+    """
+    Deletes deployed External and Custom StorageClass
+    """
+
+    if hostvol_type == "External":
+        external_sc_name = "kadalu.external." + hostvol_name
+        lib_execute(KUBECTL_CMD, DELETE_CMD, "sc", external_sc_name)
+        logging.info(logf(
+            "Deleted External Storage class",
+            volname=hostvol_name
+        ))
+    else:
+        custom_sc_name = "kadalu." + hostvol_name
+        lib_execute(KUBECTL_CMD, DELETE_CMD, "sc", custom_sc_name)
+        logging.info(logf(
+            "Deleted custom Storage class",
+            volname=hostvol_name
+        ))
+
 
 def watch_stream(core_v1_client, k8s_client):
     """
@@ -998,7 +1016,7 @@ def deploy_storage_class(obj):
         logging.info(logf("Deployed custom StorageClass", manifest=custom_sc_filename))
     except CommandError as err:
         logging.error(logf(
-            "Failed to apply custom storag class",
+            "Failed to apply custom storage class",
             error=err))
 
 
