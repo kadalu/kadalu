@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import socket
+import time
 import uuid
 
 import urllib3
@@ -835,42 +836,49 @@ def delete_config_map(core_v1_client, obj):
     ))
 
 
+def watch_stream(core_v1_client, k8s_client):
+    """
+    Watches kubernetes event stream for kadalustorages in Kadalu namespace
+    """
+    crds = client.CustomObjectsApi(k8s_client)
+    k8s_watch = watch.Watch()
+    resource_version = ""
+    for event in k8s_watch.stream(crds.list_cluster_custom_object,
+                                  "kadalu-operator.storage",
+                                  "v1alpha1",
+                                  "kadalustorages",
+                                  resource_version=resource_version):
+        obj = event["object"]
+        operation = event['type']
+        spec = obj.get("spec")
+        if not spec:
+            continue
+        metadata = obj.get("metadata")
+        resource_version = metadata['resourceVersion']
+        logging.debug(logf("Event", operation=operation, object=repr(obj)))
+        if operation == "ADDED":
+            handle_added(core_v1_client, obj)
+        elif operation == "MODIFIED":
+            handle_modified(core_v1_client, obj)
+        elif operation == "DELETED":
+            handle_deleted(core_v1_client, obj)
+
+
 def crd_watch(core_v1_client, k8s_client):
     """
     Watches the CRD to provision new PV Hosting Volumes
     """
     while True:
         try:
-            crds = client.CustomObjectsApi(k8s_client)
-            k8s_watch = watch.Watch()
-            resource_version = ""
-            for event in k8s_watch.stream(crds.list_cluster_custom_object,
-                                          "kadalu-operator.storage",
-                                          "v1alpha1",
-                                          "kadalustorages",
-                                          resource_version=resource_version):
-                obj = event["object"]
-                operation = event['type']
-                spec = obj.get("spec")
-                if not spec:
-                    continue
-                metadata = obj.get("metadata")
-                resource_version = metadata['resourceVersion']
-                logging.debug(
-                    logf("Event", operation=operation, object=repr(obj)))
-                if operation == "ADDED":
-                    handle_added(core_v1_client, obj)
-                elif operation == "MODIFIED":
-                    handle_modified(core_v1_client, obj)
-                elif operation == "DELETED":
-                    handle_deleted(core_v1_client, obj)
+            watch_stream(core_v1_client, k8s_client)
         except ProtocolError:
             # It might so happen that this'll be logged for every hit in k8s
-            # stream and better to log at debug level
+            # event stream in kadalu namespace and better to log at debug level
             logging.debug(
                 logf(
                     "Watch connection broken and restarting watch on the stream"
                 ))
+            time.sleep(30)
 
 
 def deploy_csi_pods(core_v1_client):
