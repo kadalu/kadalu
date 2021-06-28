@@ -15,6 +15,7 @@ from jinja2 import Template
 from kadalulib import execute as lib_execute
 from kadalulib import logf, logging_setup, send_analytics_tracker
 from kubernetes import client, config, watch
+from urllib3.exceptions import ProtocolError
 from utils import CommandError
 from utils import execute as utils_execute
 
@@ -838,28 +839,38 @@ def crd_watch(core_v1_client, k8s_client):
     """
     Watches the CRD to provision new PV Hosting Volumes
     """
-    crds = client.CustomObjectsApi(k8s_client)
-    k8s_watch = watch.Watch()
-    resource_version = ""
-    for event in k8s_watch.stream(crds.list_cluster_custom_object,
-                                  "kadalu-operator.storage",
-                                  "v1alpha1",
-                                  "kadalustorages",
-                                  resource_version=resource_version):
-        obj = event["object"]
-        operation = event['type']
-        spec = obj.get("spec")
-        if not spec:
-            continue
-        metadata = obj.get("metadata")
-        resource_version = metadata['resourceVersion']
-        logging.debug(logf("Event", operation=operation, object=repr(obj)))
-        if operation == "ADDED":
-            handle_added(core_v1_client, obj)
-        elif operation == "MODIFIED":
-            handle_modified(core_v1_client, obj)
-        elif operation == "DELETED":
-            handle_deleted(core_v1_client, obj)
+    while True:
+        try:
+            crds = client.CustomObjectsApi(k8s_client)
+            k8s_watch = watch.Watch()
+            resource_version = ""
+            for event in k8s_watch.stream(crds.list_cluster_custom_object,
+                                          "kadalu-operator.storage",
+                                          "v1alpha1",
+                                          "kadalustorages",
+                                          resource_version=resource_version):
+                obj = event["object"]
+                operation = event['type']
+                spec = obj.get("spec")
+                if not spec:
+                    continue
+                metadata = obj.get("metadata")
+                resource_version = metadata['resourceVersion']
+                logging.debug(
+                    logf("Event", operation=operation, object=repr(obj)))
+                if operation == "ADDED":
+                    handle_added(core_v1_client, obj)
+                elif operation == "MODIFIED":
+                    handle_modified(core_v1_client, obj)
+                elif operation == "DELETED":
+                    handle_deleted(core_v1_client, obj)
+        except ProtocolError:
+            # It might so happen that this'll be logged for every hit in k8s
+            # stream and better to log at debug level
+            logging.debug(
+                logf(
+                    "Watch connection broken and restarting watch on the stream"
+                ))
 
 
 def deploy_csi_pods(core_v1_client):
