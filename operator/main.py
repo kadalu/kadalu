@@ -747,7 +747,7 @@ def get_num_pvs(storage_info_data):
     except CommandError as msg:
         # If storage is created but no PV is carved then pv_stats table is not
         # created in SQLITE3
-        if "no such table" in msg:
+        if msg.stderr.find("no such table") != -1:
             # We are good to delete server pods
             return 0
         logging.error(
