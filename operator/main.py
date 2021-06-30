@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import socket
+import time
 import uuid
 
 import urllib3
@@ -15,6 +16,7 @@ from jinja2 import Template
 from kadalulib import execute as lib_execute
 from kadalulib import logf, logging_setup, send_analytics_tracker
 from kubernetes import client, config, watch
+from urllib3.exceptions import ProtocolError
 from utils import CommandError
 from utils import execute as utils_execute
 
@@ -839,9 +841,9 @@ def delete_config_map(core_v1_client, obj):
     ))
 
 
-def crd_watch(core_v1_client, k8s_client):
+def watch_stream(core_v1_client, k8s_client):
     """
-    Watches the CRD to provision new PV Hosting Volumes
+    Watches kubernetes event stream for kadalustorages in Kadalu namespace
     """
     crds = client.CustomObjectsApi(k8s_client)
     k8s_watch = watch.Watch()
@@ -865,6 +867,23 @@ def crd_watch(core_v1_client, k8s_client):
             handle_modified(core_v1_client, obj)
         elif operation == "DELETED":
             handle_deleted(core_v1_client, obj)
+
+
+def crd_watch(core_v1_client, k8s_client):
+    """
+    Watches the CRD to provision new PV Hosting Volumes
+    """
+    while True:
+        try:
+            watch_stream(core_v1_client, k8s_client)
+        except ProtocolError:
+            # It might so happen that this'll be logged for every hit in k8s
+            # event stream in kadalu namespace and better to log at debug level
+            logging.debug(
+                logf(
+                    "Watch connection broken and restarting watch on the stream"
+                ))
+            time.sleep(30)
 
 
 def deploy_csi_pods(core_v1_client):
