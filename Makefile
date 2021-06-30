@@ -77,7 +77,7 @@ pylint:
 	@pylint --disable=W0603 -s n server/glusterutils.py
 	@pylint --disable=W0511,R0911,W0603 -s n csi/controllerserver.py
 	@pylint --disable=W0511 -s n csi/identityserver.py
-	@pylint --disable=W0511 -s n csi/main.py
+	@pylint --disable=W0511,R1732 -s n csi/main.py
 	@pylint --disable=W0511 -s n csi/nodeserver.py
 	@pylint --disable=W0511,C0302 -s n csi/volumeutils.py
 	@pylint --disable=W0511,C0302 -s n operator/main.py
