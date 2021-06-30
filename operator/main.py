@@ -745,6 +745,11 @@ def get_num_pvs(storage_info_data):
         return pv_count
 
     except CommandError as msg:
+        # If storage is created but no PV is carved then pv_stats table is not
+        # created in SQLITE3
+        if 'no such table' in msg:
+            # We are good to delete server pods
+            return 0
         logging.error(
             logf("Failed to get size details of the "
                  "storage \"%s\"" % volname,
