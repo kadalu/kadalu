@@ -4,7 +4,9 @@ FROM kadalu/builder:${builder_version} as builder
 
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
 
-RUN python3 -m pip install pyxattr
+COPY server-requirements.txt /tmp/
+
+RUN python3 -m pip install -r /tmp/server-requirements.txt
 
 FROM ubuntu:20.04 as prod
 
