@@ -19,7 +19,6 @@ from kubernetes import client, config, watch
 from urllib3.exceptions import ProtocolError
 from utils import CommandError
 from utils import execute as utils_execute
-from scutils import to_sc_yaml
 
 NAMESPACE = os.environ.get("KADALU_NAMESPACE", "kadalu")
 VERSION = os.environ.get("KADALU_VERSION", "latest")
@@ -1002,22 +1001,10 @@ def deploy_storage_class(obj):
         logging.info(logf("Deployed StorageClass", manifest=filename))
 
     # Deploy custom Storage Class
-    try:
-        hostvol_name = obj["metadata"]["name"]
-        sc_yaml_content = to_sc_yaml(obj)
-        custom_sc_filename = os.path.join(MANIFESTS_DIR, "storageclass-%s.yaml" % hostvol_name)
-        with open(custom_sc_filename, "w") as sc_file_pointer:
-            sc_file_pointer.write(sc_yaml_content)
-
-        logging.info(logf("Applying custom StorageClass",
-                         hostvol=hostvol_name,
-                         type=obj["spec"]["type"]))
-        lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", custom_sc_filename)
-        logging.info(logf("Deployed custom StorageClass", manifest=custom_sc_filename))
-    except CommandError as err:
-        logging.error(logf(
-            "Failed to apply custom storage class",
-            error=err))
+    custom_sc_filename = os.path.join(MANIFESTS_DIR, "storageclass.kadalu.custom.yaml")
+    template(custom_sc_filename, hostvol_name=obj["metadata"]["name"], type=obj["spec"]["type"])
+    lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", custom_sc_filename)
+    logging.info(logf("Deployed custom StorageClass", manifest=custom_sc_filename))
 
 
 def main():
