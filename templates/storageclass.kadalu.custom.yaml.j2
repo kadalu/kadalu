@@ -1,0 +1,11 @@
+# -*- mode: yaml -*-
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: kadalu.{{ hostvol_name }}
+provisioner: kadalu
+allowVolumeExpansion: true
+parameters:
+  hostvol_type: {{ type }}
+  storage_name: {{ hostvol_name }}
