@@ -846,6 +846,7 @@ def delete_storage_class(hostvol_name, hostvol_type):
     """
     Deletes deployed External and Custom StorageClass
     """
+
     if hostvol_type == "External":
         external_sc_name = "kadalu.external." + hostvol_name
         lib_execute(KUBECTL_CMD, DELETE_CMD, "sc", external_sc_name)
