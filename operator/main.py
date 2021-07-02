@@ -841,11 +841,11 @@ def delete_config_map(core_v1_client, obj):
         volname=volname
     ))
 
+
 def delete_storage_class(hostvol_name, hostvol_type):
     """
     Deletes deployed External and Custom StorageClass
     """
-
     if hostvol_type == "External":
         external_sc_name = "kadalu.external." + hostvol_name
         lib_execute(KUBECTL_CMD, DELETE_CMD, "sc", external_sc_name)
@@ -996,15 +996,10 @@ def deploy_storage_class(obj):
             logging.info(logf("StorageClass already present, continuing with Apply",
                               manifest=filename))
 
-        template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
+        template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
+                 hostvol_name=obj["metadata"]["name"], type=obj["spec"]["type"])
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
-
-    # Deploy custom Storage Class
-    custom_sc_filename = os.path.join(MANIFESTS_DIR, "storageclass.kadalu.custom.yaml")
-    template(custom_sc_filename, hostvol_name=obj["metadata"]["name"], type=obj["spec"]["type"])
-    lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", custom_sc_filename)
-    logging.info(logf("Deployed custom StorageClass", manifest=custom_sc_filename))
 
 
 def main():
