@@ -998,7 +998,7 @@ def deploy_storage_class(obj):
                               manifest=filename))
 
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
-                 hostvol_name=obj["metadata"]["name"], type=obj["spec"]["type"])
+                 hostvol_name=obj["metadata"]["name"])
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
 
