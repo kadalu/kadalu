@@ -42,7 +42,7 @@ jobs:
           python-version: '3.x'
       - name: Get the CLI build (kubectl-kadalu)
         run: |
-          python -m pip install -r ci_merge-requirements.txt
+          python -m pip install -r requirements/ci_merge-requirements.txt
           KADALU_VERSION=devel make cli-build
       -
         name: Builder Image

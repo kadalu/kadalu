@@ -125,12 +125,12 @@ helm-chart:
 
 gen-requirements:
 	@echo "Generating requirements file for all kadalu components and CI"
-	pip-compile --extra=builder -o builder-requirements.txt --allow-unsafe
-	pip-compile --extra=operator -o operator-requirements.txt
-	pip-compile --extra=csi -o csi-requirements.txt
-	pip-compile --extra=server -o server-requirements.txt
-	pip-compile --extra=ci_submit -o ci_submit-requirements.txt
-	pip-compile --extra=ci_merge -o ci_merge-requirements.txt --allow-unsafe
+	pip-compile --extra=builder -o requirements/builder-requirements.txt --allow-unsafe
+	pip-compile --extra=operator -o requirements/operator-requirements.txt
+	pip-compile --extra=csi -o requirements/csi-requirements.txt
+	pip-compile --extra=server -o requirements/server-requirements.txt
+	pip-compile --extra=ci_submit -o requirements/ci_submit-requirements.txt
+	pip-compile --extra=ci_merge -o requirements/ci_merge-requirements.txt --allow-unsafe
 
 
 ifeq ($(TWINE_PASSWORD),)
