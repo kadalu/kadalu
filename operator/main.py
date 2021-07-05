@@ -667,17 +667,14 @@ def handle_deleted(core_v1_client, obj):
 
         hostvol_type = storage_info_data.get("type")
 
-        if hostvol_type == "External":
-            # We can't delete external volume but cleanup StorageClass and
-            # Configmap
-            delete_storage_class(volname, hostvol_type)
-            delete_config_map(core_v1_client, obj)
+        # We can't delete external volume but cleanup StorageClass and Configmap
+        # Delete Configmap and Storage class for both Native & External
+        delete_storage_class(volname, hostvol_type)
+        delete_config_map(core_v1_client, obj)
 
-        else:
-            delete_storage_class(volname, hostvol_type)
+        if hostvol_type != "External":
+
             delete_server_pods(storage_info_data, obj)
-            delete_config_map(core_v1_client, obj)
-
             filename = os.path.join(MANIFESTS_DIR, "services.yaml")
             template(filename, namespace=NAMESPACE, volname=volname)
             lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)

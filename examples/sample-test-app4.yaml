@@ -5,7 +5,7 @@ apiVersion: v1
 metadata:
   name: pv4-1
 spec:
-  storageClassName: kadalu.disperse
+  storageClassName: kadalu.storage-pool-4
   accessModes:
     - ReadWriteMany
   resources:
@@ -39,7 +39,7 @@ apiVersion: v1
 metadata:
   name: pv4-2
 spec:
-  storageClassName: kadalu.disperse
+  storageClassName: kadalu.storage-pool-4
   accessModes:
     - ReadWriteOnce
   resources:
