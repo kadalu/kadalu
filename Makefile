@@ -125,12 +125,14 @@ helm-chart:
 
 gen-requirements:
 	@echo "Generating requirements file for all kadalu components and CI"
+	@cp -f requirements/setup.py requirements/setup.cfg .
 	pip-compile --extra=builder -o requirements/builder-requirements.txt --allow-unsafe
 	pip-compile --extra=operator -o requirements/operator-requirements.txt
 	pip-compile --extra=csi -o requirements/csi-requirements.txt
 	pip-compile --extra=server -o requirements/server-requirements.txt
 	pip-compile --extra=ci_submit -o requirements/ci_submit-requirements.txt
 	pip-compile --extra=ci_merge -o requirements/ci_merge-requirements.txt --allow-unsafe
+	@rm setup.py setup.cfg -f
 
 
 ifeq ($(TWINE_PASSWORD),)
