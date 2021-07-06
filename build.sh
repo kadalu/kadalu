@@ -2,6 +2,9 @@
 
 set -e -o pipefail
 
+cp requirements/* .
+trap "rm -f *-requirements.txt" EXIT
+
 DOCKER_USER="${DOCKER_USER:-kadalu}"
 KADALU_VERSION="${KADALU_VERSION}"
 

@@ -15,6 +15,7 @@ help:
 	@echo "    make prepare-release-manifests - Prepare release manifest files"
 	@echo "    make cli-build         - Build CLI binary"
 	@echo "    make helm-chart        - Create a tgz archive of Helm chart"
+	@echo "	   make gen-requirements  - Generate requirements file for kadalu components"
 
 build-grpc:
 	python3 -m grpc_tools.protoc -I./csi/protos --python_out=csi --grpc_python_out=csi ./csi/protos/csi.proto
@@ -121,6 +122,18 @@ pypi-build:
 helm-chart:
 	@echo "Creating tgz archive of helm chart(Version: ${KADALU_VERSION}).."
 	cd helm; sed -i -e "s/0.0.0-0/${KADALU_VERSION}/" kadalu/Chart.yaml; tar -czf kadalu-helm-chart.tgz kadalu
+
+gen-requirements:
+	@echo "Generating requirements file for all kadalu components and CI"
+	@cp -f requirements/setup.py requirements/setup.cfg .
+	pip-compile --extra=builder -o requirements/builder-requirements.txt --allow-unsafe
+	pip-compile --extra=operator -o requirements/operator-requirements.txt
+	pip-compile --extra=csi -o requirements/csi-requirements.txt
+	pip-compile --extra=server -o requirements/server-requirements.txt
+	pip-compile --extra=ci_submit -o requirements/ci_submit-requirements.txt
+	pip-compile --extra=ci_merge -o requirements/ci_merge-requirements.txt --allow-unsafe
+	@rm setup.py setup.cfg -f
+
 
 ifeq ($(TWINE_PASSWORD),)
 pypi-upload: pypi-build

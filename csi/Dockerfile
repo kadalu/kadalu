@@ -4,7 +4,9 @@ FROM kadalu/builder:${builder_version} as builder
 
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
 
-RUN python3 -m pip install googleapis-common-protos pyxattr grpcio
+COPY csi-requirements.txt /tmp/
+
+RUN python3 -m pip install -r /tmp/csi-requirements.txt
 
 FROM ubuntu:20.04 as prod
 ENV DEBIAN_FRONTEND=noninteractive

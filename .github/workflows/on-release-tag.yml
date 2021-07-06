@@ -24,8 +24,7 @@ jobs:
           python-version: '3.x'
       - name: Run 'make release'
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install -r requirements/ci_merge-requirements.txt
           KADALU_VERSION=${{ env.kadalu_version }} TWINE_PASSWORD=${{ secrets.TWINE_PASSWORD }} make pypi-upload
 
   publish-artifacts:
@@ -39,8 +38,7 @@ jobs:
         python-version: '3.x'
     - name: Build kubectl-kadalu
       run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install -r requirements/ci_merge-requirements.txt
           KADALU_VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,') make cli-build
     - name: Generate Manifests
       run: |
@@ -99,8 +97,7 @@ jobs:
           python-version: '3.x'
       - name: Get the CLI build (kubectl-kadalu)
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install -r requirements/ci_merge-requirements.txt
           KADALU_VERSION=${{ env.kadalu_version }} make cli-build
       -
         name: Build Builder Image

@@ -7,6 +7,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV VIRTUAL_ENV=/kadalu
 ENV PATH="$VIRTUAL_ENV/bin:/opt/sbin:/opt/bin:$PATH"
 
+COPY builder-requirements.txt /tmp/
+
 RUN apt-get update -yq && \
     apt-get install -y --no-install-recommends python3 curl xfsprogs net-tools telnet wget e2fsprogs \
     python3-pip sqlite build-essential g++ python3-dev flex bison openssl libssl-dev libtirpc-dev liburcu-dev \
@@ -17,9 +19,7 @@ RUN apt-get update -yq && \
     curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|' | sed 's|armv7l|arm|'`/kubectl -o /usr/bin/kubectl && \
     chmod +x /usr/bin/kubectl &&  \
     python3 -m venv $VIRTUAL_ENV && cd $VIRTUAL_ENV && \
-    python3 -m pip install --upgrade pip && \
-    python3 -m pip install --upgrade setuptools && \
-    pip install prometheus-client jinja2 requests datetime xxhash
+    python3 -m pip install -r /tmp/builder-requirements.txt
 
 RUN sed -i "s/include-system-site-packages = false/include-system-site-packages = true/g" /kadalu/pyvenv.cfg
 
