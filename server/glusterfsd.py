@@ -131,17 +131,17 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
                         device=brick_device,
                         mountdir=mountdir,
                     ))
-                try:
-                    execute("mount", brick_device, mountdir)
-                except CommandException as err:
-                    logging.error(logf(
-                        "Failed to mount export brick (after mkfs)",
-                        fstype=brickfs,
-                        device=brick_device,
-                        mountdir=mountdir,
-                        error=err,
-                    ))
-                    sys.exit(1)
+            try:
+                execute("mount", brick_device, mountdir)
+            except CommandException as err:
+                logging.error(logf(
+                    "Failed to mount export brick (after mkfs)",
+                    fstype=brickfs,
+                    device=brick_device,
+                    mountdir=mountdir,
+                    error=err,
+                ))
+                sys.exit(1)
 
         elif 'already mounted' not in err.err:
             logging.error(logf(
