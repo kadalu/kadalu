@@ -524,6 +524,9 @@ def handle_added(core_v1_client, obj):
         ))
         return
 
+    # Storage Class
+    deploy_storage_class(obj)
+
     # Ignore if already deployed
     volname = obj["metadata"]["name"]
     pods = core_v1_client.list_namespaced_pod(NAMESPACE)
@@ -662,21 +665,16 @@ def handle_deleted(core_v1_client, obj):
 
     elif pv_count == 0:
 
-        if storage_info_data.get("type") == "External":
-            # We can't delete external volume but cleanup StorageClass and
-            # Configmap
-            volname = "kadalu.external." + volname
-            lib_execute(KUBECTL_CMD, DELETE_CMD, "sc", volname)
-            logging.info(logf(
-                "Deleted Storage class",
-                volname=volname,
-            ))
-            delete_config_map(core_v1_client, obj)
+        hostvol_type = storage_info_data.get("type")
 
-        else:
+        # We can't delete external volume but cleanup StorageClass and Configmap
+        # Delete Configmap and Storage class for both Native & External
+        delete_storage_class(volname, hostvol_type)
+        delete_config_map(core_v1_client, obj)
+
+        if hostvol_type != "External":
+
             delete_server_pods(storage_info_data, obj)
-            delete_config_map(core_v1_client, obj)
-
             filename = os.path.join(MANIFESTS_DIR, "services.yaml")
             template(filename, namespace=NAMESPACE, volname=volname)
             lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
@@ -841,6 +839,27 @@ def delete_config_map(core_v1_client, obj):
     ))
 
 
+def delete_storage_class(hostvol_name, hostvol_type):
+    """
+    Deletes deployed External and Custom StorageClass
+    """
+
+    if hostvol_type == "External":
+        external_sc_name = "kadalu.external." + hostvol_name
+        lib_execute(KUBECTL_CMD, DELETE_CMD, "sc", external_sc_name)
+        logging.info(logf(
+            "Deleted External Storage class",
+            volname=hostvol_name
+        ))
+    else:
+        custom_sc_name = "kadalu." + hostvol_name
+        lib_execute(KUBECTL_CMD, DELETE_CMD, "sc", custom_sc_name)
+        logging.info(logf(
+            "Deleted custom Storage class",
+            volname=hostvol_name
+        ))
+
+
 def watch_stream(core_v1_client, k8s_client):
     """
     Watches kubernetes event stream for kadalustorages in Kadalu namespace
@@ -955,9 +974,10 @@ def deploy_config_map(core_v1_client):
     return uid, upgrade
 
 
-def deploy_storage_class():
-    """Deploys the default storage class for KaDalu if not exists"""
+def deploy_storage_class(obj):
+    """Deploys the default and custom storage class for KaDalu if not exists"""
 
+    # Deploy defalut Storage Class
     api_instance = client.StorageV1Api()
     scs = api_instance.list_storage_class()
     sc_names = []
@@ -974,8 +994,8 @@ def deploy_storage_class():
             logging.info(logf("StorageClass already present, continuing with Apply",
                               manifest=filename))
 
-        # Deploy Storage Class
-        template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
+        template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
+                 hostvol_name=obj["metadata"]["name"])
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
 
@@ -997,9 +1017,6 @@ def main():
 
     # CSI Pods
     deploy_csi_pods(core_v1_client)
-
-    # Storage Class
-    deploy_storage_class()
 
     if upgrade:
         logging.info(logf("Upgrading to ", version=VERSION))

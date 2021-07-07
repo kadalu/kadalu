@@ -5,7 +5,7 @@ apiVersion: v1
 metadata:
   name: pv3-1
 spec:
-  storageClassName: kadalu.replica3
+  storageClassName: kadalu.storage-pool-3
   accessModes:
     - ReadWriteMany
   resources:
@@ -39,7 +39,7 @@ apiVersion: v1
 metadata:
   name: pv3-2
 spec:
-  storageClassName: kadalu.replica3
+  storageClassName: kadalu.storage-pool-3
   accessModes:
     - ReadWriteOnce
   resources:
