@@ -490,7 +490,7 @@ def handle_external_storage_addition(core_v1_client, obj):
         "type": VOLUME_TYPE_EXTERNAL,
         "pvReclaimPolicy": pv_reclaim_policy,
         # CRD would set 'native' but just being cautious
-        "kadalu_format": details.get("kadalu_format", "native"),
+        "kadalu_format": obj["spec"].get("kadalu_format", "native"),
         "gluster_hosts": ",".join(hosts),
         "gluster_volname": details["gluster_volname"],
         "gluster_options": details.get("gluster_options", ""),

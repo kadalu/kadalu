@@ -118,11 +118,6 @@ def validate(args):
                     file=sys.stderr)
             fail = True
 
-        if args.kadalu_format:
-            print("'--kadalu-format' is used only with '--type External'",
-                    file=sys.stderr)
-            fail = True
-
         if fail:
             sys.exit(1)
 
@@ -259,6 +254,9 @@ def storage_add_data(args):
     if args.volume_id:
         content["spec"]["volume_id"] = args.volume_id
 
+    if args.kadalu_format:
+        content["spec"]["kadalu_format"] = args.kadalu_format
+
     # External details are specified, no 'storage' section required
     if args.external:
         node, vol = args.external.split(":", 1)
@@ -274,8 +272,6 @@ def storage_add_data(args):
             "gluster_volname": vol.strip("/"),
             "gluster_options": g_opts,
         }
-        if args.kadalu_format:
-            content["spec"]["details"]["kadalu_format"] = args.kadalu_format
         return content
 
     # Everything below can be provided for a 'Replica3' setup.

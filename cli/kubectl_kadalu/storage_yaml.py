@@ -56,14 +56,8 @@ def to_storage_yaml(data):
 
     if data["spec"].get("details", None) is not None:
         yaml += "  details:\n"
-        key = "kadalu_format"
-        value = ""
-        if data["spec"]["details"].get(key):
-            value = data["spec"]["details"].pop(key)
         entry = data["spec"]["details"]
         yaml += Template(EXTERNAL_TMPL).substitute(**entry)
-        if value:
-            yaml += '    kadalu_format: "%s"\n' % value
 
     if data["spec"].get("tiebreaker", None) is not None:
         yaml += Template(TIEBREAKER_TMPL).substitute(
@@ -79,5 +73,8 @@ def to_storage_yaml(data):
 
     if data["spec"].get("volume_id", None) is not None:
         yaml +=  "  volume_id: %s\n" % data["spec"]["volume_id"]
+
+    if data["spec"].get("kadalu_format", None) is not None:
+        yaml +=  "  kadalu_format: %s\n" % data["spec"]["kadalu_format"]
 
     return yaml

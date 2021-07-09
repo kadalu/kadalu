@@ -31,14 +31,14 @@ metadata:
   name: ext-config
 spec:
   type: External
+  # Omitting 'kadalu_format' or using 'native' as a value will create
+  # 1 PV : 1 Subdir in external gluster volume
+  kadalu_format: native
   details:
     # gluster_hosts: [ gluster1.kadalu.io, gluster2.kadalu.io ]
     gluster_host: gluster1.kadalu.io
     gluster_volname: kadalu
     gluster_options: log-level=DEBUG
-    # Omitting 'kadalu_format' or using 'native' as a value will create
-    # 1 PV : 1 Subdir in external gluster volume
-    kadalu_format: native
 
 # file: pvc-from-external-gluster.yaml
 ---
@@ -127,12 +127,12 @@ metadata:
   name: pv-ext # Keep changing the name for different volumes
 spec:
   type: External
+  # Setting 'kadalu_format' as 'non-native' is important
+  kadalu_format: non-native          # Will map 1 Gluster Volume : 1 PV
   details:
     gluster_host: gluster1.kadalu.io   # Change to your gluster host
     gluster_volname: test              # Change to existing gluster volume
     gluster_options: log-level=DEBUG   # Comma separated options
-    # Setting 'kadalu_format' as 'non-native' is important
-    kadalu_format: non-native          # Will map 1 Gluster Volume : 1 PV
 
 ---
 kind: PersistentVolumeClaim
