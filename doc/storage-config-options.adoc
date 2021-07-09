@@ -160,7 +160,7 @@ The external mode can be specified with `type` as `External`. And when the type 
 
 [source,console]
 ----
-$ kubectl kadalu storage-add storage-pool1 \
+$ kubectl kadalu storage-add external-pool \
     --external gluster_host:/gluster_volname
 ----
 
@@ -170,7 +170,7 @@ Above,
 * 'gluster_volname': Gluster volume name to be used as kadalu host storage volume. We prefer it to be a new volume created for kadalu.
 
 
-Notice that to create PVC from External Storage config, you need to provide `storageClassName` option as `kadalu.external.{{ config-name }}`. In above case, it becomes **`kadalu.external.ext-config`**.
+Notice that to create PVC from External Storage config, you need to provide `storageClassName` option as `kadalu.{{ config-name }}`. In above case, it becomes **`kadalu.external-pool`**.
 
 
 === How it works?

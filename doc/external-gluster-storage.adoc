@@ -7,7 +7,7 @@ server processes are not managed by kadalu operator.
 
 In both the ways please note `metadata.name` (let's say `e-vol`) in
 `kind: KadaluStorage` will create a StorageClass with name
-`kadalu.external.<volname>` (`volname` will be replaces with `e-vol`).
+`kadalu.<volname>` (`volname` will be replaces with `e-vol`).
 
 == Using external gluster in kadalu native way
 
@@ -47,8 +47,8 @@ apiVersion: v1
 metadata:
   name: pv-ext-kadalu
 spec:
-  # Add 'kadalu.external.' to name from KadaluStorage kind
-  storageClassName: kadalu.external.ext-config
+  # Add 'kadalu.' to name from KadaluStorage kind
+  storageClassName: kadalu.ext-config
   accessModes:
     - ReadWriteMany
   resources:
@@ -67,13 +67,13 @@ You can also setup the external storage through our `kubectl kadalu` CLI.
 $ kubectl kadalu storage-add store-name --external gluster.kadalu.io:/kadalu
 ----
 
-After this, just use `kadalu.external.store-name` (note that 'store-name' is
+After this, just use `kadalu.store-name` (note that 'store-name' is
 name used for `storage-add`) in PVC yaml, like below:
 
 ----
 ...
 spec:
-  storageClassName: kadalu.external.store-name
+  storageClassName: kadalu.store-name
   ...
 ----
 
@@ -140,7 +140,7 @@ apiVersion: v1
 metadata:
   name: pv-ext
 spec:
-  storageClassName: kadalu.external.pv-ext
+  storageClassName: kadalu.pv-ext
   accessModes:
     - ReadWriteMany
   resources:

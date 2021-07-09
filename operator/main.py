@@ -359,6 +359,7 @@ def update_config_map(core_v1_client, obj):
         "kadalu_version": VERSION,
         "volname": volname,
         "volume_id": volume_id,
+        "kadalu_format": obj["spec"].get("kadalu_format", "native"),
         "type": voltype,
         "pvReclaimPolicy" : pv_reclaim_policy,
         "bricks": [],
@@ -722,7 +723,7 @@ def get_num_pvs(storage_info_data):
     if storage_info_data.get("type") == "External":
         # We can't access external cluster and so query existing PVs which are
         # using external storageclass
-        volname = "kadalu.external." + volname
+        volname = "kadalu." + volname
         jpath = ('jsonpath=\'{range .items[?(@.spec.storageClassName=="%s")]}'
                  '{.spec.storageClassName}{"\\n"}{end}\'' % volname)
         cmd = ["kubectl", "get", "pv", "-o", jpath]
@@ -844,20 +845,12 @@ def delete_storage_class(hostvol_name, hostvol_type):
     Deletes deployed External and Custom StorageClass
     """
 
-    if hostvol_type == "External":
-        external_sc_name = "kadalu.external." + hostvol_name
-        lib_execute(KUBECTL_CMD, DELETE_CMD, "sc", external_sc_name)
-        logging.info(logf(
-            "Deleted External Storage class",
-            volname=hostvol_name
-        ))
-    else:
-        custom_sc_name = "kadalu." + hostvol_name
-        lib_execute(KUBECTL_CMD, DELETE_CMD, "sc", custom_sc_name)
-        logging.info(logf(
-            "Deleted custom Storage class",
-            volname=hostvol_name
-        ))
+    sc_name = "kadalu." + hostvol_name
+    lib_execute(KUBECTL_CMD, DELETE_CMD, "sc", sc_name)
+    logging.info(logf(
+        "Deleted Storage class",
+        volname=hostvol_name
+    ))
 
 
 def watch_stream(core_v1_client, k8s_client):
@@ -995,7 +988,8 @@ def deploy_storage_class(obj):
                               manifest=filename))
 
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
-                 hostvol_name=obj["metadata"]["name"])
+                 hostvol_name=obj["metadata"]["name"],
+                 kadalu_format=obj["spec"].get("kadalu_format", "native"))
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
 

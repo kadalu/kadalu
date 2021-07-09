@@ -18,7 +18,7 @@ apiVersion: v1
 metadata:
   name: pv-ext
 spec:
-  storageClassName: kadalu.external.pv-ext
+  storageClassName: kadalu.pv-ext
   accessModes:
     - ReadWriteMany
   resources:
