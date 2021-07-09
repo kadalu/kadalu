@@ -840,7 +840,7 @@ def delete_config_map(core_v1_client, obj):
     ))
 
 
-def delete_storage_class(hostvol_name, hostvol_type):
+def delete_storage_class(hostvol_name, _):
     """
     Deletes deployed External and Custom StorageClass
     """
