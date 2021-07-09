@@ -70,6 +70,9 @@ spec:
                   default: delete
                 volume_id:
                   type: string
+                kadalu_format:
+                  type: string
+                  default: native
                 storage:
                   type: array
                   items:
