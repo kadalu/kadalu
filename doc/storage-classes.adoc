@@ -36,23 +36,50 @@ spec:
       storage: 1Gi
 ----
 
-== kadalu.replica1
+== kadalu.storage-pool-name
 
-On using this Storage class, Kadalu will provision PVs only from
-Replica 1 Storage pools across the Cluster. Use this option when high
-availability is provided by the application and not required from the
-Storage.
+Kadalu creates and deploys Storage Class when storage is created.
+The name of this Storage class is same as the Storage name. Kadalu wil 
+provision PVs only from this Storage pool across the Cluster.
 
-Example PVC,
+Example:
+
+When a Storage is created with name "storage-pool-1", Kadalu deploys 
+a Storage Class with name "kadalu.storage-pool-1". The parameter "storage_name"
+is set to "storage-pool-1" to filter storages to PVs only from this Storage.
+
+Example:
+Create Storage "storage-pool-1",
+
+[source,console]
+----
+$ kubectl kadalu storage-add storage-pool-1 \
+    --path kube-nodename:/mnt/mount/export-path
+----
+
+Deployed Storage Class,
+
+[source,yaml]
+----
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: kadalu.storage-pool-1
+provisioner: kadalu
+parameters:
+  storage_name: "storage-pool-1"
+----
+
+And the PVC,
 
 [source,yaml]
 ----
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: pv2
+  name: pv1
 spec:
-  storageClassName: kadalu.replica1
+  storageClassName: kadalu.storage-pool-1
   accessModes:
     - ReadWriteMany
   resources:
@@ -60,51 +87,6 @@ spec:
       storage: 1Gi
 ----
 
-== kadalu.replica2
-
-On using this Storage class, Kadalu will provision PVs only from
-Replica 2 Storage pools across the Cluster. Replica 2 Storage pools
-use Tiebreaker to avoid Split-brain.
-
-Example PVC,
-
-[source,yaml]
-----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: pv3
-spec:
-  storageClassName: kadalu.replica2
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 1Gi
-----
-
-== kadalu.replica3
-
-On using this Storage class, Kadalu will provision PVs only from
-Replica 3 Storage pools across the Cluster. Use this Storage class
-when PVs require high availability.
-
-Example PVC,
-
-[source,yaml]
-----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: pv4
-spec:
-  storageClassName: kadalu.replica3
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 1Gi
-----
 
 == How to Create a custom Storage Class?
 
