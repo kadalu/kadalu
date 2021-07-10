@@ -80,12 +80,9 @@ def set_args(name, subparsers):
         default=0)
     # Default for 'kadalu-format' is set in CRD
     arg("--kadalu-format",
-            help=(
-                "Can only be used in conjunction with '--external' argument. "
-                "Specifies whether the external cluster should be provisioned "
-                "in kadalu native (1 PV:1 Subdir) or non-native (1 PV: 1 Volu "
-                "me) format. Default: native"
-                ),
+            help=("Specifies whether the  cluster should be provisioned in "
+                  "kadalu native (1 PV:1 Subdir) or non-native "
+                  "(1 PV: 1 Volume) format. Default: native"),
             choices=["native", "non-native"],
             default=None)
     utils.add_global_flags(parser)
