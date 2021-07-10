@@ -7,7 +7,7 @@ server processes are not managed by kadalu operator.
 
 In both the ways please note `metadata.name` (let's say `e-vol`) in
 `kind: KadaluStorage` will create a StorageClass with name
-`kadalu.external.<volname>` (`volname` will be replaces with `e-vol`).
+`kadalu.<volname>` (`volname` will be replaces with `e-vol`).
 
 == Using external gluster in kadalu native way
 
@@ -31,14 +31,14 @@ metadata:
   name: ext-config
 spec:
   type: External
+  # Omitting 'kadalu_format' or using 'native' as a value will create
+  # 1 PV : 1 Subdir in external gluster volume
+  kadalu_format: native
   details:
     # gluster_hosts: [ gluster1.kadalu.io, gluster2.kadalu.io ]
     gluster_host: gluster1.kadalu.io
     gluster_volname: kadalu
     gluster_options: log-level=DEBUG
-    # Omitting 'kadalu_format' or using 'native' as a value will create
-    # 1 PV : 1 Subdir in external gluster volume
-    kadalu_format: native
 
 # file: pvc-from-external-gluster.yaml
 ---
@@ -47,8 +47,8 @@ apiVersion: v1
 metadata:
   name: pv-ext-kadalu
 spec:
-  # Add 'kadalu.external.' to name from KadaluStorage kind
-  storageClassName: kadalu.external.ext-config
+  # Add 'kadalu.' to name from KadaluStorage kind
+  storageClassName: kadalu.ext-config
   accessModes:
     - ReadWriteMany
   resources:
@@ -67,13 +67,13 @@ You can also setup the external storage through our `kubectl kadalu` CLI.
 $ kubectl kadalu storage-add store-name --external gluster.kadalu.io:/kadalu
 ----
 
-After this, just use `kadalu.external.store-name` (note that 'store-name' is
+After this, just use `kadalu.store-name` (note that 'store-name' is
 name used for `storage-add`) in PVC yaml, like below:
 
 ----
 ...
 spec:
-  storageClassName: kadalu.external.store-name
+  storageClassName: kadalu.store-name
   ...
 ----
 
@@ -127,12 +127,12 @@ metadata:
   name: pv-ext # Keep changing the name for different volumes
 spec:
   type: External
+  # Setting 'kadalu_format' as 'non-native' is important
+  kadalu_format: non-native          # Will map 1 Gluster Volume : 1 PV
   details:
     gluster_host: gluster1.kadalu.io   # Change to your gluster host
     gluster_volname: test              # Change to existing gluster volume
     gluster_options: log-level=DEBUG   # Comma separated options
-    # Setting 'kadalu_format' as 'non-native' is important
-    kadalu_format: non-native          # Will map 1 Gluster Volume : 1 PV
 
 ---
 kind: PersistentVolumeClaim
@@ -140,7 +140,7 @@ apiVersion: v1
 metadata:
   name: pv-ext
 spec:
-  storageClassName: kadalu.external.pv-ext
+  storageClassName: kadalu.pv-ext
   accessModes:
     - ReadWriteMany
   resources:

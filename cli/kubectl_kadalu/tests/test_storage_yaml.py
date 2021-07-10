@@ -358,7 +358,7 @@ spec:
     gluster_hosts: {EXTERNAL_HOSTS}
     gluster_volname: "{EXTERNAL_VOLNAME}"
     gluster_options: "{EXTERNAL_OPTIONS}"
-    kadalu_format: "{NON_NATIVE}"
+  kadalu_format: {NON_NATIVE}
 """
 
 
@@ -372,9 +372,9 @@ def test_external_storage_non_native():
             "details": {
                 "gluster_hosts": EXTERNAL_HOSTS,
                 "gluster_volname": EXTERNAL_VOLNAME,
-                "gluster_options": EXTERNAL_OPTIONS,
-                "kadalu_format": NON_NATIVE
-            }
+                "gluster_options": EXTERNAL_OPTIONS
+            },
+            "kadalu_format": NON_NATIVE
         }
     }
     assert (to_storage_yaml(content) == EXTERNAL_OUTPUT_NON_NATIVE)

@@ -4,7 +4,7 @@ apiVersion: v1
 metadata:
   name: pv-ext-kadalu
 spec:
-  storageClassName: kadalu.external.ext-config # Add 'kadalu.external.' to name from KadaluStorage kind
+  storageClassName: kadalu.ext-config # Add 'kadalu.' to name from KadaluStorage kind
   accessModes:
     - ReadWriteMany
   resources:
@@ -38,7 +38,7 @@ apiVersion: v1
 metadata:
   name: pv-ext-kadalu-1
 spec:
-  storageClassName: kadalu # Add 'kadalu.external.' to name from KadaluStorage kind
+  storageClassName: kadalu # Add 'kadalu.' to name from KadaluStorage kind
   accessModes:
     - ReadWriteMany
   resources:

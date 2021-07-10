@@ -2,7 +2,7 @@
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
-  name: kadalu.external.{{ volname }}
+  name: kadalu.{{ volname }}
 provisioner: kadalu
 parameters:
   hostvol_type: "External"

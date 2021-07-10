@@ -80,12 +80,9 @@ def set_args(name, subparsers):
         default=0)
     # Default for 'kadalu-format' is set in CRD
     arg("--kadalu-format",
-            help=(
-                "Can only be used in conjunction with '--external' argument. "
-                "Specifies whether the external cluster should be provisioned "
-                "in kadalu native (1 PV:1 Subdir) or non-native (1 PV: 1 Volu "
-                "me) format. Default: native"
-                ),
+            help=("Specifies whether the  cluster should be provisioned in "
+                  "kadalu native (1 PV:1 Subdir) or non-native "
+                  "(1 PV: 1 Volume) format. Default: native"),
             choices=["native", "non-native"],
             default=None)
     utils.add_global_flags(parser)
@@ -115,11 +112,6 @@ def validate(args):
 
         if args.gluster_options:
             print("'--gluster-options' is used only with '--type External'",
-                    file=sys.stderr)
-            fail = True
-
-        if args.kadalu_format:
-            print("'--kadalu-format' is used only with '--type External'",
                     file=sys.stderr)
             fail = True
 
@@ -259,6 +251,9 @@ def storage_add_data(args):
     if args.volume_id:
         content["spec"]["volume_id"] = args.volume_id
 
+    if args.kadalu_format:
+        content["spec"]["kadalu_format"] = args.kadalu_format
+
     # External details are specified, no 'storage' section required
     if args.external:
         node, vol = args.external.split(":", 1)
@@ -274,8 +269,6 @@ def storage_add_data(args):
             "gluster_volname": vol.strip("/"),
             "gluster_options": g_opts,
         }
-        if args.kadalu_format:
-            content["spec"]["details"]["kadalu_format"] = args.kadalu_format
         return content
 
     # Everything below can be provided for a 'Replica3' setup.
