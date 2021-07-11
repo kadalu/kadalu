@@ -525,9 +525,6 @@ def handle_added(core_v1_client, obj):
         ))
         return
 
-    # Storage Class
-    deploy_storage_class(obj)
-
     # Ignore if already deployed
     volname = obj["metadata"]["name"]
     pods = core_v1_client.list_namespaced_pod(NAMESPACE)
@@ -569,6 +566,9 @@ def handle_added(core_v1_client, obj):
     # Generate Node ID for each storage device.
     for idx, _ in enumerate(obj["spec"]["storage"]):
         obj["spec"]["storage"][idx]["node_id"] = "node-%d" % idx
+
+    # Storage Class
+    deploy_storage_class(obj)
 
     update_config_map(core_v1_client, obj)
     deploy_server_pods(obj)
