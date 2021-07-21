@@ -289,6 +289,24 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                 context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
                 return csi_pb2.CreateVolumeResponse()
 
+        if filters.get('kadalu_format') == 'non-native':
+            # Then mount the whole volume as PV
+            msg = "non-native way of Kadalu mount expected"
+            logging.info(msg)
+            return csi_pb2.CreateVolumeResponse(
+                volume={
+                    "volume_id": request.name,
+                    "capacity_bytes": pvsize,
+                    "volume_context": {
+                        "type": hostvoltype,
+                        "hostvol": hostvol,
+                        "pvtype": pvtype,
+                        "fstype": "xfs",
+                        "kadalu_format": "non-native"
+                    }
+                }
+            )
+
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
         if pvtype == PV_TYPE_VIRTBLOCK:
             vol = create_virtblock_volume(
