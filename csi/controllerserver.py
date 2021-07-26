@@ -137,6 +137,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
             hostvoltype = data['type']
 
+        kformat = filters.get('kadalu_format', "native")
         if hostvoltype == 'External':
             ext_volume = check_external_volume(request, host_volumes)
 
@@ -145,7 +146,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
                 # By default 'kadalu_format' is set to 'native' as part of CRD
                 # definition
-                if filters.get('kadalu_format') == 'non-native':
+                if kformat == 'non-native':
                     # If 'kadalu_format' is 'non-native', the request will be
                     # considered as to map 1 PV to 1 Gluster volume
 
@@ -176,6 +177,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                                 "gserver": ext_volume['g_host'],
                                 "fstype": "xfs",
                                 "options": ext_volume['g_options'],
+                                "kformat": kformat,
                             }
                         }
                     )
@@ -262,6 +264,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                             "gserver": ext_volume['g_host'],
                             "fstype": "xfs",
                             "options": ext_volume['g_options'],
+                            "kformat": kformat,
                         }
                     }
                 )
@@ -289,7 +292,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                 context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
                 return csi_pb2.CreateVolumeResponse()
 
-        if filters.get('kadalu_format') == 'non-native':
+        if kformat == 'non-native':
             # Then mount the whole volume as PV
             msg = "non-native way of Kadalu mount expected"
             logging.info(msg)
@@ -302,7 +305,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                         "hostvol": hostvol,
                         "pvtype": pvtype,
                         "fstype": "xfs",
-                        "kadalu_format": "non-native"
+                        "kformat": kformat,
                     }
                 }
             )
@@ -337,7 +340,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                     "hostvol": hostvol,
                     "pvtype": pvtype,
                     "path": vol.volpath,
-                    "fstype": "xfs"
+                    "fstype": "xfs",
+                    "kformat": kformat,
                 }
             }
         )
