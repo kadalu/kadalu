@@ -95,3 +95,19 @@ If you have installed `kubectl_kadalu` package, then you can do below to get the
 ----
 $ kubectl kadalu logs
 ----
+
+
+=== Quota of PVCs
+
+`kadalu` uses simple-quota feature of glusterfs, which is present only in kadalu storage releases of glusterfs.
+
+As this is a new feature of glusterfs, there is possibilities where an user can hit a bug which is stopping the usage in in production. Hence, we have provided an option to disable quota limit check on PVCs of a particular storage pool. Please use below steps to get this working.
+
+
+[source,console]
+----
+$ kubectl exec -it kadalu-csi-provisioner-0 -c kadalu-provisioner -- bash
+# setfattr -n glusterfs.quota.disable-check -v "1" /mnt/${storage-pool-name}
+----
+
+This disable check is 'runtime' only fix right now, so if the server pods are restarted, this command may need to be issued again. Similarly to enable the check again, just pass the value as `"0"`.
