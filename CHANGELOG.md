@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.4] - 2021-07-27
+
+- Fixed accounting issues related to Quota feature.
+- Fixed issues while mounting the devices after creating fs
+- Removed default storage classes created for each Volume types.
+- Added one storage class for each Kadalu Storage.
+- Operator: Added retry for Protocol error while watching the CRD.
+- Fixed issue while deleting a Kadalu Storage when no Pvs present.
+
 ## [0.8.3] - 2021-06-21
 
 - Improvements to the External GlusterFS Volumes support.
@@ -237,7 +246,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.3...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.4...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
@@ -256,3 +265,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.8.1]: https://github.com/kadalu/kadalu/compare/0.8.0...0.8.1
 [0.8.2]: https://github.com/kadalu/kadalu/compare/0.8.1...0.8.2
 [0.8.3]: https://github.com/kadalu/kadalu/compare/0.8.2...0.8.3
+[0.8.4]: https://github.com/kadalu/kadalu/compare/0.8.3...0.8.4
