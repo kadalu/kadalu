@@ -200,7 +200,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                         mntdir, request.name, pvsize)
                 else:
                     use_gluster_quota = False
-                    if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
+                    if (os.path.isfile("/etc/secret-volume/ssh-privatekey") \
                         and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
                         use_gluster_quota = True
                     secret_private_key = "/etc/secret-volume/ssh-privatekey"
@@ -328,7 +328,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             duration_seconds=time.time() - start_time
         ))
 
-        update_free_size(hostvol, request.name, -pvsize)
+        update_free_size(hostvol, hostvoltype, request.name, -pvsize)
 
         send_analytics_tracker("pvc-%s" % hostvoltype, uid)
         return csi_pb2.CreateVolumeResponse(
@@ -545,6 +545,11 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         # Get existing volume
         existing_volume = search_volume(request.volume_id)
+        if existing_volume.kformat == 'non-native':
+            errmsg = "PV with kadalu_format == non-native doesn't support Expansion"
+            logging.error(errmsg)
+            # But lets not fail the call, and continue here
+            return csi_pb2.ControllerExpandVolumeResponse()
 
         # Volume size before expansion
         existing_pvsize = existing_volume.size
@@ -571,6 +576,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         hostvol = existing_volume.hostvol
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
+        use_gluster_quota = False
 
         # Check free-size in storage-pool before expansion
         if not is_hosting_volume_free(hostvol, expansion_requested_pvsize):
@@ -590,7 +596,42 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             expand_volume(mntdir)
         else:
             update_subdir_volume(
-                mntdir, pvname, expansion_requested_pvsize)
+                mntdir, existing_volume.hostvoltype, pvname, expansion_requested_pvsize)
+            if existing_volume.hostvoltype == 'External':
+                # Use Gluster quota if set
+                if (os.path.isfile("/etc/secret-volume/ssh-privatekey") \
+                    and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
+                    use_gluster_quota = True
+
+        # Can be true only if its 'External'
+        if use_gluster_quota:
+            secret_private_key = "/etc/secret-volume/ssh-privatekey"
+            secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
+
+            logging.debug(logf("Set Quota (expand) using gluster directory Quota"))
+            quota_cmd = [
+                "ssh",
+                "-oStrictHostKeyChecking=no",
+                "-i",
+                "%s" % secret_private_key,
+                "%s@%s" % (secret_username, existing_volume.ghost),
+                "sudo",
+                "gluster",
+                "volume",
+                "quota",
+                "%s" % existing_volume.gvolname,
+                "limit-usage",
+                "/%s" % existing_volume.volpath,
+                "%s" % expansion_requested_pvsize * 0.05,
+            ]
+            try:
+                execute(*quota_cmd)
+            except CommandException as err:
+                errmsg = "Unable to set Gluster Quota via ssh"
+                logging.error(logf(errmsg, error=err))
+                context.set_details(errmsg)
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                return csi_pb2.CreateVolumeResponse()
 
         logging.info(logf(
             "Volume expanded",
@@ -605,7 +646,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         # sizechanged is the additional change to be
         # subtracted from storage-pool
         sizechange = expansion_requested_pvsize - existing_pvsize
-        update_free_size(hostvol, pvname, -sizechange)
+        update_free_size(hostvol, existing_volume.hostvoltype, pvname, -sizechange)
 
         # if not hostvoltype:
         #     hostvoltype = "unknown"

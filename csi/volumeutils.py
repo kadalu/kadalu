@@ -40,9 +40,14 @@ class Volume():
         self.voltype = voltype
         self.volname = volname
         self.volhash = kwargs.get("volhash", None)
+        self.volpath = kwargs.get("volpath", None)
         self.hostvol = hostvol
         self.size = kwargs.get("size", None)
         self.volpath = kwargs.get("volpath", None)
+        self.ghost = kwargs.get("ghost", None)
+        self.hostvoltype = kwargs.get("hostvoltype", None)
+        self.gvolname = kwargs.get("gvolname", None)
+        self.kformat = kwargs.get("kformat", 'native')
         self.setpath()
 
     def setpath(self):
@@ -190,7 +195,7 @@ def get_pv_hosting_volumes(filters={}, iteration=40):
     return volumes
 
 
-def update_free_size(hostvol, pvname, sizechange):
+def update_free_size(hostvol, hostvoltype, pvname, sizechange):
     """Update the free size in respective host volume's stats.db file"""
 
     mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
@@ -445,7 +450,7 @@ def is_hosting_volume_free(hostvol, requested_pvsize):
         return False
 
 
-def update_subdir_volume(hostvol_mnt, volname, expansion_requested_pvsize):
+def update_subdir_volume(hostvol_mnt, hostvoltype, volname, expansion_requested_pvsize):
     """Update sub directory Volume"""
 
     volhash = get_volname_hash(volname)
@@ -480,11 +485,16 @@ def update_subdir_volume(hostvol_mnt, volname, expansion_requested_pvsize):
         pvsize_buffer=pvsize_buffer,
     ))
 
+    # Handle this case in calling function
+    if hostvoltype == 'External':
+        return None;
+
     retry_errors(os.setxattr,
                  [os.path.join(hostvol_mnt, volpath),
                   "trusted.gfs.squota.limit",
                   str(expansion_requested_pvsize).encode()],
                  [ENOTCONN])
+
     count = 0
     while True:
         count += 1
@@ -706,7 +716,7 @@ def delete_volume(volname):
             # developing thats not true. There can be a delete request for
             # previously created pvc, which would be assigned to you once
             # you come up. We can't fail then.
-            update_free_size(vol.hostvol, volname, data["size"])
+            update_free_size(vol.hostvol, vol.hostvoltype, volname, data["size"])
 
         os.remove(info_file_path)
         logging.debug(logf(
@@ -754,7 +764,12 @@ def search_volume(volname):
                     voltype=voltype,
                     volhash=volhash,
                     hostvol=hvol,
-                    size=data["size"]
+                    volpath=volume.get('path', None),
+                    size=data["size"],
+                    kformat=volume['kformat'],
+                    hostvoltype=volume['type'],
+                    ghost=volume.get('gserver', None),
+                    gvolname=volume.get('gvolname', None),
                 )
     return None
 
