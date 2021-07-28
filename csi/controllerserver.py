@@ -328,7 +328,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             duration_seconds=time.time() - start_time
         ))
 
-        update_free_size(hostvol, hostvoltype, request.name, -pvsize)
+        update_free_size(hostvol, request.name, -pvsize)
 
         send_analytics_tracker("pvc-%s" % hostvoltype, uid)
         return csi_pb2.CreateVolumeResponse(
@@ -545,7 +545,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         # Get existing volume
         existing_volume = search_volume(request.volume_id)
-        if existing_volume.kformat == 'non-native':
+        if existing_volume.extra['kformat'] == 'non-native':
             errmsg = "PV with kadalu_format == non-native doesn't support Expansion"
             logging.error(errmsg)
             # But lets not fail the call, and continue here
@@ -590,14 +590,16 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
             return csi_pb2.CreateVolumeResponse()
 
+        hostvoltype = existing_volume.extra['hostvoltype']
+
         if pvtype == PV_TYPE_VIRTBLOCK:
             update_virtblock_volume(
                 mntdir, pvname, expansion_requested_pvsize)
             expand_volume(mntdir)
         else:
             update_subdir_volume(
-                mntdir, existing_volume.hostvoltype, pvname, expansion_requested_pvsize)
-            if existing_volume.hostvoltype == 'External':
+                mntdir, hostvoltype, pvname, expansion_requested_pvsize)
+            if hostvoltype == 'External':
                 # Use Gluster quota if set
                 if (os.path.isfile("/etc/secret-volume/ssh-privatekey") \
                     and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
@@ -614,12 +616,12 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                 "-oStrictHostKeyChecking=no",
                 "-i",
                 "%s" % secret_private_key,
-                "%s@%s" % (secret_username, existing_volume.ghost),
+                "%s@%s" % (secret_username, existing_volume.extra['ghost']),
                 "sudo",
                 "gluster",
                 "volume",
                 "quota",
-                "%s" % existing_volume.gvolname,
+                "%s" % existing_volume.extra['gvolname'],
                 "limit-usage",
                 "/%s" % existing_volume.volpath,
                 "%s" % expansion_requested_pvsize * 0.05,
@@ -646,7 +648,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         # sizechanged is the additional change to be
         # subtracted from storage-pool
         sizechange = expansion_requested_pvsize - existing_pvsize
-        update_free_size(hostvol, existing_volume.hostvoltype, pvname, -sizechange)
+        update_free_size(hostvol, pvname, -sizechange)
 
         # if not hostvoltype:
         #     hostvoltype = "unknown"

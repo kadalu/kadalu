@@ -43,11 +43,11 @@ class Volume():
         self.volpath = kwargs.get("volpath", None)
         self.hostvol = hostvol
         self.size = kwargs.get("size", None)
-        self.volpath = kwargs.get("volpath", None)
-        self.ghost = kwargs.get("ghost", None)
-        self.hostvoltype = kwargs.get("hostvoltype", None)
-        self.gvolname = kwargs.get("gvolname", None)
-        self.kformat = kwargs.get("kformat", 'native')
+        self.extra = {}
+        self.extra['ghost'] = kwargs.get("ghost", None)
+        self.extra['hostvoltype'] = kwargs.get("hostvoltype", None)
+        self.extra['gvolname'] = kwargs.get("gvolname", None)
+        self.extra['kformat'] = kwargs.get("kformat", 'native')
         self.setpath()
 
     def setpath(self):
@@ -195,7 +195,7 @@ def get_pv_hosting_volumes(filters={}, iteration=40):
     return volumes
 
 
-def update_free_size(hostvol, hostvoltype, pvname, sizechange):
+def update_free_size(hostvol, pvname, sizechange):
     """Update the free size in respective host volume's stats.db file"""
 
     mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
@@ -487,7 +487,7 @@ def update_subdir_volume(hostvol_mnt, hostvoltype, volname, expansion_requested_
 
     # Handle this case in calling function
     if hostvoltype == 'External':
-        return None;
+        return None
 
     retry_errors(os.setxattr,
                  [os.path.join(hostvol_mnt, volpath),
@@ -716,7 +716,7 @@ def delete_volume(volname):
             # developing thats not true. There can be a delete request for
             # previously created pvc, which would be assigned to you once
             # you come up. We can't fail then.
-            update_free_size(vol.hostvol, vol.hostvoltype, volname, data["size"])
+            update_free_size(vol.hostvol, volname, data["size"])
 
         os.remove(info_file_path)
         logging.debug(logf(
