@@ -30,7 +30,7 @@ def mount_storage():
 
     host_volumes = get_pv_hosting_volumes({})
     for volume in host_volumes:
-        if volume["k_format"] == "non-native":
+        if volume["kformat"] == "non-native":
             # Need to skip mounting external non-native mounts in-order for
             # kadalu-quotad not to set quota xattrs
             continue

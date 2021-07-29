@@ -177,7 +177,7 @@ def get_pv_hosting_volumes(filters={}, iteration=40):
                 "g_volname": data.get("gluster_volname", None),
                 "g_host": data.get("gluster_hosts", None),
                 "g_options": data.get("gluster_options", None),
-                "k_format": data.get("kadalu_format", None),
+                "kformat": data.get("kadalu_format", None),
             }
 
             volumes.append(volume)
@@ -764,12 +764,12 @@ def search_volume(volname):
                     voltype=voltype,
                     volhash=volhash,
                     hostvol=hvol,
-                    volpath=volume.get('path', None),
                     size=data["size"],
-                    kformat=volume['kformat'],
-                    hostvoltype=volume['type'],
-                    ghost=volume.get('gserver', None),
-                    gvolname=volume.get('gvolname', None),
+                    volpath=info_path,
+                    kformat=volume.get('kformat', 'native'),
+                    hostvoltype=volume.get('type', None),
+                    ghost=volume.get('g_host', None),
+                    gvolname=volume.get('g_volname', None),
                 )
     return None
 
@@ -1150,11 +1150,11 @@ def check_external_volume(pv_request, host_volumes):
         if vol["type"] != "External":
             continue
 
-        # For external volume both k_format, g_volname and hosts should match
+        # For external volume both kformat, g_volname and hosts should match
         # gluster_hosts is flattened to a string and can be compared as such
         # Assumptions:
         # 1. User will not reuse a gluster non-native volume
-        if (vol["k_format"] == params["kadalu_format"]
+        if (vol["kformat"] == params["kadalu_format"]
                 and vol["g_volname"] == params["gluster_volname"]
                 and vol["g_host"] == params["gluster_hosts"]):
             mntdir = os.path.join(HOSTVOL_MOUNTDIR, vol["name"])
