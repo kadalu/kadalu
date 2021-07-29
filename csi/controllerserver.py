@@ -31,6 +31,36 @@ GEN = None
 LIMIT = 30
 
 
+# noqa # pylint: disable=too-many-arguments
+def execute_gluster_quota_command(privkey, user, host, gvolname, path, size):
+    """
+    Function to execute the GlusterFS's quota command on external cluster
+    """
+    quota_cmd = [
+        "ssh",
+        "-oStrictHostKeyChecking=no",
+        "-i",
+        "%s" % privkey,
+        "%s@%s" % (user, host),
+        "sudo",
+        "gluster",
+        "volume",
+        "quota",
+        "%s" % gvolname,
+        "limit-usage",
+        "/%s" % path,
+        "%s" % size * 0.05,
+    ]
+    try:
+        execute(*quota_cmd)
+    except CommandException as err:
+        errmsg = "Unable to set Gluster Quota via ssh"
+        logging.error(logf(errmsg, error=err))
+        return errmsg
+
+    return None
+
+
 class ControllerServer(csi_pb2_grpc.ControllerServicer):
     """
     ControllerServer object is responsible for handling host
@@ -200,7 +230,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                         mntdir, request.name, pvsize)
                 else:
                     use_gluster_quota = False
-                    if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
+                    if (os.path.isfile("/etc/secret-volume/ssh-privatekey") \
                         and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
                         use_gluster_quota = True
                     secret_private_key = "/etc/secret-volume/ssh-privatekey"
@@ -215,26 +245,10 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                         logging.debug(logf("Set Quota in the native way"))
                     else:
                         logging.debug(logf("Set Quota using gluster directory Quota"))
-                        quota_cmd = [
-                            "ssh",
-                            "-oStrictHostKeyChecking=no",
-                            "-i",
-                            "%s" % secret_private_key,
-                            "%s@%s" % (secret_username, hostname),
-                            "sudo",
-                            "gluster",
-                            "volume",
-                            "quota",
-                            "%s" % gluster_vol_name,
-                            "limit-usage",
-                            "/%s" % quota_path,
-                            "%s" % quota_size
-                        ]
-                        try:
-                            execute(*quota_cmd)
-                        except CommandException as err:
-                            errmsg = "Unable to set Gluster Quota via ssh"
-                            logging.error(logf(errmsg, error=err))
+                        errmsg = execute_gluster_quota_command(
+                            secret_private_key, secret_username, hostname,
+                            gluster_vol_name, quota_path, quota_size)
+                        if errmsg:
                             context.set_details(errmsg)
                             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
                             return csi_pb2.CreateVolumeResponse()
@@ -545,6 +559,11 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         # Get existing volume
         existing_volume = search_volume(request.volume_id)
+        if existing_volume.extra['kformat'] == 'non-native':
+            errmsg = "PV with kadalu_format == non-native doesn't support Expansion"
+            logging.error(errmsg)
+            # But lets not fail the call, and continue here
+            return csi_pb2.ControllerExpandVolumeResponse()
 
         # Volume size before expansion
         existing_pvsize = existing_volume.size
@@ -571,6 +590,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         hostvol = existing_volume.hostvol
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
+        use_gluster_quota = False
 
         # Check free-size in storage-pool before expansion
         if not is_hosting_volume_free(hostvol, expansion_requested_pvsize):
@@ -584,13 +604,35 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
             return csi_pb2.CreateVolumeResponse()
 
+        hostvoltype = existing_volume.extra['hostvoltype']
+
         if pvtype == PV_TYPE_VIRTBLOCK:
             update_virtblock_volume(
                 mntdir, pvname, expansion_requested_pvsize)
             expand_volume(mntdir)
         else:
             update_subdir_volume(
-                mntdir, pvname, expansion_requested_pvsize)
+                mntdir, hostvoltype, pvname, expansion_requested_pvsize)
+            if hostvoltype == 'External':
+                # Use Gluster quota if set
+                if (os.path.isfile("/etc/secret-volume/ssh-privatekey") \
+                    and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
+                    use_gluster_quota = True
+
+        # Can be true only if its 'External'
+        if use_gluster_quota:
+            secret_private_key = "/etc/secret-volume/ssh-privatekey"
+            secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
+
+            logging.debug(logf("Set Quota (expand) using gluster directory Quota"))
+            errmsg = execute_gluster_quota_command(
+                secret_private_key, secret_username, existing_volume.extra['ghost'],
+                existing_volume.extra['gvolname'], existing_volume.volpath,
+                expansion_requested_pvsize)
+            if errmsg:
+                context.set_details(errmsg)
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                return csi_pb2.ControllerExpandVolumeResponse()
 
         logging.info(logf(
             "Volume expanded",

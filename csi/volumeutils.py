@@ -40,9 +40,14 @@ class Volume():
         self.voltype = voltype
         self.volname = volname
         self.volhash = kwargs.get("volhash", None)
+        self.volpath = kwargs.get("volpath", None)
         self.hostvol = hostvol
         self.size = kwargs.get("size", None)
-        self.volpath = kwargs.get("volpath", None)
+        self.extra = {}
+        self.extra['ghost'] = kwargs.get("ghost", None)
+        self.extra['hostvoltype'] = kwargs.get("hostvoltype", None)
+        self.extra['gvolname'] = kwargs.get("gvolname", None)
+        self.extra['kformat'] = kwargs.get("kformat", 'native')
         self.setpath()
 
     def setpath(self):
@@ -172,7 +177,7 @@ def get_pv_hosting_volumes(filters={}, iteration=40):
                 "g_volname": data.get("gluster_volname", None),
                 "g_host": data.get("gluster_hosts", None),
                 "g_options": data.get("gluster_options", None),
-                "k_format": data.get("kadalu_format", None),
+                "kformat": data.get("kadalu_format", None),
             }
 
             volumes.append(volume)
@@ -445,7 +450,7 @@ def is_hosting_volume_free(hostvol, requested_pvsize):
         return False
 
 
-def update_subdir_volume(hostvol_mnt, volname, expansion_requested_pvsize):
+def update_subdir_volume(hostvol_mnt, hostvoltype, volname, expansion_requested_pvsize):
     """Update sub directory Volume"""
 
     volhash = get_volname_hash(volname)
@@ -480,11 +485,16 @@ def update_subdir_volume(hostvol_mnt, volname, expansion_requested_pvsize):
         pvsize_buffer=pvsize_buffer,
     ))
 
+    # Handle this case in calling function
+    if hostvoltype == 'External':
+        return None
+
     retry_errors(os.setxattr,
                  [os.path.join(hostvol_mnt, volpath),
                   "trusted.gfs.squota.limit",
                   str(expansion_requested_pvsize).encode()],
                  [ENOTCONN])
+
     count = 0
     while True:
         count += 1
@@ -754,7 +764,12 @@ def search_volume(volname):
                     voltype=voltype,
                     volhash=volhash,
                     hostvol=hvol,
-                    size=data["size"]
+                    size=data["size"],
+                    volpath=info_path,
+                    kformat=volume.get('kformat', 'native'),
+                    hostvoltype=volume.get('type', None),
+                    ghost=volume.get('g_host', None),
+                    gvolname=volume.get('g_volname', None),
                 )
     return None
 
@@ -1135,11 +1150,11 @@ def check_external_volume(pv_request, host_volumes):
         if vol["type"] != "External":
             continue
 
-        # For external volume both k_format, g_volname and hosts should match
+        # For external volume both kformat, g_volname and hosts should match
         # gluster_hosts is flattened to a string and can be compared as such
         # Assumptions:
         # 1. User will not reuse a gluster non-native volume
-        if (vol["k_format"] == params["kadalu_format"]
+        if (vol["kformat"] == params["kadalu_format"]
                 and vol["g_volname"] == params["gluster_volname"]
                 and vol["g_host"] == params["gluster_hosts"]):
             mntdir = os.path.join(HOSTVOL_MOUNTDIR, vol["name"])
