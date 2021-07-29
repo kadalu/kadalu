@@ -41,7 +41,7 @@ def validate(_args):
     """No validation available"""
     return
 
-
+# noqa # pylint: disable=too-many-branches
 def run(args):
     """ perform install subcommand """
 
