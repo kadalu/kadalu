@@ -1,0 +1,155 @@
+# -*- mode: yaml -*-
+## Deploy CSI NodePlugin
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kadalu-csi-nodeplugin
+rules:
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kadalu-csi-nodeplugin
+  namespace: {{ namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: kadalu-csi-nodeplugin
+    namespace: {{ namespace }}
+roleRef:
+  kind: ClusterRole
+  name: kadalu-csi-nodeplugin
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: kadalu-csi-nodeplugin
+  namespace: {{ namespace }}
+  labels:
+    app.kubernetes.io/part-of: kadalu
+    app.kubernetes.io/component: csi-driver
+    app.kubernetes.io/name: kadalu-csi-nodeplugin
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: kadalu
+      app.kubernetes.io/component: csi-driver
+      app.kubernetes.io/name: kadalu-csi-nodeplugin
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: kadalu
+        app.kubernetes.io/component: csi-driver
+        app.kubernetes.io/name: kadalu-csi-nodeplugin
+      namespace: {{ namespace }}
+    spec:
+      serviceAccountName: kadalu-csi-nodeplugin
+      containers:
+        - name: csi-node-driver-registrar
+          image: docker.io/raspbernetes/csi-node-driver-registrar:2.0.1
+          args:
+            - "--v=5"
+            - "--csi-address=$(ADDRESS)"
+            - "--kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)"
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "rm -rf /registration/kadalu /registration/kadalu-reg.sock"]
+          env:
+            - name: ADDRESS
+              value: /plugin/csi.sock
+            - name: DRIVER_REG_SOCK_PATH
+              value: {{ kubelet_dir }}/plugins_registry/kadalu/csi.sock
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: KADALU_VERSION
+              value: "{{ kadalu_version }}"
+            - name: K8S_DIST
+              value: "{{ k8s_dist }}"
+            - name: VERBOSE
+              value: "{{ verbose }}"
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /plugin
+            - name: registration-dir
+              mountPath: /registration
+        - name: kadalu-nodeplugin
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["SYS_ADMIN"]
+            allowPrivilegeEscalation: true
+          image: docker.io/{{ docker_user }}/kadalu-csi:{{ kadalu_version }}
+          env:
+            - name: NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: CSI_ENDPOINT
+              value: unix://plugin/csi.sock
+            - name: KADALU_VERSION
+              value: "{{ kadalu_version }}"
+            - name: K8S_DIST
+              value: "{{ k8s_dist }}"
+            - name: VERBOSE
+              value: "{{ verbose }}"
+            - name: CSI_ROLE
+              value: "nodeplugin"
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /plugin
+            - name: pods-mount-dir
+              mountPath: {{ kubelet_dir }}/pods
+              mountPropagation: "Bidirectional"
+            - name: glusterfsd-volfilesdir
+              mountPath: "/var/lib/gluster"
+            - name: gluster-dev
+              mountPath: "/dev"
+            - name: varlog
+              mountPath: /var/log/gluster
+{% if deploy_socat == "yes" %}
+        - name: csi-socat
+          image: docker.io/alpine/socat:1.0.5
+          args:
+            - tcp-listen:10000,fork,reuseaddr
+            - unix-connect:/plugin/csi.sock
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /plugin
+{% endif %}
+        - name: kadalu-logging
+          image: docker.io/library/busybox
+          command: ["/bin/sh"]
+          args: ["-c", "while true; do logcnt=$(/bin/ls /var/log/gluster/ | wc -l); if [ ${logcnt} -gt 0 ]; then break; fi; sleep 5; done; tail -f /var/log/gluster/*.log"]
+          volumeMounts:
+            - name: varlog
+              mountPath: "/var/log/gluster"
+      volumes:
+        - name: plugin-dir
+          hostPath:
+            path: {{ kubelet_dir }}/plugins_registry/kadalu
+            type: DirectoryOrCreate
+        - name: pods-mount-dir
+          hostPath:
+            path: {{ kubelet_dir }}/pods
+            type: Directory
+        - name: registration-dir
+          hostPath:
+            path: {{ kubelet_dir }}/plugins_registry/
+            type: Directory
+        - name: glusterfsd-volfilesdir
+          configMap:
+            name: "kadalu-info"
+        - name: gluster-dev
+          hostPath:
+            path: "/dev"
+        - name: varlog
+          emptyDir: {}
