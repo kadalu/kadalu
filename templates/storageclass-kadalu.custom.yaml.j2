@@ -5,7 +5,7 @@ apiVersion: storage.k8s.io/v1
 metadata:
   name: kadalu.{{ hostvol_name }}
 provisioner: kadalu
-allowVolumeExpansion: true
+allowVolumeExpansion: {%- if kadalu_format == "native" %} true{%- else %} false{%- endif %}
 parameters:
   storage_name: {{ hostvol_name }}
   kadalu_format: {{ kadalu_format }}
