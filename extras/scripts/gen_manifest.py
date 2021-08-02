@@ -49,3 +49,10 @@ if __name__ == "__main__":
     }
 
     template(sys.argv[1], template_file="operator.yaml.j2", template_args=TEMPLATE_ARGS)
+
+    csipath = os.path.join(os.path.dirname(sys.argv[1]), "csi-nodeplugin-" + K8S_DIST + ".yaml")
+    if K8S_DIST == "kubernetes":
+        csipath = os.path.join(os.path.dirname(sys.argv[1]), "csi-nodeplugin.yaml")
+
+    # Generate csi-nodeplugin too
+    template(csipath, template_file="csi-nodeplugin.yaml.j2", template_args=TEMPLATE_ARGS)

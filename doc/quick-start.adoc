@@ -1,3 +1,4 @@
+
 = Quick Start
 
 > **NOTE:** This document is written with the focus to have a single document which can fit both new-comers to k8s ecosystem, and also those who know the system. If you are well versed with k8s yaml files, and can manage using 'kubectl' directly, you can use kadalu without python3 dependency, directly using yaml files. Check link:./quick-start-yaml.adoc[this document] for more details.

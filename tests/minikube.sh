@@ -285,6 +285,7 @@ kadalu_operator)
     # pick the operator file from repo
     sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator.yaml
     kubectl apply -f manifests/kadalu-operator.yaml
+    kubectl apply -f manifests/csi-nodeplugin.yaml
 
     sleep 1
     # Start storage
