@@ -33,7 +33,6 @@ COPY templates/csi.yaml.j2                  /kadalu/templates/csi.yaml.j2
 COPY templates/csi-driver-crd.yaml.j2       /kadalu/templates/csi-driver-crd.yaml.j2
 COPY templates/csi-driver-object.yaml.j2    /kadalu/templates/csi-driver-object.yaml.j2
 COPY templates/configmap.yaml.j2            /kadalu/templates/configmap.yaml.j2
-COPY templates/storageclass-kadalu.yaml.j2           /kadalu/templates/storageclass-kadalu.yaml.j2
 COPY templates/storageclass-kadalu.custom.yaml.j2    /kadalu/templates/storageclass-kadalu.custom.yaml.j2
 COPY templates/external-storageclass.yaml.j2         /kadalu/templates/external-storageclass.yaml.j2
 COPY lib/kadalulib.py                       /kadalu/kadalulib.py
