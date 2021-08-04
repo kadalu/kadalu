@@ -77,4 +77,4 @@ operator-6dfb65dcdd-r664t        1/1     Running   0          30m
 ----
 
 
-After this, go ahead and link:create-pvc.adoc[create your PVC and attach] it to other applications.
+After this, go ahead and link:./create-pvc.adoc[create your PVC and attach] it to other applications.
