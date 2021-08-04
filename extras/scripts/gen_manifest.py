@@ -31,7 +31,6 @@ if __name__ == "__main__":
     KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
     K8S_DIST = os.environ.get("K8S_DIST", "kubernetes")
     VERBOSE = os.environ.get("VERBOSE", "no")
-    DEPLOY_SOCAT = os.environ.get("DEPLOY_SOCAT", "no")
     KUBELET_DIR = "/var/lib/kubelet"
     if K8S_DIST == "microk8s":
         KUBELET_DIR = "/var/snap/microk8s/common/var/lib/kubelet"
@@ -45,7 +44,6 @@ if __name__ == "__main__":
         "k8s_dist": K8S_DIST,
         "kubelet_dir": KUBELET_DIR,
         "verbose": VERBOSE,
-        "deploy_socat": DEPLOY_SOCAT,
     }
 
     template(sys.argv[1], template_file="operator.yaml.j2", template_args=TEMPLATE_ARGS)

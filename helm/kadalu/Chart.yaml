@@ -1,7 +1,14 @@
 apiVersion: v2
 name: kadalu
 icon: https://kadalu.io/static/css/logo.png
-description: kadalu.io Storage Operator and CSI for k8s (with glusterfs)
+description: Contains subchart for deploying Kadalu Operator and Kadalu CSI Nodeplugin
 type: application
 # Value of 'version' will be replaced with correct version on part of release
 version: 0.0.0-0
+dependencies:
+  - name: operator
+    repository: file://charts/operator
+    condition: operator.enabled
+  - name: csi-nodeplugin
+    repository: file://charts/csi-nodeplugin
+    condition: csi-nodeplugin.enabled
