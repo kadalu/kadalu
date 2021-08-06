@@ -68,12 +68,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: KADALU_VERSION
-              value: "{{ kadalu_version }}"
-            - name: K8S_DIST
-              value: "{{ k8s_dist }}"
-            - name: VERBOSE
-              value: "{{ verbose }}"
           volumeMounts:
             - name: plugin-dir
               mountPath: /plugin
@@ -113,18 +107,6 @@ spec:
               mountPath: "/dev"
             - name: varlog
               mountPath: /var/log/gluster
-{% if deploy_socat == "yes" %}
-        - name: csi-socat
-          image: docker.io/alpine/socat:1.0.5
-          args:
-            - tcp-listen:10000,fork,reuseaddr
-            - unix-connect:/plugin/csi.sock
-          securityContext:
-            privileged: true
-          volumeMounts:
-            - name: plugin-dir
-              mountPath: /plugin
-{% endif %}
         - name: kadalu-logging
           image: docker.io/library/busybox
           command: ["/bin/sh"]

@@ -52,5 +52,3 @@ spec:
               value: "{{ .Values.kubernetesDistro }}"
             - name: VERBOSE
               value: "{{ .Values.verbose }}"
-            - name: DEPLOY_SOCAT
-              value: "{{ .Values.deploy_socat }}"

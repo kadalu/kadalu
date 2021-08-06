@@ -1,4 +1,3 @@
-# A shorter version of this is being deployed when 'deploy_socat' pod is set to 'yes' in operator manifest
 # This manifest is only used for manually debugging KaDalu CSI Driver
 
 # Once this pod is deployed you can run below for communicating with CSI driver

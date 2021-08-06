@@ -1,29 +1,15 @@
-# Default values for kadalu
+# Default values for kadalue
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 1
-kubernetesDistro: kubernetes
-verbose: 'no'
-deploy_socat: 'no'
-
-image:
-  repository: kadalu/kadalu-operator
-  pullPolicy: IfNotPresent
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: devel
-
-serviceAccount:
-  create: true
-
-podSecurityContext: {}
-
-securityContext: {}
-
-service:
-
-resources: {}
-
-autoscaling:
+# Values while deploying operator
+operator:
   enabled: false
+  kubernetesDistro: 'kubernetes'
+  verbose: 'no'
 
+# Values while deploying csi-nodeplugin
+csi-nodeplugin:
+  enabled: false
+  kubernetesDistro: 'kubernetes'
+  verbose: 'no'

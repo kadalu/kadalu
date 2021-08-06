@@ -25,7 +25,6 @@ VERSION = os.environ.get("KADALU_VERSION", "latest")
 K8S_DIST = os.environ.get("K8S_DIST", "kubernetes")
 KUBELET_DIR = os.environ.get("KUBELET_DIR")
 VERBOSE = os.environ.get("VERBOSE", "no")
-DEPLOY_SOCAT = os.environ.get("DEPLOY_SOCAT", "no")
 MANIFESTS_DIR = "/kadalu/templates"
 KUBECTL_CMD = "/usr/bin/kubectl"
 KADALU_CONFIG_MAP = "kadalu-info"
@@ -928,8 +927,7 @@ def deploy_csi_pods(core_v1_client):
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
     template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
              docker_user=docker_user, k8s_dist=K8S_DIST,
-             kubelet_dir=KUBELET_DIR, verbose=VERBOSE,
-             deploy_socat=DEPLOY_SOCAT)
+             kubelet_dir=KUBELET_DIR, verbose=VERBOSE,)
 
     lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
     logging.info(logf("Deployed CSI Pods", manifest=filename))

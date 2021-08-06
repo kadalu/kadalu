@@ -30,10 +30,13 @@ test-containers:
 gen-manifest:
 	@echo "Generating manifest files, run the following commands"
 	@echo
+	@echo "Install Kadalu Operator followed by CSI Nodeplugin"
+	@echo
 	@mkdir -p manifests
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator.yaml
 	@echo "kubectl apply -f manifests/kadalu-operator.yaml"
+	@echo "kubectl apply -f manifests/csi-nodeplugin.yaml"
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		K8S_DIST=openshift                                   \
 		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-openshift.yaml
@@ -45,6 +48,7 @@ gen-manifest:
 	@echo 'Run `oc login -u system:admin` to login as admin'
 	@echo
 	@echo "oc create -f manifests/kadalu-operator-openshift.yaml"
+	@echo "oc create -f manifests/csi-nodeplugin-openshift.yaml"
 
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		K8S_DIST=microk8s                                    \
@@ -54,6 +58,7 @@ gen-manifest:
 	@echo "the following command"
 	@echo
 	@echo "kubectl apply -f manifests/kadalu-operator-microk8s.yaml"
+	@echo "kubectl apply -f manifests/csi-nodeplugin-microk8s.yaml"
 
 	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		K8S_DIST=rke                                    \
@@ -63,6 +68,7 @@ gen-manifest:
 	@echo "the following command"
 	@echo
 	@echo "kubectl apply -f manifests/kadalu-operator-rke.yaml"
+	@echo "kubectl apply -f manifests/csi-nodeplugin-rke.yaml"
 
 pylint:
 	@cp lib/kadalulib.py csi/
@@ -121,7 +127,7 @@ pypi-build:
 
 helm-chart:
 	@echo "Creating tgz archive of helm chart(Version: ${KADALU_VERSION}).."
-	cd helm; sed -i -e "s/0.0.0-0/${KADALU_VERSION}/" kadalu/Chart.yaml; tar -czf kadalu-helm-chart.tgz kadalu
+	cd helm; grep -rln '0.0.0-0' | grep Chart | xargs -I file sed -i -e "s/0.0.0-0/${KADALU_VERSION}/" file; tar -czf kadalu-helm-chart.tgz kadalu
 
 gen-requirements:
 	@echo "Generating requirements file for all kadalu components and CI"
