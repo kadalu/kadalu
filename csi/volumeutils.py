@@ -341,6 +341,11 @@ def create_subdir_volume(hostvol_mnt, volname, size, use_gluster_quota):
         "Created PV directory",
         pvdir=volpath
     ))
+
+    # Write info file so that Brick's quotad sidecar
+    # container picks it up (or) for external quota expansion
+    save_pv_metadata(hostvol_mnt, volpath, size)
+
     if use_gluster_quota is True:
         return Volume(
             volname=volname,
@@ -350,10 +355,6 @@ def create_subdir_volume(hostvol_mnt, volname, size, use_gluster_quota):
             size=size,
             volpath=volpath,
         )
-
-    # Write info file so that Brick's quotad sidecar
-    # container picks it up.
-    save_pv_metadata(hostvol_mnt, volpath, size)
 
     # Wait for quota set
     # TODO: Handle Timeout

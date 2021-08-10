@@ -4,7 +4,7 @@ apiVersion: storage.k8s.io/v1
 metadata:
   name: kadalu.{{ volname }}
 provisioner: kadalu
-allowVolumeExpansion: {%- if kadalu_format == "native" %}true{%- else %}false{%- endif %}
+allowVolumeExpansion: {%- if kadalu_format == "native" %} true{%- else %} false{%- endif %}
 parameters:
   hostvol_type: "External"
   gluster_hosts: {{ gluster_hosts }}
