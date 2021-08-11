@@ -36,6 +36,8 @@ def execute_gluster_quota_command(privkey, user, host, gvolname, path, size):
     """
     Function to execute the GlusterFS's quota command on external cluster
     """
+    # 'size' can always be parsed as integer with no errors
+    size = int(size) * 0.95
     quota_cmd = [
         "ssh",
         "-oStrictHostKeyChecking=no",
@@ -49,7 +51,7 @@ def execute_gluster_quota_command(privkey, user, host, gvolname, path, size):
         "%s" % gvolname,
         "limit-usage",
         "/%s" % path,
-        "%s" % size * 0.05,
+        "%s" % size,
     ]
     try:
         execute(*quota_cmd)
