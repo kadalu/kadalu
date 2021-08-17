@@ -18,6 +18,7 @@ VOLUME_ID_XATTR_NAME = "trusted.glusterfs.volume-id"
 VOLFILES_DIR = "/kadalu/volfiles"
 TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
+MKFS_XFS_CMD = "/sbin/mkfs.xfs"
 
 
 def create_brickdir(brick_path):
@@ -102,6 +103,12 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
 
     try:
         execute("mount", brick_device, mountdir)
+        logging.info(logf(
+            "Successfully mounted device on path",
+            fstype=brickfs,
+            device=brick_device,
+            mountdir=mountdir,
+            ))
     except CommandException as err:
         logging.info(logf(
             "Failed to mount device, continuing with mkfs",
@@ -114,7 +121,12 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
             # This error pops up when we do mount on an empty device or wrong fs
             # Try doing a mkfs and try mount
             try:
-                execute("mkfs.xfs", brick_device)
+                execute(MKFS_XFS_CMD, brick_device)
+                logging.info(logf(
+                    "Successfully created xfs file system on device",
+                    fstype=brickfs,
+                    device=brick_device,
+                    ))
             except CommandException as err:
                 if "appears to contain an existing filesystem" not in err.err:
                     logging.error(logf(
@@ -133,6 +145,12 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
                     ))
             try:
                 execute("mount", brick_device, mountdir)
+                logging.info(logf(
+                    "Successfully mounted device on path",
+                    fstype=brickfs,
+                    device=brick_device,
+                    mountdir=mountdir,
+                    ))
             except CommandException as err:
                 logging.error(logf(
                     "Failed to mount export brick (after mkfs)",

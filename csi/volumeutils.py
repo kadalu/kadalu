@@ -17,9 +17,9 @@ from kadalulib import (PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, CommandException,
                        makedirs, retry_errors)
 
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
-MOUNT_CMD = "/usr/bin/mount"
-UNMOUNT_CMD = "/usr/bin/umount"
-MKFS_XFS_CMD = "/usr/sbin/mkfs.xfs"
+MOUNT_CMD = "/bin/mount"
+UNMOUNT_CMD = "/bin/umount"
+MKFS_XFS_CMD = "/sbin/mkfs.xfs"
 RESERVED_SIZE_PERCENTAGE = 10
 HOSTVOL_MOUNTDIR = "/mnt"
 VOLFILES_DIR = "/kadalu/volfiles"

@@ -11,7 +11,7 @@ RUN python3 -m pip install -r /tmp/csi-requirements.txt
 FROM python:3.8.11-slim-buster as prod
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends attr libtirpc3 bash inotify-tools ssh && \
+    apt-get install -y --no-install-recommends xfsprogs attr libtirpc3 bash inotify-tools ssh && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
