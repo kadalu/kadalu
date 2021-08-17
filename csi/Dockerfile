@@ -8,10 +8,10 @@ COPY csi-requirements.txt /tmp/
 
 RUN python3 -m pip install -r /tmp/csi-requirements.txt
 
-FROM ubuntu:20.04 as prod
+FROM python:3.8.11-slim-buster as prod
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends attr python3 libtirpc3 bash inotify-tools ssh && \
+    apt-get install -y --no-install-recommends attr libtirpc3 bash inotify-tools ssh && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -23,6 +23,10 @@ COPY --from=builder /opt /opt
 # actual application to be copied here
 # using already installed packages from builder for faster build time
 COPY --from=builder /kadalu /kadalu
+
+# venv in 'ubuntu' img links python3 executable to '/usr/bin/python3'
+# but in 'python:slim' it's at '/usr/local/bin/python3'
+RUN ln -sfn /usr/local/bin/python3 /kadalu/bin/python3
 
 # copy grpcio installed in pypi_source image
 COPY --from=builder /usr/local/lib/python3.8/dist-packages /kadalu/lib/python3.8/site-packages/
