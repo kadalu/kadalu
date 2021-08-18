@@ -11,7 +11,7 @@ RUN python3 -m pip install -r /tmp/csi-requirements.txt
 FROM python:3.7.11-slim-buster as prod
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends xfsprogs attr libtirpc3 bash inotify-tools ssh && \
+    apt-get install -y --no-install-recommends xfsprogs attr libtirpc3 bash inotify-tools ssh liburcu6 && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -24,7 +24,7 @@ COPY --from=builder /opt /opt
 # using already installed packages from builder for faster build time
 COPY --from=builder /kadalu /kadalu
 
-# venv in 'ubuntu' img links python3 executable to '/usr/bin/python3'
+# venv in 'buster' img links python3 executable to '/usr/bin/python3'
 # but in 'python:slim' it's at '/usr/local/bin/python3'
 RUN ln -sfn /usr/local/bin/python3 /kadalu/bin/python3
 

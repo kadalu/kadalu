@@ -24,7 +24,7 @@ COPY --from=builder /usr/bin/kubectl /usr/bin/kubectl
 # using already installed packages from builder for faster build time
 COPY --from=builder /kadalu /kadalu
 
-# venv in 'ubuntu' img links python3 executable to '/usr/bin/python3'
+# venv in 'buster' img links python3 executable to '/usr/bin/python3'
 # but in 'python:slim' it's at '/usr/local/bin/python3'
 RUN ln -sfn /usr/local/bin/python3 /kadalu/bin/python3
 
