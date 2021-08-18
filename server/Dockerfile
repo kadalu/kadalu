@@ -8,7 +8,7 @@ COPY server-requirements.txt /tmp/
 
 RUN python3 -m pip install -r /tmp/server-requirements.txt
 
-FROM python:3.8.11-slim-buster as prod
+FROM python:3.7.11-slim-buster as prod
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
@@ -26,9 +26,6 @@ RUN apt-get update -yq && \
     apt-get install -y --no-install-recommends attr xfsprogs libtirpc3 sqlite3 && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
-
-# copy pyxattr installed in pypi_source image
-COPY --from=builder /usr/local/lib/python3.8/dist-packages /kadalu/lib/python3.8/site-packages/
 
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
 RUN mkdir -p /var/run/gluster /var/log/glusterfs
