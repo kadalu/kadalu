@@ -1010,6 +1010,10 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             use_gluster_quota = True
         secret_private_key = "/etc/secret-volume/ssh-privatekey"
         secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
+        
+        # SSH into only first host in volume['g_host'] entry
+        g_host = volume['g_host'].split(',')[0]
+
         if use_gluster_quota is False:
             logging.debug(logf("Do not set quota-deem-statfs"))
         else:
@@ -1019,7 +1023,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
                 "-oStrictHostKeyChecking=no",
                 "-i",
                 "%s" % secret_private_key,
-                "%s@%s" % (secret_username, volume['g_host']),
+                "%s@%s" % (secret_username, g_host),
                 "sudo",
                 "gluster",
                 "volume",
