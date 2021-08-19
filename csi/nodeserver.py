@@ -16,8 +16,8 @@ from kadalulib import logf
 
 HOSTVOL_MOUNTDIR = "/mnt"
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
-MOUNT_CMD = "/usr/bin/mount"
-UNMOUNT_CMD = "/usr/bin/umount"
+MOUNT_CMD = "/bin/mount"
+UNMOUNT_CMD = "/bin/umount"
 
 
 class NodeServer(csi_pb2_grpc.NodeServicer):

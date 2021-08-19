@@ -8,7 +8,7 @@ COPY server-requirements.txt /tmp/
 
 RUN python3 -m pip install -r /tmp/server-requirements.txt
 
-FROM ubuntu:20.04 as prod
+FROM python:3.9.6-slim-bullseye as prod
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
@@ -18,13 +18,14 @@ COPY --from=builder /opt /opt
 # using already installed packages from builder for faster build time
 COPY --from=builder /kadalu /kadalu
 
+# venv in 'buster' img links python3 executable to '/usr/bin/python3'
+# but in 'python:slim' it's at '/usr/local/bin/python3'
+RUN ln -sfn /usr/local/bin/python3 /kadalu/bin/python3
+
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends attr python3 xfsprogs libtirpc3 sqlite3 && \
+    apt-get install -y --no-install-recommends attr xfsprogs libtirpc3 sqlite3 liburcu6 && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
-
-# copy pyxattr installed in pypi_source image
-COPY --from=builder /usr/local/lib/python3.8/dist-packages /kadalu/lib/python3.8/site-packages/
 
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
 RUN mkdir -p /var/run/gluster /var/log/glusterfs
