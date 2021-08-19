@@ -1219,7 +1219,8 @@ def yield_pvc_from_mntdir(mntdir):
                 data = json.loads(handle.read().strip())
             logging.debug(
                 logf("Found a PVC at", path=file_path, size=data.get("size")))
-            yield name[name.find("pvc"):name.find(".json")], data.get("size")
+            yield name[name.find("pvc"):name.find(".json")], data.get("size"), \
+                data.get("path_prefix")
 
 
 def yield_pvc_from_hostvol():

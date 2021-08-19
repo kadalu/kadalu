@@ -1,4 +1,5 @@
 import os
+import pathlib
 import time
 import logging
 
@@ -6,7 +7,8 @@ from prometheus_client.core import GaugeMetricFamily, \
      CounterMetricFamily, REGISTRY
 from prometheus_client import start_http_server
 
-from volumeutils import HOSTVOL_MOUNTDIR
+from volumeutils import (HOSTVOL_MOUNTDIR, PV_TYPE_SUBVOL,
+                         yield_pvc_from_mntdir)
 from kadalulib import logging_setup, logf
 
 
@@ -44,6 +46,21 @@ class CsiMetricsCollector(object):
             'Kadalu Storage Inodes free Count',
             labels=capacity_labels
         )
+        pv_capacity_bytes = GaugeMetricFamily(
+            'kadalu_storage_pv_capacity_bytes',
+            'Kadalu Storage PV Capacity',
+            labels=capacity_labels+["pv"]
+        )
+        pv_capacity_used_bytes = GaugeMetricFamily(
+            'kadalu_storage_pv_capacity_used_bytes',
+            'Kadalu Storage PV Used Capacity',
+            labels=capacity_labels+["pv"]
+        )
+        pv_capacity_free_bytes = GaugeMetricFamily(
+            'kadalu_storage_pv_capacity_free_bytes',
+            'Kadalu Storage PV Free Capacity',
+            labels=capacity_labels+["pv"]
+        )
 
         for dirname in os.listdir(HOSTVOL_MOUNTDIR):
             labels = [dirname]  # TODO: Add more labels
@@ -67,12 +84,34 @@ class CsiMetricsCollector(object):
                 inodes_free_count.add_metric(labels, free)
                 inodes_used_count.add_metric(labels, used)
 
+                # Gathers capacity metrics for each subvol
+                for pvc in yield_pvc_from_mntdir(os.path.join(pth, "info")):
+                    # pvc[0]: name
+                    # pvc[1]: size
+                    # pvc[2]: path prefix
+                    pvcpath = os.path.join(pth, pvc[2])
+                    pvcname = pvc[0]
+                    pvclabels = labels + [pvcname]
+
+                    stat = os.statvfs(pvcpath)
+
+                    # Capacity
+                    total = stat.f_bsize * stat.f_blocks
+                    free = stat.f_bsize * stat.f_bavail
+                    used = total - free
+                    pv_capacity_bytes.add_metric(pvclabels, total)
+                    pv_capacity_free_bytes.add_metric(pvclabels, free)
+                    pv_capacity_used_bytes.add_metric(pvclabels, used)
+
         yield capacity_bytes
         yield capacity_free_bytes
         yield capacity_used_bytes
         yield inodes_count
         yield inodes_free_count
         yield inodes_used_count
+        yield pv_capacity_bytes
+        yield pv_capacity_used_bytes
+        yield pv_capacity_free_bytes
 
 
 REGISTRY.register(CsiMetricsCollector())
