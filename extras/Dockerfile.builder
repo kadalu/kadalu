@@ -1,4 +1,4 @@
-FROM debian:buster
+FROM debian:bullseye
 
 ARG branch="series_1"
 
@@ -11,7 +11,7 @@ COPY builder-requirements.txt /tmp/
 
 RUN apt-get update -yq && \
     apt-get install -y --no-install-recommends python3 curl xfsprogs net-tools telnet wget e2fsprogs zlib1g-dev liburcu6\
-    python3-pip sqlite build-essential g++ python3-dev flex bison openssl libssl-dev libtirpc-dev liburcu-dev \
+    python3-pip sqlite3 build-essential g++ python3-dev flex bison openssl libssl-dev libtirpc-dev liburcu-dev \
     libfuse-dev libuuid1 python3-distutils uuid-dev acl-dev libtool automake autoconf git pkg-config \
     python3-venv python3-wheel libffi-dev && \
     git clone --depth 1 https://github.com/kadalu/glusterfs --branch ${branch} --single-branch glusterfs && \

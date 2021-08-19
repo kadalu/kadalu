@@ -8,7 +8,7 @@ COPY server-requirements.txt /tmp/
 
 RUN python3 -m pip install -r /tmp/server-requirements.txt
 
-FROM python:3.7.11-slim-buster as prod
+FROM python:3.9.6-slim-bullseye as prod
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
