@@ -14,7 +14,7 @@ import uuid
 import urllib3
 from jinja2 import Template
 from kadalulib import execute as lib_execute
-from kadalulib import logf, logging_setup, send_analytics_tracker
+from kadalulib import logf, logging_setup, send_analytics_tracker, is_host_reachable
 from kubernetes import client, config, watch
 from urllib3.exceptions import ProtocolError
 from utils import CommandError
@@ -78,24 +78,6 @@ def bricks_validation(bricks):
 
     return ret
 
-
-def is_host_reachable(hosts, port):
-    """Check if glusterd is reachable in the given node"""
-    timeout = 5
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(timeout)
-    for host in hosts:
-        try:
-            sock.connect((host, int(port)))
-            sock.shutdown(socket.SHUT_RDWR)
-            return True
-        except socket.error as msg:
-            logging.error(logf("Failed to open socket connection",
-                               error=msg, host=host))
-            continue
-        finally:
-            sock.close()
-    return False
 
 def validate_ext_details(obj):
     """Validate external Volume details"""

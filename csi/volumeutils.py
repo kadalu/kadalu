@@ -14,7 +14,7 @@ from jinja2 import Template
 from kadalulib import (PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, CommandException,
                        SizeAccounting, execute, get_volname_hash,
                        get_volume_path, is_gluster_mount_proc_running, logf,
-                       makedirs, retry_errors)
+                       makedirs, retry_errors, reachable_hosts)
 
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/usr/bin/mount"
@@ -1010,9 +1010,13 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             use_gluster_quota = True
         secret_private_key = "/etc/secret-volume/ssh-privatekey"
         secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
-        
-        # SSH into only first host in volume['g_host'] entry
-        g_host = volume['g_host'].split(',')[0]
+
+        # SSH into only first reachable host in volume['g_host'] entry
+        g_host = reachable_hosts(volume['g_host'].strip().split(','))
+
+        if g_host is None:
+            logging.error(logf("All hosts are not reachable"))
+            return
 
         if use_gluster_quota is False:
             logging.debug(logf("Do not set quota-deem-statfs"))

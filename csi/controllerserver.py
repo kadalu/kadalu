@@ -18,7 +18,7 @@ from volumeutils import (HOSTVOL_MOUNTDIR, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
                          mount_and_select_hosting_volume, search_volume,
                          unmount_glusterfs, update_free_size,
                          update_subdir_volume, update_virtblock_volume,
-                         yield_list_of_pvcs)
+                         yield_list_of_pvcs, reachable_hosts)
 
 VOLINFO_DIR = "/var/lib/gluster"
 KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
@@ -38,6 +38,13 @@ def execute_gluster_quota_command(privkey, user, host, gvolname, path, size):
     """
     # 'size' can always be parsed as integer with no errors
     size = int(size) * 0.95
+
+    host = reachable_hosts(host)
+    if host is None:
+        errmsg = "All hosts are not reachable"
+        logging.error(logf(errmsg))
+        return errmsg
+
     quota_cmd = [
         "ssh",
         "-oStrictHostKeyChecking=no",
