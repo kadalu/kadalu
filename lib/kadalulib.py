@@ -7,7 +7,7 @@ import os
 import time
 import sqlite3
 import signal
-
+import socket
 import xxhash
 
 CREATE_TABLE_1 = """CREATE TABLE IF NOT EXISTS summary (
@@ -75,6 +75,34 @@ def is_gluster_mount_proc_running(volname, mountpoint):
                           universal_newlines=True) as proc:
         proc.communicate()
         return proc.returncode == 0
+
+
+def is_host_reachable(hosts, port):
+    """Check if glusterd is reachable in the given node"""
+    timeout = 5
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(timeout)
+    for host in hosts:
+        try:
+            sock.connect((host, int(port)))
+            sock.shutdown(socket.SHUT_RDWR)
+            return True
+        except socket.error as msg:
+            logging.error(logf("Failed to open socket connection",
+                               error=msg, host=host))
+            continue
+        finally:
+            sock.close()
+    return False
+
+
+def reachable_host(hosts):
+    """Return first reachable host for dir-quota SSH"""
+    for host in hosts:
+        host = host.strip()
+        if is_host_reachable([host], 22):
+            return host
+    return None
 
 
 def makedirs(dirpath):
