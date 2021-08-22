@@ -4,7 +4,7 @@ This page is a collection for some common problems and their solution
 
 == not all pods are started - `error when creating "/kadalu/templates/csi-driver-object.yaml"`
 
-Kadalu-oerator spins upseveral pods like `csi-provisioner` or `csi-nodeplugin`. In case you don't see them expect the `operator`-pod check the log of the pod.
+Kadalu-operator spins upseveral pods like `csi-provisioner` or `csi-nodeplugin`. In case you don't see them expect the `operator`-pod check the log of the pod.
 
 [source,console]
 ----
