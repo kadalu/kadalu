@@ -38,9 +38,9 @@ def mount_storage():
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
         try:
             mount_glusterfs(volume, mntdir)
+            logging.info(logf("Volume is mounted successfully", hvol=hvol))
         except CommandException:
             logging.error(logf("Unable to mount volume", hvol=hvol))
-        logging.info(logf("Volume is mounted successfully", hvol=hvol))
     return
 
 
