@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.5] - 2021-08-23
+
+- Added support for PV expansion provisioned from external Volumes.
+- New Prometheus metrics added. `kadalu_storage_pv_capacity_bytes`, `kadalu_storage_pv_capacity_used_bytes` and `kadalu_storage_pv_capacity_free_bytes`
+- Prometheus annotations added to automatically configure scraping.
+- Fixed issue with Python dependencies in Arm builds.
+- To avoid applications loosing access to the storage after upgrade, CSI node plugins are not upgraded as part of Operator and server pods upgrade.
+- Fixed issues while setting external Quota when multiple hosts provided.
+
 ## [0.8.4] - 2021-07-27
 
 - Fixed accounting issues related to Quota feature.
@@ -246,7 +255,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.4...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.5...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
@@ -266,3 +275,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.8.2]: https://github.com/kadalu/kadalu/compare/0.8.1...0.8.2
 [0.8.3]: https://github.com/kadalu/kadalu/compare/0.8.2...0.8.3
 [0.8.4]: https://github.com/kadalu/kadalu/compare/0.8.3...0.8.4
+[0.8.5]: https://github.com/kadalu/kadalu/compare/0.8.4...0.8.5
