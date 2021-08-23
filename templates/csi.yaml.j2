@@ -201,8 +201,8 @@ spec:
         app.kubernetes.io/component: csi-driver
         app.kubernetes.io/name: kadalu-csi-provisioner
       annotations:
-        prometheus.io/scrape: true
-        prometheus.io/port: 8000
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
     spec:
       serviceAccountName: kadalu-csi-provisioner
       containers:
