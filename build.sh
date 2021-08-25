@@ -2,7 +2,7 @@
 
 set -e -o pipefail
 
-cp requirements/* .
+cp -f requirements/*-requirements.txt .
 trap "rm -f *-requirements.txt" EXIT
 
 DOCKER_USER="${DOCKER_USER:-kadalu}"
