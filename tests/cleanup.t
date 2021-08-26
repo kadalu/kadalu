@@ -1,0 +1,1 @@
+TEST "minikube stop"

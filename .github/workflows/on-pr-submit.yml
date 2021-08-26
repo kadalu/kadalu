@@ -61,7 +61,7 @@ jobs:
     # Build Containers
     - uses: actions/checkout@v2
     - name: Install Docker Dependencies
-      run: sudo apt-get install -y conntrack
+      run: sudo apt-get install -y conntrack ruby
     - name: Build locally
       id: build_local
       run: |
@@ -77,26 +77,26 @@ jobs:
           CONTAINERS_FOR=TESTING make test-containers
         fi
         echo Completed building containers
+        curl -L https://github.com/kadalu/binnacle/releases/latest/download/binnacle -o binnacle
+        chmod +x ./binnacle
+        sudo mv ./binnacle /usr/local/bin/binnacle
+        binnacle --version
     - name: Generate Manifests
       run: VERBOSE="yes" make gen-manifest
 
     # Operator Tests
-    - name: Setup Minikube
-      run: tests/setup.sh $KUBE_VERSION
-    - name: Run tests
-      run: tests/travis-test.sh $KUBE_VERSION
-    - name: Cleanup
-      run: tests/cleanup.sh $KUBE_VERSION
+    - name: Operator Tests
+      run: binnacle -v tests/operator_tests.t
+
+    - name: On failure of Operator tests
+      if: ${{ failure() }}
+      run: "FAILED=1 bash tests/scripts/print_all_logs.sh"
 
     # CLI Tests (run conditionally)
-    - name: Setup Minikube (CLI Test)
-      run: |
-        sudo sysctl fs.protected_regular=0
-        tests/setup.sh $KUBE_VERSION
+    - name: CLI Tests
+      run: binnacle -v tests/cli_tests.t
       if: "contains(needs.get-info.outputs.files, 'cli')"
-    - name: Run tests (CLI Test)
-      run: tests/travis-test.sh $KUBE_VERSION cli
-      if: "contains(needs.get-info.outputs.files, 'cli')"
-    - name: Cleanup (CLI Test)
-      run: tests/cleanup.sh $KUBE_VERSION
-      if: "contains(needs.get-info.outputs.files, 'cli')"
+
+    - name: On failure of CLI tests
+      if: ${{ failure() }}
+      run: "FAILED=1 bash tests/scripts/print_all_logs.sh"
