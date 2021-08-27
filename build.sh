@@ -2,14 +2,16 @@
 
 set -e -o pipefail
 
-cp requirements/* .
+cp -f requirements/*-requirements.txt .
 trap "rm -f *-requirements.txt" EXIT
 
 DOCKER_USER="${DOCKER_USER:-kadalu}"
 KADALU_VERSION="${KADALU_VERSION}"
 
 RUNTIME_CMD=${RUNTIME_CMD:-docker}
-build="build"
+# Use buildx for docker to simulate release script in github workflow
+# Requires Docker >=v19.03
+build="buildx build"
 if [[ "${RUNTIME_CMD}" == "buildah" ]]; then
         build="bud"
 fi
