@@ -1012,7 +1012,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
         secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
 
         # SSH into only first reachable host in volume['g_host'] entry
-        g_host = reachable_host(volume['g_host'].strip().split(','))
+        g_host = reachable_host(volume['g_host'])
 
         if g_host is None:
             logging.error(logf("All hosts are not reachable"))

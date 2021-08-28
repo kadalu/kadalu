@@ -98,6 +98,7 @@ def is_host_reachable(hosts, port):
 
 def reachable_host(hosts):
     """Return first reachable host for dir-quota SSH"""
+    hosts = hosts.strip().split(',')
     for host in hosts:
         host = host.strip()
         if is_host_reachable([host], 22):
