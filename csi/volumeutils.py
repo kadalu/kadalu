@@ -1211,13 +1211,33 @@ def yield_hostvol_mount():
         yield os.path.join(mntdir, 'info')
 
 
+# def loopa(mntdir):
+# ...     for child in os.listdir(mntdir):
+# ...             name = os.path.join(mntdir, child)
+# ...             print(child, name)
+# ...             if len(os.listdir(name)) == 0:
+# ...                     print("Empty", name)
+# ...             elif os.path.isdir(name):
+# ...                     loopa(name)
+
+
 def yield_pvc_from_mntdir(mntdir):
     """Yields PVCs from a single mntdir"""
     # Max recursion depth is two subdirs (/<mntdir>/x/y/<pvc-hash-.json>)
     # If 'subvol' exist then max depth will be three subdirs
     for child in os.listdir(mntdir):
         name = os.path.join(mntdir, child)
-        if os.path.isdir(name):
+
+        # Handle condition for no PVC JSON file
+        # The PVC is created, then deleted along with json file. 
+        # Leaving path prefix as empty leaf directory.
+        if os.path.isdir(name) and len(os.listdir(name)) == 0:
+            logging.error(logf(
+                "No PVC found"
+            ))
+            yield None
+
+        elif os.path.isdir(name):
             yield from yield_pvc_from_mntdir(name)
         elif name.endswith('json'):
             # Base case we are interested in, the filename ending with '.json'
@@ -1225,7 +1245,7 @@ def yield_pvc_from_mntdir(mntdir):
             file_path = os.path.join(mntdir, name)
             with open(file_path) as handle:
                 data = json.loads(handle.read().strip())
-            logging.debug(
+            logging.info(
                 logf("Found a PVC at", path=file_path, size=data.get("size")))
             yield name[name.find("pvc"):name.find(".json")], data.get("size"), \
                 data.get("path_prefix")

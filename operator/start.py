@@ -8,6 +8,7 @@ def main():
 
     mon = Monitor()
     mon.add_process(Proc("operator", "python3", [curr_dir + "/main.py"]))
+    mon.add_process(Proc("metrics", "python3", [curr_dir + "/exporter.py"]))
 
     mon.start_all()
     mon.monitor()

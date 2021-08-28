@@ -23,7 +23,7 @@ COPY --from=builder /kadalu /kadalu
 RUN ln -sfn /usr/local/bin/python3 /kadalu/bin/python3
 
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends attr xfsprogs libtirpc3 sqlite3 liburcu6 && \
+    apt-get install -y --no-install-recommends net-tools netcat iputils-ping telnet attr xfsprogs libtirpc3 sqlite3 liburcu6 && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -37,6 +37,7 @@ COPY server/shd.py           /kadalu/shd.py
 COPY server/mount-glustervol /usr/bin/mount-glustervol
 COPY lib/startup.sh          /kadalu/startup.sh
 COPY server/stop-server.sh   /kadalu/stop-server.sh
+COPY server/exporter.py      /kadalu/exporter.py
 
 # Copy Volfile templates
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/
