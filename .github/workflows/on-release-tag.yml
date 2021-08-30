@@ -72,6 +72,8 @@ jobs:
         overwrite: true
         file_glob: true
 
+  # Use no-cache while building images as they may break release and they are built
+  # only during release so the delay/bandwidth worth the time
   multi-arch-build-for-release:
     runs-on: ubuntu-latest
     steps:
@@ -111,6 +113,7 @@ jobs:
           file: extras/Dockerfile.builder
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
+          no-cache: true
           tags: |
             docker.io/kadalu/builder:${{ steps.vars.outputs.tag }}
             docker.io/kadalu/builder:latest
@@ -129,6 +132,7 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           target: prod
           push: true
+          no-cache: true
           tags: |
             docker.io/kadalu/kadalu-csi:${{ steps.vars.outputs.tag }}
             docker.io/kadalu/kadalu-csi:latest
@@ -148,6 +152,7 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           target: prod
           push: true
+          no-cache: true
           tags: |
             docker.io/kadalu/kadalu-server:${{ steps.vars.outputs.tag }}
             docker.io/kadalu/kadalu-server:latest
@@ -167,6 +172,7 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           target: prod
           push: true
+          no-cache: true
           tags: |
             docker.io/kadalu/kadalu-operator:${{ steps.vars.outputs.tag }}
             docker.io/kadalu/kadalu-operator:latest
