@@ -11,7 +11,8 @@ KADALU_VERSION="${KADALU_VERSION}"
 RUNTIME_CMD=${RUNTIME_CMD:-docker}
 # Use buildx for docker to simulate release script in github workflow
 # Requires Docker >=v19.03
-build="buildx build"
+PLATFORM=$(uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|' | sed 's|armv7l|arm/v7|')
+build="buildx build --platform linux/$PLATFORM --load"
 if [[ "${RUNTIME_CMD}" == "buildah" ]]; then
         build="bud"
 fi
@@ -21,7 +22,7 @@ fi
 # only look for those tags. For version info on non-release commits, we want to
 # include the git commit info as a "build" suffix ("+stuff" at the end). There
 # is also special casing here for when no tags match.
-VERSION_GLOB="v[0-9]*"
+VERSION_GLOB="[0-9]*"
 # Get the nearest "version" tag if one exists. If not, this returns the full
 # git hash
 NEAREST_TAG="$(git describe --always --tags --match "$VERSION_GLOB" --abbrev=0)"
@@ -85,8 +86,11 @@ $RUNTIME_CMD $build \
 	     -t "${DOCKER_USER}/builder:latest" "${build_args[@]}" \
 	     --network host -f extras/Dockerfile.builder .
 
-echo "Building images kadalu-\$service:${VERSION}";
-
+echo "Building kadalu-server with version tag as ${VERSION}";
 build_container "kadalu-server" "server/Dockerfile" ${KADALU_VERSION}
+
+echo "Building kadalu-csi with version tag as ${VERSION}";
 build_container "kadalu-csi" "csi/Dockerfile" ${KADALU_VERSION}
+
+echo "Building kadalu-operator with version tag as ${VERSION}";
 build_container "kadalu-operator" "operator/Dockerfile" ${KADALU_VERSION}

@@ -19,7 +19,8 @@ RUN apt-get update -yq && \
 
 COPY builder-requirements.txt /tmp/
 RUN python3 -m venv $VIRTUAL_ENV && cd $VIRTUAL_ENV && \
-    python3 -m pip install -r /tmp/builder-requirements.txt
+    python3 -m pip install -r /tmp/builder-requirements.txt && \
+    grep -Po '^[\w\.-]*(?=)' /tmp/builder-requirements.txt | xargs -I pkg python3 -m pip show pkg | grep -P '^(Name|Version|Location)'
 
 RUN sed -i "s/include-system-site-packages = false/include-system-site-packages = true/g" /kadalu/pyvenv.cfg
 
