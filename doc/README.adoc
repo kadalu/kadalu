@@ -24,6 +24,7 @@ One more blog to check is link:https://thoughtexpo.com/tags/kadalu/[Blogs @ Thou
 * link:try-kadalu.adoc[Try Kadalu]
 * link:external-gluster-storage.adoc[External Gluster Storage]
 * link:storage-config-options.adoc[Storage Config Options]
+* link:mounted-block-volume.adoc[Mounted Block Volume]
 * link:storage-classes.adoc[Storage Classes]
 * link:troubleshooting.adoc[Troubleshooting]
 

@@ -202,6 +202,39 @@ spec:
       storage: 1Gi
 ----
 
+=== pv_type
+
+Use this option if the PV created using this Storage Class should be a Mounted Block Volume.
+
+[source,yaml]
+----
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: kadalu.db-storage
+provisioner: kadalu
+parameters:
+  storage_name: "storage-pool-1"
+  pv_type: Block
+----
+
+And the PVC,
+
+[source,yaml]
+----
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv8
+spec:
+  storageClassName: kadalu.db-storage
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+----
+
 The number of customization a Storage Class can provide is
 impressive. The only limit is your imagination. Please open a new
 https://github.com/kadalu/kadalu/issues[issue] if your use case
