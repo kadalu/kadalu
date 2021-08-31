@@ -6,7 +6,7 @@ ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
 
 COPY server-requirements.txt /tmp/
 
-RUN python3 -m pip install -r /tmp/server-requirements.txt && \
+RUN python3 -m pip install -r /tmp/server-requirements.txt --no-cache-dir && \
     grep -Po '^[\w\.-]*(?=)' /tmp/server-requirements.txt | xargs -I pkg python3 -m pip show pkg | grep -P '^(Name|Version|Location)'
 
 FROM python:3.9.6-slim-bullseye as prod

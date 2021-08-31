@@ -74,7 +74,6 @@ jobs:
           platforms: linux/amd64
           target: prod
           push: true
-          load: true
           tags: |
             docker.io/kadalu/kadalu-csi:${{ github.sha }}
             docker.io/kadalu/kadalu-csi:devel
@@ -93,7 +92,6 @@ jobs:
           platforms: linux/amd64
           target: prod
           push: true
-          load: true
           tags: |
             docker.io/kadalu/kadalu-operator:${{ github.sha }}
             docker.io/kadalu/kadalu-operator:devel
@@ -112,7 +110,6 @@ jobs:
           platforms: linux/amd64
           target: prod
           push: true
-          load: true
           tags: |
             docker.io/kadalu/kadalu-server:${{ github.sha }}
             docker.io/kadalu/kadalu-server:devel
@@ -145,7 +142,6 @@ jobs:
           platforms: linux/amd64
           target: prod
           push: true
-          load: true
           tags: |
             docker.io/kadalu/test-io:${{ github.sha }}
             docker.io/kadalu/test-io:devel
@@ -165,7 +161,6 @@ jobs:
           platforms: linux/amd64
           target: prod
           push: true
-          load: true
           tags: |
             docker.io/kadalu/test-csi:${{ github.sha }}
             docker.io/kadalu/test-csi:devel

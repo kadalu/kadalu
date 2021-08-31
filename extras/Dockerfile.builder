@@ -18,8 +18,8 @@ RUN apt-get update -yq && \
     chmod +x /usr/bin/kubectl
 
 COPY builder-requirements.txt /tmp/
-RUN python3 -m venv $VIRTUAL_ENV && cd $VIRTUAL_ENV && \
-    python3 -m pip install -r /tmp/builder-requirements.txt && \
+RUN python3 -m venv $VIRTUAL_ENV && cd $VIRTUAL_ENV && sleep 1 && which python3 && which pip && \
+    $VIRTUAL_ENV/bin/pip install -r /tmp/builder-requirements.txt --no-cache-dir && \
     grep -Po '^[\w\.-]*(?=)' /tmp/builder-requirements.txt | xargs -I pkg python3 -m pip show pkg | grep -P '^(Name|Version|Location)'
 
 RUN sed -i "s/include-system-site-packages = false/include-system-site-packages = true/g" /kadalu/pyvenv.cfg
