@@ -6,7 +6,8 @@ ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
 
 COPY csi-requirements.txt /tmp/
 
-RUN python3 -m pip install -r /tmp/csi-requirements.txt
+RUN python3 -m pip install -r /tmp/csi-requirements.txt && \
+    grep -Po '^[\w\.-]*(?=)' /tmp/csi-requirements.txt | xargs -I pkg python3 -m pip show pkg | grep -P '^(Name|Version|Location)'
 
 FROM python:3.9.6-slim-bullseye as prod
 ENV DEBIAN_FRONTEND=noninteractive
