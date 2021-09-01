@@ -1229,7 +1229,7 @@ def yield_pvc_from_mntdir(mntdir):
         name = os.path.join(mntdir, child)
 
         # Handle condition for no PVC JSON file
-        # The PVC is created, then deleted along with json file. 
+        # The PVC is created, then deleted along with json file.
         # Leaving path prefix as empty leaf directory.
         if os.path.isdir(name) and len(os.listdir(name)) == 0:
             logging.error(logf(

@@ -106,10 +106,10 @@ def collect_all_metrics():
     metrics = get_operator_data(metrics)
 
     pod_ip_data = get_pod_ip_data()
-    
+
     for pod_name, ip_addr in pod_ip_data.items():
         print(pod_name, ip_addr)
-        
+
         #Skip GET request to operator
         # operator_str = "operator-"
         # if key != None and operator_str in str(key):
@@ -127,7 +127,7 @@ def collect_all_metrics():
                 if provisioner_str in str(pod_name):
                     metrics.storages = json.loads(r.data)["storages"]
                 metrics.pods.append(json.loads(r.data)["pod"])
-                
+
     return metrics
 
 
@@ -144,7 +144,7 @@ def collect_and_set_prometheus_metrics():
         total_inodes.labels(storage["name"]).set(storage["total_inodes"])
         used_inodes.labels(storage["name"]).set(storage["used_inodes"])
         free_inodes.labels(storage["name"]).set(storage["free_inodes"])
-        
+
         for pvc in storage["pvc"]:
 
             total_pvc_capacity_bytes.labels(pvc["name"]).set(pvc["total_pvc_capacity"])
@@ -163,7 +163,7 @@ async def collect_metrics(request, call_next):
 
     if request.url.path == "/metrics":
         collect_and_set_prometheus_metrics()
-      
+
     return await call_next(request)
 
 

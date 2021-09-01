@@ -11,10 +11,10 @@ app = FastAPI()
 @app.get("/_api/metrics")
 def metrics():
     """
-    Gathers storage and pvcs metrics. 
+    Gathers storage and pvcs metrics.
     Starts process by exposing the data collected in port 8050 at '/_api/metrics'.
     """
-    
+
     data = {
         "pod": {},
         "storages": []
@@ -43,7 +43,7 @@ def metrics():
     }
 
     # Handle condition for no storage & PVC,
-    # sometimes storage name is not shown until a PVC is created at /mnt 
+    # sometimes storage name is not shown until a PVC is created at /mnt
     # Observations:
     # When there is a PVC previously created for now deployed storage-pool,
     # this behaviour is seen. [ Volume not found for deleted, delete response completed ]
@@ -80,7 +80,7 @@ def metrics():
                 "total_inodes": total_inodes,
                 "free_inodes": free_inodes,
                 "used_inodes": used_inodes,
-                "pvc": [] 
+                "pvc": []
             }
 
             storage_info_path = os.path.join(storage_path, "info")
@@ -95,7 +95,7 @@ def metrics():
 
             # Gathers metrics for each subvol[PVC]
             for pvc in yield_pvc_from_mntdir(storage_info_path):
-              
+
                 # Handle condition when PVC is created and then deleted,
                 # Leaving an empty leaf directory with path prefix.
                 if pvc is None:

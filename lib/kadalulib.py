@@ -398,8 +398,9 @@ class Monitor:
             return
 
         if not terminating:
-            state.restart()
-            logging.info(logf("Restarted Process", name=state.proc.name))
+            pass
+            #state.restart()
+            #logging.info(logf("Restarted Process", name=state.proc.name))
 
     def monitor(self):
         """

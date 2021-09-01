@@ -6,10 +6,10 @@ app = FastAPI()
 @app.get("/_api/metrics")
 def metrics():
     """
-    Gathers storage and pvcs metrics. 
+    Gathers storage and pvcs metrics.
     Starts process by exposing the data collected in port 8050 at '/_api/metrics'.
     """
-    
+
     data = {
         "pod": {}
     }
@@ -36,7 +36,7 @@ def metrics():
         "memory_usage_in_bytes": int(memory_usage_in_bytes),
         "cpu_usage_in_nanoseconds": int(cpu_usage_in_nanoseconds)
     }
-    
+
     return data
 
 
