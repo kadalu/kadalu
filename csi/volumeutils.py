@@ -20,6 +20,7 @@ GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/bin/mount"
 UNMOUNT_CMD = "/bin/umount"
 MKFS_XFS_CMD = "/sbin/mkfs.xfs"
+XFS_GROWFS_CMD = "/sbin/xfs_growfs"
 RESERVED_SIZE_PERCENTAGE = 10
 HOSTVOL_MOUNTDIR = "/mnt"
 VOLFILES_DIR = "/kadalu/volfiles"
@@ -245,10 +246,10 @@ def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
     return None
 
 
-def create_virtblock_volume(hostvol_mnt, volname, size):
+def create_block_volume(pvtype, hostvol_mnt, volname, size):
     """Create virtual block volume"""
     volhash = get_volname_hash(volname)
-    volpath = get_volume_path(PV_TYPE_VIRTBLOCK, volhash, volname)
+    volpath = get_volume_path(pvtype, volhash, volname)
     volpath_full = os.path.join(hostvol_mnt, volpath)
     logging.debug(logf(
         "Volume hash",
@@ -261,7 +262,7 @@ def create_virtblock_volume(hostvol_mnt, volname, size):
     # Create a file with required size
     makedirs(os.path.dirname(volpath_full))
     logging.debug(logf(
-        "Created virtblock directory",
+        f"Created {pvtype} directory",
         path=os.path.dirname(volpath)
     ))
 
@@ -282,17 +283,19 @@ def create_virtblock_volume(hostvol_mnt, volname, size):
         size=size
     ))
 
-    # TODO: Multiple FS support based on volume_capability mount option
-    execute(MKFS_XFS_CMD, volpath_full)
-    logging.debug(logf(
-        "Created Filesystem",
-        path=volpath,
-        command=MKFS_XFS_CMD
-    ))
+    if pvtype == PV_TYPE_VIRTBLOCK:
+        # TODO: Multiple FS support based on volume_capability mount option
+        execute(MKFS_XFS_CMD, volpath_full)
+        logging.debug(logf(
+            "Created Filesystem",
+            path=volpath,
+            command=MKFS_XFS_CMD
+        ))
+
     save_pv_metadata(hostvol_mnt, volpath, size)
     return Volume(
         volname=volname,
-        voltype=PV_TYPE_VIRTBLOCK,
+        voltype=pvtype,
         volhash=volhash,
         hostvol=os.path.basename(hostvol_mnt),
         size=size,

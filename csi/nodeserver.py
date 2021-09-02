@@ -116,6 +116,7 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             pvpath=pvpath,
             pvtype=pvtype,
             hostvol=hostvol,
+            target_path=request.target_path,
             duration_seconds=time.time() - start_time
         ))
         return csi_pb2.NodePublishVolumeResponse()

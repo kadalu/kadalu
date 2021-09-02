@@ -318,11 +318,11 @@ kadalu_operator)
 test_kadalu)
     date
 
-    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 2 90
+    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 3 90
 
-    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 2 90
+    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 3 90
 
-    get_pvc_and_check examples/sample-test-app4.yaml "Disperse" 2 90
+    get_pvc_and_check examples/sample-test-app4.yaml "Disperse" 3 90
 
     #get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 60
 
@@ -340,7 +340,7 @@ test_kadalu)
     # difference of ~2 min
     wait_till_pods_start 400
 
-    #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 2 60
+    #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 3 60
 
     # Run minimal IO test
     run_io
