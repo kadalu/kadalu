@@ -1,4 +1,3 @@
-
 import json
 import urllib3
 import uvicorn
@@ -6,7 +5,7 @@ import logging
 from utils import execute, CommandError
 from fastapi import FastAPI
 from prometheus_client import make_asgi_app, start_http_server, Gauge
-#from kadalulib import logf, logging_setup
+from kadalulib import logf, logging_setup
 
 # Define all metrics here
 total_capacity_bytes = Gauge('kadalu_storage_total_capacity_bytes', 'Kadalu Total Storage Capacity', ['name'])
@@ -44,20 +43,13 @@ def get_pod_ip_data():
             ip_addr = item["status"]["podIP"]
             pod_ip_data[pod_name] = ip_addr
 
-        # logging.info(logf(
-        #     "POD IP DATA",
-        #     pod_ip_data=pod_ip_data
-        # ))
-
-        # Return data in 'dict' format
         return pod_ip_data
 
     except CommandError as err:
-        # logging.error(logf(
-        #     "Failed to get IP Addresses of pods in kadalu namespace",
-        #     error=err
-        # ))
-        print("Failed to get IP addresses of pods in kadalu namespace")
+        logging.error(logf(
+            "Failed to get IP Addresses of pods in kadalu namespace",
+            error=err
+        ))
         return None
 
 
@@ -77,21 +69,20 @@ def get_operator_data(metrics):
 
     pod_name_path = '/etc/hostname'
     with open(pod_name_path, 'r') as pod_fd:
-        pod_name = pod_fd.read()
-
+        pod_name = pod_fd.read().strip()
 
     memory_usage_file_path = '/sys/fs/cgroup/memory/memory.usage_in_bytes'
     with open(memory_usage_file_path, 'r') as memory_fd:
-        memory_usage_in_bytes = memory_fd.read()
+        memory_usage_in_bytes = memory_fd.read().strip()
 
     cpu_usage_file_path = '/sys/fs/cgroup/cpu/cpuacct.usage'
     with open(cpu_usage_file_path, 'r') as cpu_fd:
-        cpu_usage_in_nanoseconds = cpu_fd.read()
+        cpu_usage_in_nanoseconds = cpu_fd.read().strip()
 
     pod = {
         "pod_name": pod_name,
-        "memory_usage_in_bytes": memory_usage_in_bytes,
-        "cpu_usage_in_nanoseconds": cpu_usage_in_nanoseconds
+        "memory_usage_in_bytes": int(memory_usage_in_bytes),
+        "cpu_usage_in_nanoseconds": int(cpu_usage_in_nanoseconds)
     }
 
     metrics.pods.append(pod)
@@ -108,7 +99,6 @@ def collect_all_metrics():
     pod_ip_data = get_pod_ip_data()
 
     for pod_name, ip_addr in pod_ip_data.items():
-        print(pod_name, ip_addr)
 
         #Skip GET request to operator
         # operator_str = "operator-"
@@ -156,11 +146,9 @@ def collect_and_set_prometheus_metrics():
             free_pvc_inodes.labels(pvc["name"]).set(pvc["free_pvc_inodes"])
 
 
-# Calling function?
 @app.middleware("http")
 async def collect_metrics(request, call_next):
     """ Collect metrics and set data to prometheus at /metrics """
-
     if request.url.path == "/metrics":
         collect_and_set_prometheus_metrics()
 
@@ -170,11 +158,10 @@ async def collect_metrics(request, call_next):
 @app.get("/metrics.json")
 async def metrics_json():
     """ Return collected metrics in JSON format at /metrics.json """
-
     return collect_all_metrics()
 
-
+logging_setup()
 app.mount("/metrics", make_asgi_app())
 
-# RUN THIS ON OPERATOR TERMINAL TO START METRICS EXPORTER PROCESS
-# uvicorn.run("exporter:app", host="127.0.0.1", port=8080, log_level="info")
+# RUN THIS ON OPERATOR TERMINAL at '/kadalu' TO START METRICS EXPORTER PROCESS
+# uvicorn exporter:app --port XXXX

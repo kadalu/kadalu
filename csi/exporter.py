@@ -43,10 +43,7 @@ def metrics():
     }
 
     # Handle condition for no storage & PVC,
-    # sometimes storage name is not shown until a PVC is created at /mnt
-    # Observations:
-    # When there is a PVC previously created for now deployed storage-pool,
-    # this behaviour is seen. [ Volume not found for deleted, delete response completed ]
+    # sometimes storage name is not shown at /mnt until a the server is mounted.
     if len(os.listdir(HOSTVOL_MOUNTDIR)) == 0:
         logging.error(logf(
             "No storage-pool found! Try again by creating a storage.",
@@ -99,7 +96,6 @@ def metrics():
                 # Handle condition when PVC is created and then deleted,
                 # Leaving an empty leaf directory with path prefix.
                 if pvc is None:
-                    # DEBUG
                     logging.info(logf(
                         "PVC JSON file not found. PVC must have been deleted. Trying again!"
                     ))

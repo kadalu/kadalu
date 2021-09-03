@@ -1222,7 +1222,7 @@ def yield_pvc_from_mntdir(mntdir):
         # The PVC is created, then deleted along with json file.
         # Leaving path prefix as empty leaf directory.
         if os.path.isdir(name) and len(os.listdir(name)) == 0:
-            logging.error(logf(
+            logging.debug(logf(
                 "No PVC found"
             ))
             yield None
@@ -1235,7 +1235,7 @@ def yield_pvc_from_mntdir(mntdir):
             file_path = os.path.join(mntdir, name)
             with open(file_path) as handle:
                 data = json.loads(handle.read().strip())
-            logging.info(
+            logging.debug(
                 logf("Found a PVC at", path=file_path, size=data.get("size")))
             yield name[name.find("pvc"):name.find(".json")], data.get("size"), \
                 data.get("path_prefix")

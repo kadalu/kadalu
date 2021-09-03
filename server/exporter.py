@@ -22,7 +22,6 @@ def metrics():
     with open(pod_name_path, 'r') as pod_fd:
         pod_name = pod_fd.read().strip()
 
-
     memory_usage_file_path = '/sys/fs/cgroup/memory/memory.usage_in_bytes'
     with open(memory_usage_file_path, 'r') as memory_fd:
         memory_usage_in_bytes = memory_fd.read().strip()
