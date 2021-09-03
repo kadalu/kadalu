@@ -1211,16 +1211,6 @@ def yield_hostvol_mount():
         yield os.path.join(mntdir, 'info')
 
 
-# def loopa(mntdir):
-# ...     for child in os.listdir(mntdir):
-# ...             name = os.path.join(mntdir, child)
-# ...             print(child, name)
-# ...             if len(os.listdir(name)) == 0:
-# ...                     print("Empty", name)
-# ...             elif os.path.isdir(name):
-# ...                     loopa(name)
-
-
 def yield_pvc_from_mntdir(mntdir):
     """Yields PVCs from a single mntdir"""
     # Max recursion depth is two subdirs (/<mntdir>/x/y/<pvc-hash-.json>)
