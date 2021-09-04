@@ -1,18 +1,16 @@
 """
 nodeserver implementation
 """
-import os
 import logging
+import os
 import time
-
-import grpc
 
 import csi_pb2
 import csi_pb2_grpc
-from volumeutils import mount_volume, unmount_volume, mount_glusterfs, \
-    mount_glusterfs_with_host
+import grpc
 from kadalulib import logf
-
+from volumeutils import (PVC_POOL, mount_glusterfs, mount_glusterfs_with_host,
+                         mount_volume, unmount_volume, update_pv_metadata)
 
 HOSTVOL_MOUNTDIR = "/mnt"
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
@@ -110,6 +108,9 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         # Mount the PV
         # TODO: Handle Volume capability mount flags
         mount_volume(pvpath_full, request.target_path, pvtype, fstype=None)
+        update_pv_metadata(hostvol_mnt=mntdir, pvpath=pvpath,
+                target_path=request.target_path)
+        PVC_POOL[request.target_path] = (mntdir, pvpath)
         logging.info(logf(
             "Mounted PV",
             volume=request.volume_id,
@@ -143,6 +144,13 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             volume=request.volume_id,
         ))
         unmount_volume(request.target_path)
+
+        # Workload might be re-scheduled, so clear off existing target_path
+        # from info_file metadata
+        update_pv_metadata(*PVC_POOL[request.target_path])
+
+        # PVCs count may build-up overtime, so delete the key from global dict
+        del PVC_POOL[request.target_path]
 
         return csi_pb2.NodeUnpublishVolumeResponse()
 

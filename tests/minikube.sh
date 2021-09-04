@@ -178,6 +178,9 @@ function run_io(){
 
   echo Collecting arequal-checksum from pods under io-pod deployment
   first_sum=$(kubectl exec -i ${pods[0]} -- sh -c 'arequal-checksum /mnt/alpha') && echo "$first_sum"
+
+  # TODO: Reboot nodeplugin
+
   second_sum=$(kubectl exec -i ${pods[1]} -- sh -c 'arequal-checksum /mnt/alpha') && echo "$second_sum"
 
   echo Validate checksum between first and second pod [Empty for checksum match]

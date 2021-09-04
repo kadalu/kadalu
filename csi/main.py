@@ -3,45 +3,20 @@ Starting point of CSI driver GRP server
 """
 import logging
 import os
-import time
 import signal
-
+import time
 from concurrent import futures
 
-import grpc
-
 import csi_pb2_grpc
+import grpc
 from controllerserver import ControllerServer
 from identityserver import IdentityServer
-from kadalulib import CommandException, logf, logging_setup
+from kadalulib import logf, logging_setup
 from nodeserver import NodeServer
-from volumeutils import (HOSTVOL_MOUNTDIR, get_pv_hosting_volumes,
-                         mount_glusterfs, reload_glusterfs)
+from volumeutils import (get_pv_hosting_volumes, reload_glusterfs,
+                         remount_storage)
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
-
-def mount_storage():
-    """
-    Mount storage if any volumes exist after a pod reboot
-    """
-    if os.environ.get("CSI_ROLE", "-") != "provisioner":
-        logging.debug("Volume need to be mounted on only provisioner pod")
-        return
-
-    host_volumes = get_pv_hosting_volumes({})
-    for volume in host_volumes:
-        if volume["kformat"] == "non-native":
-            # Need to skip mounting external non-native mounts in-order for
-            # kadalu-quotad not to set quota xattrs
-            continue
-        hvol = volume["name"]
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
-        try:
-            mount_glusterfs(volume, mntdir)
-            logging.info(logf("Volume is mounted successfully", hvol=hvol))
-        except CommandException:
-            logging.error(logf("Unable to mount volume", hvol=hvol))
-    return
 
 
 def reconfigure_mounts(_signum, _frame):
@@ -63,8 +38,9 @@ def main():
     """
     logging_setup()
 
-    # If Provisioner pod reboots, mount volumes if they exist before reboot
-    mount_storage()
+    # If provisioner is rebooted mount storage pool and if nodeplugin is
+    # rebooted mount pvc
+    remount_storage()
 
     signal.signal(signal.SIGHUP, reconfigure_mounts)
 

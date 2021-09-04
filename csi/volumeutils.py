@@ -31,6 +31,10 @@ VOLINFO_DIR = "/var/lib/gluster"
 # Used while sending SIGHUP during any modifcation to storage config
 VOL_DATA = {}
 
+# Cpython dict is threadsafe and can be re-used across grpc calls
+# Used to store, target_path to tuple of mntdir, pvpath
+PVC_POOL = {}
+
 statfile_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 mount_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 
@@ -584,7 +588,7 @@ def update_virtblock_volume(hostvol_mnt, volname, expansion_requested_pvsize):
     )
 
 
-def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize):
+def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize=None, target_path=None):
     """Update PV metadata in info file"""
 
     # Create info dir if not exists
@@ -598,16 +602,16 @@ def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize):
     ))
 
     # Update existing PV contents
-    with open(info_file_path + ".json", "r") as info_file:
+    with open(info_file_path + ".json", "r+") as info_file:
         data = json.load(info_file)
+        # Update PV contents or use existing values (except for target_path)
+        data["size"] = expansion_requested_pvsize or data["size"]
+        data["path_prefix"] = os.path.dirname(pvpath) or data["path_prefix"]
+        data["target_path"] = target_path
 
-    # Update PV contents
-    data["size"] = expansion_requested_pvsize
-    data["path_prefix"] = os.path.dirname(pvpath)
-
-    # Save back the changes
-    with open(info_file_path + ".json", "w+") as info_file:
-        info_file.write(json.dumps(data))
+        info_file.seek(0)
+        json.dump(data, info_file)
+        info_file.truncate()
 
     logging.debug(logf(
         "Metadata updated",
@@ -841,7 +845,7 @@ def unmount_volume(mountpoint):
 def expand_volume(mountpoint):
     """Expand a Volume"""
     if os.path.ismount(mountpoint):
-        execute("xfs_growfs", "-d", mountpoint)
+        execute(XFS_GROWFS_CMD, "-d", mountpoint)
 
 
 def generate_client_volfile(volname):
@@ -1196,6 +1200,31 @@ def check_external_volume(pv_request, host_volumes):
 
     return hvol
 
+def remount_storage():
+    """
+    Mount storage if any volumes exist after a pod reboot
+    """
+    host_volumes = get_pv_hosting_volumes({})
+    if os.environ.get("CSI_ROLE", "-") == "provisioner":
+        host_volumes = get_pv_hosting_volumes({})
+        for volume in host_volumes:
+            if volume["kformat"] == "non-native":
+                # Need to skip mounting external non-native mounts in-order for
+                # kadalu-quotad not to set quota xattrs
+                continue
+            hvol = volume["name"]
+            mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
+            try:
+                mount_glusterfs(volume, mntdir)
+                logging.info(logf("Volume is mounted successfully", hvol=hvol))
+            except CommandException:
+                logging.error(logf("Unable to mount volume", hvol=hvol))
+    elif os.environ.get("CSI_ROLE", "-") == "nodeplugin":
+        # TODO:
+        # 1. Mount PVCs by utilizing target_path in pv metadata and
+        # comparing with existing path for Pod mount space
+        # 2. Refactor yield methods for correct usage
+        logging.info("All existing PVCs are mount successfully")
 
 def yield_hostvol_mount():
     """Yields mount directory where hostvol is mounted"""
