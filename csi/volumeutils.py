@@ -322,7 +322,8 @@ def save_pv_metadata(hostvol_mnt, pvpath, pvsize):
     with open(info_file_path + ".json", "w") as info_file:
         info_file.write(json.dumps({
             "size": pvsize,
-            "path_prefix": os.path.dirname(pvpath)
+            "path_prefix": os.path.dirname(pvpath),
+            "target_path": None,
         }))
         logging.debug(logf(
             "Metadata saved",
@@ -588,7 +589,7 @@ def update_virtblock_volume(hostvol_mnt, volname, expansion_requested_pvsize):
     )
 
 
-def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize=None, target_path=None):
+def update_pv_metadata(hostvol_mnt, pvpath, new_pvsize=None, target_path=None):
     """Update PV metadata in info file"""
 
     # Create info dir if not exists
@@ -602,16 +603,17 @@ def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize=None, tar
     ))
 
     # Update existing PV contents
-    with open(info_file_path + ".json", "r+") as info_file:
-        data = json.load(info_file)
-        # Update PV contents or use existing values (except for target_path)
-        data["size"] = expansion_requested_pvsize or data["size"]
-        data["path_prefix"] = os.path.dirname(pvpath) or data["path_prefix"]
-        data["target_path"] = target_path
+    with mount_lock:
+        with open(info_file_path + ".json", "r+") as info_file:
+            data = json.load(info_file)
+            if new_pvsize and data["size"] != new_pvsize:
+                data["size"] = new_pvsize
+            data["path_prefix"] = os.path.dirname(pvpath)
+            data["target_path"] = target_path
 
-        info_file.seek(0)
-        json.dump(data, info_file)
-        info_file.truncate()
+            info_file.seek(0)
+            json.dump(data, info_file)
+            info_file.truncate()
 
     logging.debug(logf(
         "Metadata updated",

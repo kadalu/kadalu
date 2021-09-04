@@ -150,7 +150,7 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         update_pv_metadata(*PVC_POOL[request.target_path])
 
         # PVCs count may build-up overtime, so delete the key from global dict
-        del PVC_POOL[request.target_path]
+        PVC_POOL.pop(request.target_path, None)
 
         return csi_pb2.NodeUnpublishVolumeResponse()
 
