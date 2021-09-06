@@ -30,20 +30,20 @@ def metrics():
 
     memory_usage_file_path = '/sys/fs/cgroup/memory/memory.usage_in_bytes'
     with open(memory_usage_file_path, 'r') as memory_fd:
-        memory_usage_in_bytes = memory_fd.read().strip()
+        memory_usage_in_bytes = int(memory_fd.read().strip())
 
     cpu_usage_file_path = '/sys/fs/cgroup/cpu/cpuacct.usage'
     with open(cpu_usage_file_path, 'r') as cpu_fd:
-        cpu_usage_in_nanoseconds = cpu_fd.read().strip()
+        cpu_usage_in_nanoseconds = int(cpu_fd.read().strip())
 
     data["pod"] = {
         "pod_name": pod_name,
-        "memory_usage_in_bytes": int(memory_usage_in_bytes),
-        "cpu_usage_in_nanoseconds": int(cpu_usage_in_nanoseconds)
+        "memory_usage_in_bytes": memory_usage_in_bytes,
+        "cpu_usage_in_nanoseconds": cpu_usage_in_nanoseconds
     }
 
     # Handle condition for no storage & PVC,
-    # sometimes storage name is not shown at /mnt until a the server is mounted.
+    # sometimes storage name is not shown at /mnt until server is mounted.
     if len(os.listdir(HOSTVOL_MOUNTDIR)) == 0:
         logging.error(logf(
             "No storage-pool found! Try again by creating a storage.",
@@ -83,10 +83,8 @@ def metrics():
             storage_info_path = os.path.join(storage_path, "info")
             if not os.path.exists(storage_info_path):
                 data["storages"].append(storage)
-                logging.error(logf(
-                    "No PVC found. Sending only storage metrics",
-                    storage=storage,
-                    data=data
+                logging.warning(logf(
+                    "No PVC found. Sending only storage metrics"
                 ))
                 return data
 
@@ -96,7 +94,7 @@ def metrics():
                 # Handle condition when PVC is created and then deleted,
                 # Leaving an empty leaf directory with path prefix.
                 if pvc is None:
-                    logging.info(logf(
+                    logging.warning(logf(
                         "PVC JSON file not found. PVC must have been deleted. Trying again!"
                     ))
                     # Skip loop for now and look for any new possible healthy PVC

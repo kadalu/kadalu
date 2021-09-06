@@ -24,6 +24,8 @@ total_pvc_inodes = Gauge('kadalu_pvc_total_inodes', 'Kadalu Total Total PVC Inod
 used_pvc_inodes = Gauge('kadalu_pvc_used_inodes', 'Kadalu Total Used PVC Inodes', ['name'])
 free_pvc_inodes = Gauge('kadalu_pvc_free_inodes', 'Kadalu Total Free PVC Inodes', ['name'])
 
+memory_usage = Gauge('kadalu_memory_usage_in_bytes', 'Kadalu Memory Usage in Bytes', ['name'])
+cpu_usage = Gauge('kadalu_cpu_usage_in_ns', 'Kadalu Memory Usage in Nanoseconds', ['name'])
 
 http = urllib3.PoolManager()
 app = FastAPI()
@@ -39,6 +41,11 @@ def get_pod_ip_data():
         pod_ip_data = {}
 
         for item in data["items"]:
+
+            # Skip pods which are not "Running"
+            if item["status"]["phase"] == "Pending":
+                continue
+
             pod_name = item["metadata"]["name"]
             ip_addr = item["status"]["podIP"]
             pod_ip_data[pod_name] = ip_addr
@@ -73,16 +80,16 @@ def get_operator_data(metrics):
 
     memory_usage_file_path = '/sys/fs/cgroup/memory/memory.usage_in_bytes'
     with open(memory_usage_file_path, 'r') as memory_fd:
-        memory_usage_in_bytes = memory_fd.read().strip()
+        memory_usage_in_bytes = int(memory_fd.read().strip())
 
     cpu_usage_file_path = '/sys/fs/cgroup/cpu/cpuacct.usage'
     with open(cpu_usage_file_path, 'r') as cpu_fd:
-        cpu_usage_in_nanoseconds = cpu_fd.read().strip()
+        cpu_usage_in_nanoseconds = int(cpu_fd.read().strip())
 
     pod = {
         "pod_name": pod_name,
-        "memory_usage_in_bytes": int(memory_usage_in_bytes),
-        "cpu_usage_in_nanoseconds": int(cpu_usage_in_nanoseconds)
+        "memory_usage_in_bytes": memory_usage_in_bytes,
+        "cpu_usage_in_nanoseconds": cpu_usage_in_nanoseconds
     }
 
     metrics.pods.append(pod)
@@ -125,6 +132,12 @@ def collect_and_set_prometheus_metrics():
     """ Add all metrics data to prometheus labels """
 
     metrics = collect_all_metrics()
+
+    for pod in metrics.pods:
+
+        memory_usage.labels(pod["pod_name"]).set(pod["memory_usage_in_bytes"])
+        cpu_usage.labels(pod["pod_name"]).set(pod["cpu_usage_in_nanoseconds"])
+
     for storage in metrics.storages:
 
         total_capacity_bytes.labels(storage["name"]).set(storage["total_capacity"])
