@@ -14,7 +14,7 @@ from jinja2 import Template
 from kadalulib import (PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, CommandException,
                        SizeAccounting, execute, get_volname_hash,
                        get_volume_path, is_gluster_mount_proc_running, logf,
-                       makedirs, retry_errors, reachable_host)
+                       makedirs, reachable_host, retry_errors)
 
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/bin/mount"
@@ -26,6 +26,7 @@ HOSTVOL_MOUNTDIR = "/mnt"
 VOLFILES_DIR = "/kadalu/volfiles"
 TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
+NODE_ID = os.environ["NODE_ID"]
 
 # This variable contains in-memory map of all glusterfs processes (hash of volfile and pid)
 # Used while sending SIGHUP during any modifcation to storage config
@@ -320,11 +321,11 @@ def save_pv_metadata(hostvol_mnt, pvpath, pvsize):
     ))
 
     with open(info_file_path + ".json", "w") as info_file:
-        info_file.write(json.dumps({
-            "size": pvsize,
-            "path_prefix": os.path.dirname(pvpath),
-            "target_path": None,
-        }))
+        info_file.write(
+            json.dumps({
+                "size": pvsize,
+                "path_prefix": os.path.dirname(pvpath),
+            }))
         logging.debug(logf(
             "Metadata saved",
             metadata_file=info_file_path,
@@ -588,8 +589,7 @@ def update_virtblock_volume(hostvol_mnt, volname, expansion_requested_pvsize):
         volpath=volpath,
     )
 
-
-def update_pv_metadata(hostvol_mnt, pvpath, new_pvsize=None, target_path=None):
+def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize):
     """Update PV metadata in info file"""
 
     # Create info dir if not exists
@@ -603,13 +603,40 @@ def update_pv_metadata(hostvol_mnt, pvpath, new_pvsize=None, target_path=None):
     ))
 
     # Update existing PV contents
+    with open(info_file_path + ".json", "r") as info_file:
+        data = json.load(info_file)
+
+    # Update PV contents
+    data["size"] = expansion_requested_pvsize
+    data["path_prefix"] = os.path.dirname(pvpath)
+
+    # Save back the changes
+    with open(info_file_path + ".json", "w+") as info_file:
+        info_file.write(json.dumps(data))
+
+    logging.debug(logf("Metadata updated", metadata_file=info_file_path))
+
+
+def update_pv_target(hostvol_mnt, pvpath, node, entry, target):
+    """Update PV metadata wrt target_path in info file"""
+
+    # Create info dir if not exists
+    info_file_path = os.path.join(hostvol_mnt, "info", pvpath)
+    info_file_dir = os.path.dirname(info_file_path)
+
+    retry_errors(makedirs, [info_file_dir], [ENOTCONN])
+
+    # Update existing PV contents
     with mount_lock:
         with open(info_file_path + ".json", "r+") as info_file:
             data = json.load(info_file)
-            if new_pvsize and data["size"] != new_pvsize:
-                data["size"] = new_pvsize
-            data["path_prefix"] = os.path.dirname(pvpath)
-            data["target_path"] = target_path
+            if data.get("mounts") is None:
+                data["mounts"] = {}
+                data["mounts"][node] = []
+            if entry == "add":
+                data["mounts"][node].append(target)
+            elif entry == "remove":
+                data["mounts"][node].remove(target)
 
             info_file.seek(0)
             json.dump(data, info_file)
@@ -1202,13 +1229,17 @@ def check_external_volume(pv_request, host_volumes):
 
     return hvol
 
+
 def remount_storage():
     """
     Mount storage if any volumes exist after a pod reboot
     """
     host_volumes = get_pv_hosting_volumes({})
+    all_pools = {
+        os.path.join(HOSTVOL_MOUNTDIR, volume["name"])
+        for volume in host_volumes
+    }
     if os.environ.get("CSI_ROLE", "-") == "provisioner":
-        host_volumes = get_pv_hosting_volumes({})
         for volume in host_volumes:
             if volume["kformat"] == "non-native":
                 # Need to skip mounting external non-native mounts in-order for
@@ -1219,18 +1250,55 @@ def remount_storage():
             try:
                 mount_glusterfs(volume, mntdir)
                 logging.info(logf("Volume is mounted successfully", hvol=hvol))
-            except CommandException:
-                logging.error(logf("Unable to mount volume", hvol=hvol))
+            except CommandException as err:
+                logging.error(
+                    logf("Unable to mount volume", hvol=hvol, err=err))
     elif os.environ.get("CSI_ROLE", "-") == "nodeplugin":
-        # TODO:
-        # 1. Mount PVCs by utilizing target_path in pv metadata and
-        # comparing with existing path for Pod mount space
-        # 2. Refactor yield methods for correct usage
-        logging.info("All existing PVCs are mount successfully")
+        mounted_pools = set()
+        for pvc in yield_pvc_from_hostvol():
+            if not (pvc.get("mounts") and pvc.get("mounts").get(NODE_ID)):
+                continue
+            # Now we got a PVC with info on which node and target path it was
+            # mounted before reboot. We just need to invoke mount_volume with
+            # correct params
+            pvpath_full = os.path.join(pvc["mntdir"], pvc["path_prefix"],
+                                       pvc["name"])
+            pvtype = pvc["path_prefix"][0:pvc["path_prefix"].find("/")]
 
+            for target in pvc.get("mounts").get(NODE_ID):
+                try:
+                    # TODO: Remount non-native PVCs
+                    mount_volume(pvpath_full, target, pvtype)
+                    mounted_pools.add(pvc["mntdir"])
+                    # Fill the cache, not to faill if CO calls NodeUnpublishVolume
+                    PVC_POOL[target] = (pvc["mntdir"],
+                                        os.path.join(pvc["path_prefix"],
+                                                     pvc["name"]))
+                    logging.info(
+                        logf("PVC is re-mounted successfully",
+                             pvc=pvc["name"],
+                             target_path=target))
+                except CommandException as err:
+                    logging.error(
+                        logf("Unable to mount PVC at target",
+                             path=pvpath_full,
+                             target=target,
+                             error=err))
+        # Unmount pools which doesn't have a PVC mounted on this node
+        for pool in all_pools - mounted_pools:
+            unmount_glusterfs(pool)
+
+
+# Methods starting with 'yield_*' upon known exceptions/empty returns are
+# designed to yield None. Caller should handle None gracefully based on the
+# context the info is required, like:
+# 1. Is it critical enough to serve the storage to user? Fail fast
+# 2. Performing health checks or which can be eventually consistent (listvols)?
+# handle gracefully
 def yield_hostvol_mount():
     """Yields mount directory where hostvol is mounted"""
     host_volumes = get_pv_hosting_volumes()
+    info_exist = False
     for volume in host_volumes:
         hvol = volume['name']
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
@@ -1239,19 +1307,28 @@ def yield_hostvol_mount():
         except CommandException as excep:
             logging.error(
                 logf("Unable to mount volume", hvol=hvol, excep=excep.args))
-            return
+            yield None
         logging.info(logf("Volume is mounted successfully", hvol=hvol))
-        # After mounting a hostvol, start looking for PVC from '/mntdir/info'
-        yield os.path.join(mntdir, 'info')
+        info_path = os.path.join(mntdir, 'info')
+        if os.path.isdir(info_path):
+            # After mounting a hostvol, start looking for PVC from '/mnt/<pool>/info'
+            info_exist = True
+            yield info_path
+    if not info_exist:
+        # A generator should yield "something", to signal "StopIteration" if
+        # there's no info file on any pool, there should be empty yield
+        # Note: raise StopIteration =~ yield from (), but latter signifies the
+        # intenetion that there are no elements
+        yield from ()
 
 
 def yield_pvc_from_mntdir(mntdir):
     """Yields PVCs from a single mntdir"""
     # Max recursion depth is two subdirs (/<mntdir>/x/y/<pvc-hash-.json>)
-    # If 'subvol' exist then max depth will be three subdirs
+    # If 'subvol/virtblock/rawblock' exist then max depth will be three subdirs
     for child in os.listdir(mntdir):
         name = os.path.join(mntdir, child)
-        if os.path.isdir(name):
+        if os.path.isdir(name) and len(os.listdir(name)):
             yield from yield_pvc_from_mntdir(name)
         elif name.endswith('json'):
             # Base case we are interested in, the filename ending with '.json'
@@ -1261,15 +1338,28 @@ def yield_pvc_from_mntdir(mntdir):
                 data = json.loads(handle.read().strip())
             logging.debug(
                 logf("Found a PVC at", path=file_path, size=data.get("size")))
-            yield name[name.find("pvc"):name.find(".json")], data.get("size"), \
-                data.get("path_prefix")
+            data["name"] = name[name.rfind("/") + 1:name.rfind(".json")]
+            yield data
+        else:
+            # If leaf is neither a json file nor a directory with contents
+            yield None
 
 
 def yield_pvc_from_hostvol():
     """Yields a single PVC sequentially from all the hostvolumes"""
+    pvc_exist = False
     for mntdir in yield_hostvol_mount():
-        pvcs = yield_pvc_from_mntdir(mntdir)
-        yield from pvcs
+        if mntdir is not None:
+            # Only yield PVC if we are able to mount corresponding pool
+            pvc = yield_pvc_from_mntdir(mntdir)
+            for data in pvc:
+                if data is not None:
+                    pvc_exist = True
+                    data["mntdir"] = mntdir
+                    yield data
+    if not pvc_exist:
+        # Empty yield if no PVC exist in any pool
+        yield from ()
 
 
 def wrap_pvc(pvc_gen):
@@ -1280,18 +1370,21 @@ def wrap_pvc(pvc_gen):
     gen = pvc_gen()
     try:
         prev = next(gen)
+        for value in gen:
+            yield prev, False
+            prev = value
+        yield prev, True
     except StopIteration:
-        return
-    for value in gen:
-        yield prev, False
-        prev = value
-    yield prev, True
+        # There is no PVC in any pool
+        yield from ()
 
 
 def yield_list_of_pvcs(max_entries=0):
     """Yields list of PVCs limited at 'max_entries'"""
-    # List of tuples containing PVC Name and Size
+    # List of dicts containing data of PVC from info_file (with extra keys,
+    # 'name', 'mntdir')
     pvcs = []
+    idx = -1
     for idx, value in enumerate(wrap_pvc(yield_pvc_from_hostvol)):
         pvc, last = value
         token = "" if last else str(idx)
@@ -1317,3 +1410,6 @@ def yield_list_of_pvcs(max_entries=0):
                      pvcs=pvcs))
             yield pvcs, token
             pvcs *= 0
+    if idx == -1:
+        # No single PVC is collected
+        yield from ()

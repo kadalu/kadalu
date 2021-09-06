@@ -1,15 +1,13 @@
+import logging
 import os
 import pathlib
 import time
-import logging
 
-from prometheus_client.core import GaugeMetricFamily, \
-     CounterMetricFamily, REGISTRY
+from kadalulib import logf, logging_setup
 from prometheus_client import start_http_server
-
-from volumeutils import (HOSTVOL_MOUNTDIR, PV_TYPE_SUBVOL,
-                         yield_pvc_from_mntdir)
-from kadalulib import logging_setup, logf
+from prometheus_client.core import (REGISTRY, CounterMetricFamily,
+                                    GaugeMetricFamily)
+from volumeutils import HOSTVOL_MOUNTDIR, PV_TYPE_SUBVOL, yield_pvc_from_mntdir
 
 
 class CsiMetricsCollector(object):
@@ -86,12 +84,11 @@ class CsiMetricsCollector(object):
 
                 # Gathers capacity metrics for each subvol
                 for pvc in yield_pvc_from_mntdir(os.path.join(pth, "info")):
-                    # pvc[0]: name
-                    # pvc[1]: size
-                    # pvc[2]: path prefix
-                    pvcpath = os.path.join(pth, pvc[2])
-                    pvcname = pvc[0]
-                    pvclabels = labels + [pvcname]
+                    if pvc is None:
+                        continue
+                    pvcpath = os.path.join(pth, pvc.get("path_prefix"),
+                                           pvc.get("name"))
+                    pvclabels = labels + [pvc.get("name")]
 
                     stat = os.statvfs(pvcpath)
 

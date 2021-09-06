@@ -10,18 +10,18 @@ import time
 import csi_pb2
 import csi_pb2_grpc
 import grpc
-from kadalulib import CommandException, logf, send_analytics_tracker, execute
+from kadalulib import CommandException, execute, logf, send_analytics_tracker
 from volumeutils import (HOSTVOL_MOUNTDIR, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
-                         check_external_volume, create_subdir_volume,
-                         create_block_volume, delete_volume, expand_volume,
+                         check_external_volume, create_block_volume,
+                         create_subdir_volume, delete_volume, expand_volume,
                          get_pv_hosting_volumes, is_hosting_volume_free,
-                         mount_and_select_hosting_volume, search_volume,
-                         unmount_glusterfs, update_free_size,
+                         mount_and_select_hosting_volume, reachable_host,
+                         search_volume, unmount_glusterfs, update_free_size,
                          update_subdir_volume, update_virtblock_volume,
-                         yield_list_of_pvcs, reachable_host)
+                         yield_list_of_pvcs)
 
 VOLINFO_DIR = "/var/lib/gluster"
-KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
+KADALU_VERSION = os.environ.get("KADALU_VERSION", "devel")
 
 # Generator to be used in ListVolumes
 GEN = None
@@ -516,8 +516,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         entries = [{
             "volume": {
-                "volume_id": value[0],
-                "capacity_bytes": value[1]
+                "volume_id": value.get("name"),
+                "capacity_bytes": value.get("size"),
             }
         } for value in pvcs]
 

@@ -9,8 +9,9 @@ import csi_pb2
 import csi_pb2_grpc
 import grpc
 from kadalulib import logf
-from volumeutils import (PVC_POOL, mount_glusterfs, mount_glusterfs_with_host,
-                         mount_volume, unmount_volume, update_pv_metadata)
+from volumeutils import (NODE_ID, PVC_POOL, mount_glusterfs,
+                         mount_glusterfs_with_host, mount_volume,
+                         unmount_volume, update_pv_target)
 
 HOSTVOL_MOUNTDIR = "/mnt"
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
@@ -108,9 +109,15 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         # Mount the PV
         # TODO: Handle Volume capability mount flags
         mount_volume(pvpath_full, request.target_path, pvtype, fstype=None)
-        update_pv_metadata(hostvol_mnt=mntdir, pvpath=pvpath,
-                target_path=request.target_path)
-        PVC_POOL[request.target_path] = (mntdir, pvpath)
+
+        # Store node and target path corresponding to PVC
+        if PVC_POOL.get(request.target_path) is None:
+            update_pv_target(hostvol_mnt=mntdir,
+                             pvpath=pvpath,
+                             node=NODE_ID,
+                             entry="add",
+                             target=request.target_path)
+            PVC_POOL[request.target_path] = (mntdir, pvpath)
         logging.info(logf(
             "Mounted PV",
             volume=request.volume_id,
@@ -139,18 +146,24 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             return csi_pb2.NodeUnpublishVolumeResponse()
 
-        logging.debug(logf(
-            "Received the unmount request",
-            volume=request.volume_id,
-        ))
-        unmount_volume(request.target_path)
+        logging.debug(
+            logf(
+                "Received the unmount request",
+                volume=request.volume_id,
+            ))
 
         # Workload might be re-scheduled, so clear off existing target_path
-        # from info_file metadata
-        update_pv_metadata(*PVC_POOL[request.target_path])
+        # from info_file metadata and it should be idempotent
+        if PVC_POOL.get(request.target_path) is not None:
+            update_pv_target(*PVC_POOL[request.target_path],
+                             node=NODE_ID,
+                             entry="remove",
+                             target=request.target_path)
 
-        # PVCs count may build-up overtime, so delete the key from global dict
-        PVC_POOL.pop(request.target_path, None)
+            # PVCs count may build-up overtime, so delete the key from global dict
+            PVC_POOL.pop(request.target_path, None)
+
+        unmount_volume(request.target_path)
 
         return csi_pb2.NodeUnpublishVolumeResponse()
 
@@ -159,7 +172,7 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
 
     def NodeGetInfo(self, request, context):
         return csi_pb2.NodeGetInfoResponse(
-            node_id=os.environ["NODE_ID"],
+            node_id=NODE_ID,
         )
 
     def NodeExpandVolume(self, request, context):

@@ -6,6 +6,7 @@ import os
 import signal
 import time
 from concurrent import futures
+from pathlib import Path
 
 import csi_pb2_grpc
 import grpc
@@ -52,6 +53,11 @@ def main():
     server.add_insecure_port(os.environ.get("CSI_ENDPOINT", "unix://plugin/csi.sock"))
     logging.info("Server started")
     server.start()
+
+    # Very simple health check that server is started without any issues
+    Path("/tmp").mkdir(parents=True, exist_ok=True)
+    Path("/tmp/health-ok").touch()
+
     try:
         while True:
             time.sleep(_ONE_DAY_IN_SECONDS)
