@@ -45,7 +45,7 @@ def metrics():
     # Handle condition for no storage & PVC,
     # sometimes storage name is not shown at /mnt until server is mounted.
     if len(os.listdir(HOSTVOL_MOUNTDIR)) == 0:
-        logging.error(logf(
+        logging.debug(logf(
             "No storage-pool found! Try again by creating a storage.",
             HOSTVOL_MOUNTDIR=HOSTVOL_MOUNTDIR
         ))
@@ -60,9 +60,9 @@ def metrics():
             stat = os.statvfs(storage_path)
 
             # Storage Capacity
-            total_capacity = stat.f_bsize * stat.f_blocks
-            free_capacity = stat.f_bsize * stat.f_bavail
-            used_capacity = total_capacity - free_capacity
+            total_capacity_bytes = stat.f_bsize * stat.f_blocks
+            free_capacity_bytes = stat.f_bsize * stat.f_bavail
+            used_capacity_bytes = total_capacity_bytes - free_capacity_bytes
 
             # Storage Inodes
             total_inodes = stat.f_files
@@ -71,9 +71,9 @@ def metrics():
 
             storage = {
                 "name": dirname,
-                "total_capacity": total_capacity,
-                "free_capacity": free_capacity,
-                "used_capacity": used_capacity,
+                "total_capacity_bytes": total_capacity_bytes,
+                "free_capacity_bytes": free_capacity_bytes,
+                "used_capacity_bytes": used_capacity_bytes,
                 "total_inodes": total_inodes,
                 "free_inodes": free_inodes,
                 "used_inodes": used_inodes,
@@ -109,9 +109,9 @@ def metrics():
                 stat = os.statvfs(pvcpath)
 
                 # PVC Capacity
-                total_pvc_capacity = stat.f_bsize * stat.f_blocks
-                free_pvc_capacity = stat.f_bsize * stat.f_bavail
-                used_pvc_capacity = total_pvc_capacity - free_pvc_capacity
+                total_pvc_capacity_bytes = stat.f_bsize * stat.f_blocks
+                free_pvc_capacity_bytes = stat.f_bsize * stat.f_bavail
+                used_pvc_capacity_bytes = total_pvc_capacity_bytes - free_pvc_capacity_bytes
 
                 # PVC Inodes
                 total_pvc_inodes = stat.f_files
@@ -121,9 +121,9 @@ def metrics():
                 pvc = {
                     "pvc_name": pvcname,
                     "pvc_size": pvc[1],
-                    "total_pvc_capacity": total_pvc_capacity,
-                    "free_pvc_capacity": free_pvc_capacity,
-                    "used_pvc_capacity": used_pvc_capacity,
+                    "total_pvc_capacity_bytes": total_pvc_capacity_bytes,
+                    "free_pvc_capacity_bytes": free_pvc_capacity_bytes,
+                    "used_pvc_capacity_bytes": used_pvc_capacity_bytes,
                     "total_pvc_inodes": total_pvc_inodes,
                     "free_pvc_inodes": free_pvc_inodes,
                     "used_pvc_inodes": used_pvc_inodes

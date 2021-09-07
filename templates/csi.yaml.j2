@@ -239,9 +239,6 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: kadalu-provisioner
-          ports:
-            - name: kadalu-csi-port
-              containerPort: 8050
           securityContext:
             privileged: true
             capabilities:
