@@ -865,9 +865,9 @@ def unmount_glusterfs(mountpoint):
         execute(UNMOUNT_CMD, "-l", mountpoint)
 
 
-def unmount_volume(mountpoint):
+def unmount_volume(mountpoint, force=False):
     """Unmount a Volume"""
-    if os.path.ismount(mountpoint):
+    if os.path.ismount(mountpoint) or force:
         execute(UNMOUNT_CMD, "-l", mountpoint)
 
 
@@ -1235,10 +1235,6 @@ def remount_storage():
     Mount storage if any volumes exist after a pod reboot
     """
     host_volumes = get_pv_hosting_volumes({})
-    all_pools = {
-        os.path.join(HOSTVOL_MOUNTDIR, volume["name"])
-        for volume in host_volumes
-    }
     if os.environ.get("CSI_ROLE", "-") == "provisioner":
         for volume in host_volumes:
             if volume["kformat"] == "non-native":
@@ -1254,7 +1250,6 @@ def remount_storage():
                 logging.error(
                     logf("Unable to mount volume", hvol=hvol, err=err))
     elif os.environ.get("CSI_ROLE", "-") == "nodeplugin":
-        mounted_pools = set()
         for pvc in yield_pvc_from_hostvol():
             if not (pvc.get("mounts") and pvc.get("mounts").get(NODE_ID)):
                 continue
@@ -1268,9 +1263,14 @@ def remount_storage():
             for target in pvc.get("mounts").get(NODE_ID):
                 try:
                     # TODO: Remount non-native PVCs
+                    # Upon nodeplugin reboot PVC mounts go stale and first need
+                    # to be fixed/unmounted
+                    if not os.path.ismount(target):
+                        unmount_volume(target, force=True)
                     mount_volume(pvpath_full, target, pvtype)
-                    mounted_pools.add(pvc["mntdir"])
-                    # Fill the cache, not to faill if CO calls NodeUnpublishVolume
+
+                    # Fill the cache, not to faill if CO calls
+                    # NodeUnpublishVolume
                     PVC_POOL[target] = (pvc["mntdir"],
                                         os.path.join(pvc["path_prefix"],
                                                      pvc["name"]))
@@ -1284,10 +1284,6 @@ def remount_storage():
                              path=pvpath_full,
                              target=target,
                              error=err))
-        # Unmount pools which doesn't have a PVC mounted on this node
-        for pool in all_pools - mounted_pools:
-            unmount_glusterfs(pool)
-
 
 # Methods starting with 'yield_*' upon known exceptions/empty returns are
 # designed to yield None. Caller should handle None gracefully based on the
@@ -1355,7 +1351,7 @@ def yield_pvc_from_hostvol():
             for data in pvc:
                 if data is not None:
                     pvc_exist = True
-                    data["mntdir"] = mntdir
+                    data["mntdir"] = os.path.dirname(mntdir.strip("/"))
                     yield data
     if not pvc_exist:
         # Empty yield if no PVC exist in any pool
