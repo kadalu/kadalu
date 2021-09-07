@@ -181,15 +181,8 @@ function run_io(){
 
   # Reboot nodeplugins
   kubectl delete pods -l app.kubernetes.io/name=kadalu-csi-nodeplugin --force
-  kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kadalu-csi-nodeplugin --timeout=20s || fail=1
-  nodeplugins=($(kubectl get pods -l app.kubernetes.io/name=kadalu-csi-nodeplugin -o jsonpath={'..metadata.name'}))
-  for pod in $nodeplugins; do
-    for _ in {1..10}; do
-        set +e
-        kubectl exec -it $pod -c kadalu-nodeplugin -- cat /tmp/health-ok 2>/dev/null && break; sleep 2;
-        set -e
-    done
-  done
+  # kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kadalu-csi-nodeplugin --timeout=20s || fail=1
+  sleep 20
 
   second_sum=$(kubectl exec -i ${pods[1]} -- sh -c 'arequal-checksum /mnt/alpha') && echo "$second_sum"
 
