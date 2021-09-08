@@ -86,14 +86,13 @@ class CsiMetricsCollector(object):
 
                 # Gathers capacity metrics for each subvol
                 for pvc in yield_pvc_from_mntdir(os.path.join(pth, "info")):
-                    # pvc[0]: name
-                    # pvc[1]: size
-                    # pvc[2]: path prefix
-                    pvcpath = os.path.join(pth, pvc[2])
-                    pvcname = pvc[0]
-                    pvclabels = labels + [pvcname]
+                    if pvc is None:
+                        continue
+                    pvcpath_full = os.path.join(pth, pvc.get("path_prefix"),
+                                           pvc.get("name"))
+                    pvclabels = labels + [pvc.get("name")]
 
-                    stat = os.statvfs(pvcpath)
+                    stat = os.statvfs(pvcpath_full)
 
                     # Capacity
                     total = stat.f_bsize * stat.f_blocks

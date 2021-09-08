@@ -1197,9 +1197,17 @@ def check_external_volume(pv_request, host_volumes):
     return hvol
 
 
+# Methods starting with 'yield_*' upon not a single entry raise StopIteration
+# (via return "reason") and upon no entry for a specific scenario yields
+# None. Caller should handle None gracefully based on the context the info is
+# required, like:
+# 1. Is it critical enough to serve the storage to user? Fail fast
+# 2. Performing health checks or which can be eventually consistent (listvols)?
+# Handle gracefully
 def yield_hostvol_mount():
     """Yields mount directory where hostvol is mounted"""
     host_volumes = get_pv_hosting_volumes()
+    info_exist = False
     for volume in host_volumes:
         hvol = volume['name']
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
@@ -1208,19 +1216,33 @@ def yield_hostvol_mount():
         except CommandException as excep:
             logging.error(
                 logf("Unable to mount volume", hvol=hvol, excep=excep.args))
-            return
+            # We aren't able to mount this specific hostvol
+            yield None
         logging.info(logf("Volume is mounted successfully", hvol=hvol))
-        # After mounting a hostvol, start looking for PVC from '/mntdir/info'
-        yield os.path.join(mntdir, 'info')
+        info_path = os.path.join(mntdir, 'info')
+        if os.path.isdir(info_path):
+            # After mounting a hostvol, start looking for PVC from '/mnt/<pool>/info'
+            info_exist = True
+            yield info_path
+    if not info_exist:
+        # A generator should yield "something", to signal "StopIteration" if
+        # there's no info file on any pool, there should be empty yield
+        # Note: raise StopIteration =~ return, but return with a reason is
+        # better.
+        return "No storage pool exists"
 
 
 def yield_pvc_from_mntdir(mntdir):
     """Yields PVCs from a single mntdir"""
-    # Max recursion depth is two subdirs (/<mntdir>/x/y/<pvc-hash-.json>)
-    # If 'subvol' exist then max depth will be three subdirs
+    # Max recursion depth is two subdirs (/<mntdir>/x/y/<pvc-name.json>)
+    # If 'subvol/virtblock/rawblock' exist then max depth will be three subdirs
+    if mntdir.endswith("info") and not os.path.isdir(mntdir):
+        # There might be a chance that this function is used standalone and so
+        # check for 'info' directory exists
+        yield None
     for child in os.listdir(mntdir):
         name = os.path.join(mntdir, child)
-        if os.path.isdir(name):
+        if os.path.isdir(name) and len(os.listdir(name)):
             yield from yield_pvc_from_mntdir(name)
         elif name.endswith('json'):
             # Base case we are interested in, the filename ending with '.json'
@@ -1230,15 +1252,27 @@ def yield_pvc_from_mntdir(mntdir):
                 data = json.loads(handle.read().strip())
             logging.debug(
                 logf("Found a PVC at", path=file_path, size=data.get("size")))
-            yield name[name.find("pvc"):name.find(".json")], data.get("size"), \
-                data.get("path_prefix")
+            data["name"] = name[name.rfind("/") + 1:name.rfind(".json")]
+            yield data
+        else:
+            # If leaf is neither a json file nor a directory with contents
+            yield None
 
 
 def yield_pvc_from_hostvol():
     """Yields a single PVC sequentially from all the hostvolumes"""
+    pvc_exist = False
     for mntdir in yield_hostvol_mount():
-        pvcs = yield_pvc_from_mntdir(mntdir)
-        yield from pvcs
+        if mntdir is not None:
+            # Only yield PVC if we are able to mount corresponding pool
+            pvc = yield_pvc_from_mntdir(mntdir)
+            for data in pvc:
+                if data is not None:
+                    pvc_exist = True
+                    data["mntdir"] = os.path.dirname(mntdir.strip("/"))
+                    yield data
+    if not pvc_exist:
+        return "No PVC exist in any storage pool"
 
 
 def wrap_pvc(pvc_gen):
@@ -1249,18 +1283,19 @@ def wrap_pvc(pvc_gen):
     gen = pvc_gen()
     try:
         prev = next(gen)
-    except StopIteration:
-        return
-    for value in gen:
-        yield prev, False
-        prev = value
-    yield prev, True
-
+        for value in gen:
+            yield prev, False
+            prev = value
+        yield prev, True
+    except StopIteration as errmsg:
+        return errmsg
 
 def yield_list_of_pvcs(max_entries=0):
     """Yields list of PVCs limited at 'max_entries'"""
-    # List of tuples containing PVC Name and Size
+    # List of dicts containing data of PVC from info_file (with extra keys,
+    # 'name', 'mntdir')
     pvcs = []
+    idx = -1
     for idx, value in enumerate(wrap_pvc(yield_pvc_from_hostvol)):
         pvc, last = value
         token = "" if last else str(idx)
@@ -1279,10 +1314,12 @@ def yield_list_of_pvcs(max_entries=0):
             logging.debug(logf("Received token", next_token=next_token))
             if next_token and not last and (int(next_token) !=
                                             int(token) - max_entries):
-                return
+                return "Incorrect token supplied"
             logging.debug(
                 logf("Yielding PVC set and next token is ",
                      token=token,
                      pvcs=pvcs))
             yield pvcs, token
             pvcs *= 0
+    if idx == -1:
+        return "No PVC exist in any storage pool"

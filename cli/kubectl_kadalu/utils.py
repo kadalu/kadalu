@@ -21,7 +21,7 @@ class CmdResponse(object):
 class CommandError(Exception):
     """ Class for handling exceptions """
     def __init__(self, returncode, err):
-        super().__init__(u"error %d %s" % (returncode, err))
+        super().__init__("error %d %s" % (returncode, err))
         self.returncode = returncode
         self.stderr = err
 
