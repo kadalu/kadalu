@@ -496,9 +496,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         # Run and wait for 'send'
         try:
             next(GEN)
-        except StopIteration:
+        except StopIteration as errmsg:
             # Handle no PVC created from a storage volume yet
-            errmsg = "No PVC found in any hostvol"
             logging.error(errmsg)
             context.set_details(errmsg)
             context.set_code(grpc.StatusCode.ABORTED)
@@ -507,8 +506,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         try:
             # Get list of PVCs limited at max_entries by suppling the token
             pvcs, next_token = GEN.send(starting_token)
-        except StopIteration:
-            errmsg = "Runtime Error while getting PVCs list"
+        except StopIteration as errmsg:
             logging.error(errmsg)
             context.set_details(errmsg)
             context.set_code(grpc.StatusCode.ABORTED)
@@ -516,8 +514,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         entries = [{
             "volume": {
-                "volume_id": value[0],
-                "capacity_bytes": value[1]
+                "volume_id": value.get("name"),
+                "capacity_bytes": value.get("size"),
             }
         } for value in pvcs]
 
