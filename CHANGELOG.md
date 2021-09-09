@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.6] - 2021-09-09
+
+- Mounted Block Volume support - Create a Storage Class with `pv_type: Block` and all the PVs from this Storage Class will be created as Block Volumes. Refer documentation for the examples.
+- Fixed an issue related to setting Gluster Quota when external Volume is used.
+- Fixed the Python packaging related issues with Arm build.
+
 ## [0.8.5] - 2021-08-23
 
 - Added support for PV expansion provisioned from external Volumes.
@@ -255,7 +261,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.5...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.6...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
@@ -276,3 +282,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.8.3]: https://github.com/kadalu/kadalu/compare/0.8.2...0.8.3
 [0.8.4]: https://github.com/kadalu/kadalu/compare/0.8.3...0.8.4
 [0.8.5]: https://github.com/kadalu/kadalu/compare/0.8.4...0.8.5
+[0.8.6]: https://github.com/kadalu/kadalu/compare/0.8.5...0.8.6
