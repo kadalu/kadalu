@@ -1,6 +1,6 @@
 FROM python:3.10-bullseye
 
-ARG branch="series_1"
+ARG branch="devel"
 
 ENV GRPC_PYTHON_BUILD_EXT_COMPILER_JOBS 8
 ENV DEBIAN_FRONTEND=noninteractive
@@ -11,9 +11,10 @@ RUN apt-get update -yq && \
     apt-get install -y --no-install-recommends curl xfsprogs net-tools telnet wget e2fsprogs zlib1g-dev liburcu6\
     sqlite3 build-essential g++ flex bison openssl libssl-dev libtirpc-dev liburcu-dev \
     libfuse-dev libuuid1 uuid-dev acl-dev libtool automake autoconf git pkg-config \
-    libffi-dev && \
-    git clone --depth 1 https://github.com/kadalu/glusterfs --branch ${branch} --single-branch glusterfs && \
-    (cd glusterfs && ./autogen.sh && ./configure --prefix=/opt >/dev/null && make install >/dev/null && cd ..) && \
+    libffi-dev google-perftools libgoogle-perftools-dev libtcmalloc-minimal4  libgoogle-perftools4 && \
+    git clone --depth 1 https://github.com/gluster/glusterfs --branch ${branch} --single-branch glusterfs && \
+    (cd glusterfs && ./autogen.sh && ./configure --prefix=/opt --disable-linux-io_uring --enable-tcmalloc --disable-mempool >/dev/null && \
+    make install >/dev/null && cd ..) && \
     curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|' | sed 's|armv7l|arm|'`/kubectl -o /usr/bin/kubectl && \
     chmod +x /usr/bin/kubectl
 
