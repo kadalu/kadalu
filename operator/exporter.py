@@ -69,7 +69,7 @@ def get_pod_ip_data():
 
         return pod_ip_data
 
-    except CommandError, KeyError as err:
+    except (CommandError, KeyError) as err:
         logging.error(logf(
             "Failed to get IP Addresses of pods in kadalu namespace",
             error=err
@@ -161,6 +161,7 @@ def collect_all_metrics():
         #Skip GET request to operator
         # operator_str = "operator-"
         if "operator" in k:
+            metrics.operator.update(v)
             continue
 
         # For now GET request only from csi-provisioner, nodeplugin & server pods
@@ -174,6 +175,10 @@ def collect_all_metrics():
             if nodeplugin_str in k:
 
                 metrics.nodeplugins.append(json.loads(r.data)["pod"])
+                # Is for reqd here?? Maybe yes
+                for nodeplugin in metrics.nodeplugins:
+                    if nodeplugin["pod_name"] in k:
+                        nodeplugin.update(v)
 
             if provisioner_str in k:
 
