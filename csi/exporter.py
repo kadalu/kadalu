@@ -100,11 +100,8 @@ def metrics():
                     # Skip loop for now and look for any new possible healthy PVC
                     continue
 
-                # pvc[0]: name
-                # pvc[1]: size
-                # pvc[2]: path prefix
-                pvcname = pvc[0]
-                pvcpath = os.path.join(storage_path, pvc[2], pvcname)
+                pvcname = pvc.get("name")
+                pvcpath = os.path.join(storage_path, pvc.get("path_prefix"), pvcname)
 
                 stat = os.statvfs(pvcpath)
 
@@ -120,7 +117,6 @@ def metrics():
 
                 pvc = {
                     "pvc_name": pvcname,
-                    "pvc_size": pvc[1],
                     "total_pvc_capacity_bytes": total_pvc_capacity_bytes,
                     "free_pvc_capacity_bytes": free_pvc_capacity_bytes,
                     "used_pvc_capacity_bytes": used_pvc_capacity_bytes,
