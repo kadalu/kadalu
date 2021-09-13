@@ -908,6 +908,7 @@ def generate_client_volfile(volname):
     Template(content).stream(**data).dump(client_volfile)
     return True
 
+
 def send_signal_to_process(volname, out, sig):
     """Sends the signal to one of the process"""
 
@@ -1149,6 +1150,7 @@ def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None, is_clien
 
     return
 
+
 def check_external_volume(pv_request, host_volumes):
     """Mount hosting volume"""
     # Assumption is, this has to have 'hostvol_type' as External.
@@ -1290,6 +1292,7 @@ def wrap_pvc(pvc_gen):
         yield prev, True
     except StopIteration as errmsg:
         return errmsg
+
 
 def yield_list_of_pvcs(max_entries=0):
     """Yields list of PVCs limited at 'max_entries'"""
