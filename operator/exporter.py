@@ -11,6 +11,7 @@ import metrics as storage_metrics
 http = urllib3.PoolManager()
 app = FastAPI()
 
+
 def get_pod_ip_data():
     """ Get IP Addresses of all Pods in kadalu namespace """
 
