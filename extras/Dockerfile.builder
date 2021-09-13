@@ -7,8 +7,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV VIRTUAL_ENV=/kadalu
 ENV PATH="$VIRTUAL_ENV/bin:/opt/sbin:/opt/bin:$PATH"
 
-COPY builder-requirements.txt /tmp/
-
 RUN apt-get update -yq && \
     apt-get install -y --no-install-recommends python3 curl xfsprogs net-tools telnet wget e2fsprogs zlib1g-dev liburcu6\
     python3-pip sqlite3 build-essential g++ python3-dev flex bison openssl libssl-dev libtirpc-dev liburcu-dev \
@@ -17,9 +15,12 @@ RUN apt-get update -yq && \
     git clone --depth 1 https://github.com/kadalu/glusterfs --branch ${branch} --single-branch glusterfs && \
     (cd glusterfs && ./autogen.sh && ./configure --prefix=/opt >/dev/null && make install >/dev/null && cd ..) && \
     curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|' | sed 's|armv7l|arm|'`/kubectl -o /usr/bin/kubectl && \
-    chmod +x /usr/bin/kubectl &&  \
-    python3 -m venv $VIRTUAL_ENV && cd $VIRTUAL_ENV && \
-    python3 -m pip install -r /tmp/builder-requirements.txt
+    chmod +x /usr/bin/kubectl
+
+COPY builder-requirements.txt /tmp/
+RUN python3 -m venv $VIRTUAL_ENV && cd $VIRTUAL_ENV && sleep 1 && which python3 && which pip && \
+    $VIRTUAL_ENV/bin/pip install -r /tmp/builder-requirements.txt --no-cache-dir && \
+    grep -Po '^[\w\.-]*(?=)' /tmp/builder-requirements.txt | xargs -I pkg python3 -m pip show pkg | grep -P '^(Name|Version|Location)'
 
 RUN sed -i "s/include-system-site-packages = false/include-system-site-packages = true/g" /kadalu/pyvenv.cfg
 

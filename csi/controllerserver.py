@@ -13,7 +13,7 @@ import grpc
 from kadalulib import CommandException, logf, send_analytics_tracker, execute
 from volumeutils import (HOSTVOL_MOUNTDIR, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
                          check_external_volume, create_subdir_volume,
-                         create_virtblock_volume, delete_volume, expand_volume,
+                         create_block_volume, delete_volume, expand_volume,
                          get_pv_hosting_volumes, is_hosting_volume_free,
                          mount_and_select_hosting_volume, search_volume,
                          unmount_glusterfs, update_free_size,
@@ -70,6 +70,12 @@ def execute_gluster_quota_command(privkey, user, host, gvolname, path, size):
     return None
 
 
+def pvc_access_mode(request):
+    """Fetch Access modes from Volume capabilities"""
+    for vol_capability in request.volume_capabilities:
+        return vol_capability.access_mode.mode
+
+
 class ControllerServer(csi_pb2_grpc.ControllerServicer):
     """
     ControllerServer object is responsible for handling host
@@ -112,17 +118,24 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         pvsize = request.capacity_range.required_bytes
 
         pvtype = PV_TYPE_SUBVOL
-        # 'latest' finds a place here, because only till 0.5.0 version
-        # we had 'latest' as a separate version. After that, 'latest' is
-        # just a link to latest version.
-        if KADALU_VERSION in ["0.5.0", "0.4.0", "0.3.0"]:
-            for vol_capability in request.volume_capabilities:
-                # using getattr to avoid Pylint error
-                single_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
-                                             "SINGLE_NODE_WRITER")
 
-                if vol_capability.access_mode.mode == single_node_writer:
-                    pvtype = PV_TYPE_VIRTBLOCK
+        # Mounted BlockVolume is requested via Storage Class.
+        # GlusterFS File Volume may not be useful for some workloads
+        # they can request for the Virtual Block formated and mounted
+        # as default MountVolume.
+        if request.parameters.get("pv_type", "").lower() == "block":
+            pvtype = PV_TYPE_VIRTBLOCK
+
+            single_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
+                                         "SINGLE_NODE_WRITER")
+
+            # Multi node writer is not allowed for PV_TYPE_VIRTBLOCK
+            if pvc_access_mode(request) != single_node_writer:
+                errmsg = "Only SINGLE_NODE_WRITER is allowed for block Volume"
+                logging.error(errmsg)
+                context.set_details(errmsg)
+                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+                return csi_pb2.CreateVolumeResponse()
 
         logging.debug(logf(
             "Found PV type",
@@ -235,8 +248,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                     return csi_pb2.CreateVolumeResponse()
 
                 if pvtype == PV_TYPE_VIRTBLOCK:
-                    vol = create_virtblock_volume(
-                        mntdir, request.name, pvsize)
+                    vol = create_block_volume(
+                        pvtype, mntdir, request.name, pvsize)
                 else:
                     use_gluster_quota = False
                     if (os.path.isfile("/etc/secret-volume/ssh-privatekey") \
@@ -335,8 +348,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
         if pvtype == PV_TYPE_VIRTBLOCK:
-            vol = create_virtblock_volume(
-                mntdir, request.name, pvsize)
+            vol = create_block_volume(
+                pvtype, mntdir, request.name, pvsize)
         else:
             use_gluster_quota = False
             vol = create_subdir_volume(
@@ -483,9 +496,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         # Run and wait for 'send'
         try:
             next(GEN)
-        except StopIteration:
+        except StopIteration as errmsg:
             # Handle no PVC created from a storage volume yet
-            errmsg = "No PVC found in any hostvol"
             logging.error(errmsg)
             context.set_details(errmsg)
             context.set_code(grpc.StatusCode.ABORTED)
@@ -494,8 +506,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         try:
             # Get list of PVCs limited at max_entries by suppling the token
             pvcs, next_token = GEN.send(starting_token)
-        except StopIteration:
-            errmsg = "Runtime Error while getting PVCs list"
+        except StopIteration as errmsg:
             logging.error(errmsg)
             context.set_details(errmsg)
             context.set_code(grpc.StatusCode.ABORTED)
@@ -503,8 +514,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         entries = [{
             "volume": {
-                "volume_id": value[0],
-                "capacity_bytes": value[1]
+                "volume_id": value.get("name"),
+                "capacity_bytes": value.get("size"),
             }
         } for value in pvcs if value is not None]
 

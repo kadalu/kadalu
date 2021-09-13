@@ -8,6 +8,7 @@
     - title: Try Kadalu
     - title: External Gluster Storage
     - title: Storage Config Options
+    - title: Mounted Block Volume
     - title: Storage Classes
     - title: Troubleshooting
 - section: Use cases

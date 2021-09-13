@@ -56,6 +56,7 @@ jobs:
           file: extras/Dockerfile.builder
           platforms: linux/amd64
           push: false
+          load: true
           tags: |
             docker.io/kadalu/builder:latest
           build-args: |

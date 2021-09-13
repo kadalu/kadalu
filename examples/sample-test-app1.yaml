@@ -65,3 +65,44 @@ spec:
     persistentVolumeClaim:
       claimName: pv1-2
   restartPolicy: OnFailure
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: kadalu.storage-pool-1-block
+provisioner: kadalu
+parameters:
+  storage_name: "storage-pool-1"
+  pv_type: Block
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv1-3
+spec:
+  storageClassName: kadalu.storage-pool-1-block
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod1-3
+  labels:
+    app: sample-app
+spec:
+  containers:
+  - name: sample-app
+    image: docker.io/kadalu/sample-pv-check-app:latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - mountPath: "/mnt/pv"
+      name: csivol2
+  volumes:
+  - name: csivol2
+    persistentVolumeClaim:
+      claimName: pv1-3
+  restartPolicy: OnFailure

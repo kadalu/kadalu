@@ -70,6 +70,8 @@ gen-manifest:
 	@echo "kubectl apply -f manifests/kadalu-operator-rke.yaml"
 	@echo "kubectl apply -f manifests/csi-nodeplugin-rke.yaml"
 
+# W0511: TODO Statements
+# W1514: Using 'open' with default encoding (in our usage it shouldn't matter)
 pylint:
 	@cp lib/kadalulib.py csi/
 	@cp lib/kadalulib.py server/
@@ -77,18 +79,18 @@ pylint:
 	@cp cli/kubectl_kadalu/utils.py operator/
 	@cp server/kadalu_quotad/quotad.py server/kadalu_quotad/glusterutils.py server/
 	@pylint --disable=W0511 -s n lib/kadalulib.py
-	@pylint --disable=W0511 -s n server/glusterfsd.py
-	@pylint --disable W0511,W0603 -s n server/quotad.py
+	@pylint --disable=W0511,W1514 -s n server/glusterfsd.py
+	@pylint --disable W0511,W0603,W1514 -s n server/quotad.py
 	@pylint --disable=W0511 -s n server/server.py
-	@pylint --disable=W0511 -s n server/shd.py
-	@pylint --disable=W0603 -s n server/glusterutils.py
-	@pylint --disable=W0511,R0911,W0603 -s n csi/controllerserver.py
+	@pylint --disable=W0511,W1514 -s n server/shd.py
+	@pylint --disable=W0603,W1514 -s n server/glusterutils.py
+	@pylint --disable=W0511,R0911,W0603,W1514 -s n csi/controllerserver.py
 	@pylint --disable=W0511 -s n csi/identityserver.py
 	@pylint --disable=W0511,R1732 -s n csi/main.py
 	@pylint --disable=W0511 -s n csi/nodeserver.py
-	@pylint --disable=W0511,C0302,R0912 -s n csi/volumeutils.py
-	@pylint --disable=W0511,C0302 -s n operator/main.py
-	@pylint --disable=W0511 -s n extras/scripts/gen_manifest.py
+	@pylint --disable=W0511,C0302,R0912,W1514,R1710 -s n csi/volumeutils.py
+	@pylint --disable=W0511,C0302,W1514 -s n operator/main.py
+	@pylint --disable=W0511,W1514 -s n extras/scripts/gen_manifest.py
 	@rm csi/kadalulib.py
 	@rm server/kadalulib.py
 	@rm operator/kadalulib.py
