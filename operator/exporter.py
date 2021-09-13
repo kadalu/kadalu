@@ -176,7 +176,7 @@ def collect_all_metrics():
             if nodeplugin_str in k:
 
                 metrics.nodeplugins.append(json.loads(r.data)["pod"])
-                # Is for reqd here?? Maybe yes
+                # Is for reqd here?? Maybe yes... Multiple node not tested
                 for nodeplugin in metrics.nodeplugins:
                     if nodeplugin["pod_name"] in k:
                         nodeplugin.update(v)
@@ -283,13 +283,23 @@ def collect_and_set_prometheus_metrics():
 
     metrics = collect_all_metrics()
 
-    # for pod in metrics.pods:
+    storage_metrics.memory_usage.labels(
+        metrics.operator["pod_name"]).set(metrics.operator["memory_usage_in_bytes"])
+    storage_metrics.cpu_usage.labels(
+        metrics.operator["pod_name"]).set(metrics.operator["cpu_usage_in_nanoseconds"])
 
-    #     storage_metrics.memory_usage.labels(pod["pod_name"]).set(pod["memory_usage_in_bytes"])
-    #     storage_metrics.cpu_usage.labels(pod["pod_name"]).set(pod["cpu_usage_in_nanoseconds"])
+    storage_metrics.memory_usage.labels(
+        metrics.provisioner["pod_name"]).set(metrics.provisioner["memory_usage_in_bytes"])
+    storage_metrics.cpu_usage.labels(
+        metrics.provisioner["pod_name"]).set(metrics.provisioner["cpu_usage_in_nanoseconds"])
+
+    for nodeplugin in metrics.nodeplugins:
+        storage_metrics.memory_usage.labels(
+            nodeplugin["pod_name"]).set(nodeplugin["memory_usage_in_bytes"])
+        storage_metrics.cpu_usage.labels(
+            nodeplugin["pod_name"]).set(nodeplugin["cpu_usage_in_nanoseconds"])
 
     for storage in metrics.storages:
-
         storage_metrics.total_capacity_bytes.labels(storage["name"]).set(storage["total_capacity_bytes"])
         storage_metrics.used_capacity_bytes.labels(storage["name"]).set(storage["used_capacity_bytes"])
         storage_metrics.free_capacity_bytes.labels(storage["name"]).set(storage["free_capacity_bytes"])
@@ -299,7 +309,6 @@ def collect_and_set_prometheus_metrics():
         storage_metrics.free_inodes.labels(storage["name"]).set(storage["free_inodes"])
 
         for pvc in storage["pvc"]:
-
             storage_metrics.total_pvc_capacity_bytes.labels(pvc["pvc_name"]).set(pvc["total_pvc_capacity_bytes"])
             storage_metrics.used_pvc_capacity_bytes.labels(pvc["pvc_name"]).set(pvc["used_pvc_capacity_bytes"])
             storage_metrics.free_pvc_capacity_bytes.labels(pvc["pvc_name"]).set(pvc["free_pvc_capacity_bytes"])
@@ -322,6 +331,7 @@ async def collect_metrics(request, call_next):
 async def metrics_json():
     """ Return collected metrics in JSON format at /metrics.json """
     return collect_all_metrics()
+
 
 app.mount("/metrics", make_asgi_app())
 
