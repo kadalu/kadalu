@@ -14,13 +14,8 @@ def metrics():
         "pod": {}
     }
 
-    pod_name = ""
     memory_usage_in_bytes = 0
     cpu_usage_in_nanoseconds = 0
-
-    pod_name_path = '/etc/hostname'
-    with open(pod_name_path, 'r') as pod_fd:
-        pod_name = pod_fd.read().strip()
 
     memory_usage_file_path = '/sys/fs/cgroup/memory/memory.usage_in_bytes'
     with open(memory_usage_file_path, 'r') as memory_fd:
@@ -31,7 +26,6 @@ def metrics():
         cpu_usage_in_nanoseconds = int(cpu_fd.read().strip())
 
     data["pod"] = {
-        "pod_name": pod_name,
         "memory_usage_in_bytes": memory_usage_in_bytes,
         "cpu_usage_in_nanoseconds": cpu_usage_in_nanoseconds
     }

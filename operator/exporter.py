@@ -1,10 +1,10 @@
 import json
+import logging
 import urllib3
 import uvicorn
-import logging
 from utils import execute, CommandError
 from fastapi import FastAPI
-from prometheus_client import make_asgi_app, start_http_server, Gauge
+from prometheus_client import make_asgi_app
 from kadalulib import logf, logging_setup
 import metrics as storage_metrics
 
@@ -12,15 +12,15 @@ http = urllib3.PoolManager()
 app = FastAPI()
 
 
-def get_pod_ip_data():
-    """ Get IP Addresses of all Pods in kadalu namespace """
+def get_pod_data():
+    """ Get pod and container info of all Pods in kadalu namespace """
 
     cmd = ["kubectl", "get", "pods", "-nkadalu", "-ojson"]
 
     try:
         resp = execute(cmd)
         data = json.loads(resp.stdout)
-        pod_ip_data = {}
+        pod_data = {}
 
         for item in data["items"]:
 
@@ -32,7 +32,7 @@ def get_pod_ip_data():
             pod_phase = item["status"]["phase"]
             ip_addr = item["status"]["podIP"]
 
-            pod_ip_data[pod_name] = {
+            pod_data[pod_name] = {
                 "ip_address": ip_addr,
                 "pod_phase": pod_phase
             }
@@ -48,7 +48,7 @@ def get_pod_ip_data():
                 start_time = 0
 
                 if is_ready and is_started:
-                    number_of_ready_containers = number_of_ready_containers + 1
+                    number_of_ready_containers += 1
                     start_time = container["state"]["running"].get("startedAt")
 
                 container = {
@@ -59,23 +59,19 @@ def get_pod_ip_data():
                 }
                 containers.append(container)
 
-            pod_ip_data[pod_name]["total_number_of_containers"] = len(containers)
-            pod_ip_data[pod_name]["number_of_ready_containers"] = number_of_ready_containers
-            pod_ip_data[pod_name]["containers"] = containers
+            pod_data[pod_name]["total_number_of_containers"] = len(containers)
+            pod_data[pod_name]["number_of_ready_containers"] = number_of_ready_containers
+            pod_data[pod_name]["containers"] = containers
 
-        logging.info(logf(
-            "Pod Data",
-            pod_ip_data=pod_ip_data
-        ))
-
-        return pod_ip_data
+        return pod_data
 
     except (CommandError, KeyError) as err:
         logging.error(logf(
             "Failed to get IP Addresses of pods in kadalu namespace",
             error=err
         ))
-
+        # Return as much collected or have a none check in calling function
+        return pod_data
 
 
 class Metrics:
@@ -89,13 +85,8 @@ class Metrics:
 def get_operator_data(metrics):
     """Update operator metrics"""
 
-    pod_name = ""
     memory_usage_in_bytes = 0
     cpu_usage_in_nanoseconds = 0
-
-    pod_name_path = '/etc/hostname'
-    with open(pod_name_path, 'r') as pod_fd:
-        pod_name = pod_fd.read().strip()
 
     memory_usage_file_path = '/sys/fs/cgroup/memory/memory.usage_in_bytes'
     with open(memory_usage_file_path, 'r') as memory_fd:
@@ -106,7 +97,6 @@ def get_operator_data(metrics):
         cpu_usage_in_nanoseconds = int(cpu_fd.read().strip())
 
     metrics.operator = {
-        "pod_name": pod_name,
         "memory_usage_in_bytes": memory_usage_in_bytes,
         "cpu_usage_in_nanoseconds": cpu_usage_in_nanoseconds
     }
@@ -154,127 +144,61 @@ def collect_all_metrics():
 
     metrics = get_operator_data(metrics)
 
-    pod_ip_data = get_pod_ip_data()
+    pod_data = get_pod_data()
 
-    storage_count = 0
-    for k,v in pod_ip_data.items():
+    for pod_name, pod_details in pod_data.items():
 
         #Skip GET request to operator
-        # operator_str = "operator-"
-        if "operator" in k:
-            metrics.operator.update(v)
+        if "operator" in pod_name:
+            metrics.operator.update({"pod_name": pod_name})
+            metrics.operator.update(pod_details)
             continue
 
-        # For now GET request only from csi-provisioner, nodeplugin & server pods
-        nodeplugin_str = "nodeplugin"
-        provisioner_str = "provisioner"
-        server_str = "server"
+        response = http.request('GET', 'http://'+ pod_details["ip_address"] +':8050/_api/metrics')
+        if response.status == 200:
 
-        r = http.request('GET', 'http://'+ v["ip_address"] +':8050/_api/metrics')
-        if r.status == 200:
+            if "nodeplugin" in pod_name:
 
-            if nodeplugin_str in k:
-
-                metrics.nodeplugins.append(json.loads(r.data)["pod"])
+                metrics.nodeplugins.append(json.loads(response.data)["pod"])
                 # Is for reqd here?? Maybe yes... Multiple node not tested
                 for nodeplugin in metrics.nodeplugins:
-                    if nodeplugin["pod_name"] in k:
-                        nodeplugin.update(v)
+                    if nodeplugin["pod_name"] in pod_name:
+                        nodeplugin.update(pod_details)
 
-            if provisioner_str in k:
+            if "provisioner" in pod_name:
 
                 #storage_pool_name = json.loads(r.data)["storages"]["name"]
                 #metrics.storages[storage_pool_name] = json.loads(r.data)["storages"]
-                metrics.storages = json.loads(r.data)["storages"]
-                metrics.provisioner.update(json.loads(r.data)["pod"])
-                metrics.provisioner.update(v)
-                logging.info(logf(
-                    "storages in provisioner",
-                    storages=metrics.storages
-                ))
+                metrics.storages = json.loads(response.data)["storages"]
+                metrics.provisioner.update({"pod_name": pod_name})
+                metrics.provisioner.update(json.loads(response.data)["pod"])
+                metrics.provisioner.update(pod_details)
 
-            if server_str in k:
+            if "server" in pod_name:
+
                 brick_data = collect_brick_data()
-                logging.info(logf(
-                    "v value",
-                    v=v,
-                    storage_count=storage_count,
-                    collect_brick_data=brick_data
-                ))
-
                 for storage in metrics.storages:
-                # TODO
-                # add bricks by checking if current k(pod) is there in any of the storage pools
-                # add pod details of each bricks["pod_phase", "container statues etc"] from collect bricks data
-                # add pod cpu, memory usage from pod_ip_data rename to pod_data later
 
-
-                    if storage["name"] in k:
+                    if storage["name"] in pod_name:
                         if not storage.get("bricks"):
                             storage.update({"bricks": brick_data[storage["name"]]})
+
                         for brick in storage["bricks"]:
                             brick_name = brick["node"].rstrip("."+storage["name"])
-                            if brick_name in k:
-                                logging.info(logf(
-                                    "inside if brick_name in k",
-                                    k=k,
-                                    brick=brick,
-                                    brick_name=brick_name
-                                ))
-                                # why getting updated to only last brick when bricks > 1
-                                brick.update(json.loads(r.data)["pod"])
-                                brick.update(v)
 
+                            if brick_name in pod_name:
+                                # Is pod name required here?
+                                brick.update(json.loads(response.data)["pod"])
+                                brick.update(pod_details)
+        else:
+            logging.warning(logf(
+                "Some of the pods may not be ready. Try again"
+            ))
+            # Need to mark pods down? Dont know what type of pod is failing to append/update
+            # Ex:
+            # if "operator" in pod_name:
+            #     metrics.operator.update("pod_phase": down)
 
-
-                # 1st try with arrays as brick_data
-                # else
-                # storage_name = metrics.storages[storage_count]["name"]
-                # if storage_name in k:
-                #   metrics.storage[storage_count].update({"bricks": brick_data[storage_name]})
-                # if str(metrics.storages[storage_count]["name"]) in k:
-                #     metrics.storages[storage_count].update({"bricks": brick_data[storage_count]})
-
-                #     #check node name[brick name + storage-pool name] in bricks and add respective pod details
-                #     bricks = metrics.storages[storage_count]["bricks"]
-                #     for brick in bricks:
-                #         brick_name = brick["node"].rstrip("."+metrics.storages[storage_count]["name"])
-                #         logging.info(logf(
-                #             "brick_name",
-                #             brick_name=brick_name,
-                #             k=k,
-                #             type=type(brick)
-                #         ))
-                #         if str(brick_name) in k:
-                #             logging.info(logf(
-                #                 "inside if of brick check",
-                #                 brick_name=brick_name,
-                #                 k=k
-                #             ))
-                #             brick.update(v)
-                #             storage_count+=1
-
-
-                ## Problem is in replica 3
-                ## there are 3 server pods as in 'k,v' coming in
-                ## but storage_count will update +1 every time, it should not.
-                ## Since there is only one storage in top level which is storage[0]
-                ## up
-
-                #metrics.storages[storage_count].update(v)
-                #metrics.storages.insert(storage_count,update(v))
-                #storage_count = storage_count + 1
-                #server_pod_data = json.loads(r.data)["pod"]
-                # if str(metrics.storages[storage_count].get("name")) in str(server_pod_data.get("pod_name")):
-
-                #     for k,v in metrics.storages[storage_count]["bricks"]:
-                #         if
-                #     metrics.storages[storage_count]["bricks"].update(server_pod_data)
-
-    logging.info(logf(
-        "metrics output",
-        metrics=metrics.storages
-    ))
     return metrics
 
 
