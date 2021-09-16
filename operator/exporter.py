@@ -1,3 +1,7 @@
+# check for IndexError continue or break is required [mostly break since if i not present then end there]
+# check if brick update is required in both default or only in any one.[not required in server]
+# change key-data to list_of_storages
+
 import json
 import logging
 import urllib3
@@ -12,6 +16,14 @@ http = urllib3.PoolManager()
 app = FastAPI()
 
 
+class Metrics:
+    def __init__(self):
+        self.operator = {}
+        self.storages = []
+        self.provisioner = {}
+        self.nodeplugins = []
+
+
 def get_pod_data():
     """ Get pod and container info of all Pods in kadalu namespace """
 
@@ -24,13 +36,13 @@ def get_pod_data():
 
         for item in data["items"]:
 
-            # Skip pods which are not "Running"
-            #if item["status"]["phase"] == "Pending":
-            #    continue
-
             pod_name = item["metadata"]["name"]
             pod_phase = item["status"]["phase"]
-            ip_addr = item["status"]["podIP"]
+
+            # Handle this as "Internal Server Err"
+            ip_addr = "0"
+            if "podIP" in item["status"]:
+                ip_addr = item["status"]["podIP"]
 
             pod_data[pod_name] = {
                 "ip_address": ip_addr,
@@ -70,20 +82,93 @@ def get_pod_data():
             "Failed to get IP Addresses of pods in kadalu namespace",
             error=err
         ))
-        # Return as much collected or have a none check in calling function
         return pod_data
 
 
-class Metrics:
-    def __init__(self):
-        self.operator = {}
-        self.storages = []
-        self.provisioner = {}
-        self.nodeplugins = []
+def get_storage_config_data():
+    """
+    Collects all storage related data such as list of storages, type data, bricks
+    related data from configmap for all volumes
+    """
+
+    cmd = ["kubectl", "get", "configmap", "kadalu-info", "-nkadalu", "-ojson"]
+
+    storage_config_data = {}
+    try:
+        resp = execute(cmd)
+        config_data = json.loads(resp.stdout)
+
+        data = config_data['data']
+
+        key_data = []
+        brick_data = {}
+        storage_type_data = {}
+
+        for key, value in data.items():
+            if key.endswith('info'):
+                key = key.rstrip(".info")
+                key_data.append(key)
+
+                value = json.loads(value)
+                brick_data[key] = value["bricks"]
+                storage_type_data[key] = value["type"]
+
+        storage_config_data["key_data"] = key_data
+        storage_config_data["brick_data"] = brick_data
+        storage_config_data["storage_type_data"] = storage_type_data
+
+        return storage_config_data
+
+    except CommandError as err:
+        logging.error(logf(
+            "Failed to get brick data from configmap",
+            error=err
+        ))
+        return None
 
 
-def get_operator_data(metrics):
-    """Update operator metrics"""
+def set_default_values(metrics):
+    """
+    Set default values for all pods in case to display default
+    values in case of unable to reach the pod api
+    """
+
+    metrics.operator.update({"pod_phase": "unknown"})
+    metrics.provisioner.update({"pod_phase": "unknown"})
+
+    pod_data = get_pod_data()
+    for pod_name in pod_data.keys():
+        if "nodeplugin" in pod_name:
+            metrics.nodeplugins.append({"pod_name": pod_name, "pod_phase": "unknown"})
+
+    storage_config_data = get_storage_config_data()
+    list_of_storages = storage_config_data["key_data"]
+    storage_type_data = storage_config_data["storage_type_data"]
+    brick_data = storage_config_data["brick_data"]
+
+    for storage in list_of_storages:
+
+        storage_pool = {
+            "name": storage,
+            "type": storage_type_data[storage],
+            "total_capacity_bytes": 0,
+            "free_capacity_bytes": 0,
+            "used_capacity_bytes": 0,
+            "total_inodes": 0,
+            "free_inodes": 0,
+            "used_inodes": 0,
+            "pvc": []
+        }
+
+        storage_pool.update({"bricks": brick_data[storage]})
+        for brick in storage_pool.get("bricks"):
+            brick.update({"pod_phase": "unknown"})
+
+        metrics.storages.append(storage_pool)
+
+
+def set_operator_data(metrics):
+    """Update operator related metrics"""
 
     memory_usage_in_bytes = 0
     cpu_usage_in_nanoseconds = 0
@@ -101,40 +186,76 @@ def get_operator_data(metrics):
         "cpu_usage_in_nanoseconds": cpu_usage_in_nanoseconds
     }
 
-    return metrics
+
+def set_nodeplugin_data(response, metrics, pod_name, pod_details):
+    """ Update nodeplugin related data """
+
+    for nodeplugin in metrics.nodeplugins:
+        if nodeplugin["pod_name"] in pod_name:
+            nodeplugin.update(json.loads(response.data)["pod"])
+            nodeplugin.update(pod_details)
 
 
-def collect_brick_data():
-    """ Collects all bricks related data from configmap for all volumes """
+def set_provisioner_data(response, metrics, pod_name, pod_details):
+    """ Update provisioner related data """
 
-    cmd = ["kubectl", "get", "configmap", "kadalu-info", "-nkadalu", "-ojson"]
+    # Data from provisioner is the source of truth
+    # Update only those metrics.storages data which is present in
+    # provisioner, rest will remain with default values.
+    # Example:
+    # indices          0 1 2
+    # st_frm_csi       1 2
+    # metrics.storages 1 2 3
 
-    try:
-        resp = execute(cmd)
-        config_data = json.loads(resp.stdout)
+    i = 0
+    storage_data_from_csi = json.loads(response.data)["storages"]
+    for storage in metrics.storages:
+        try:
+            if storage["name"] == storage_data_from_csi[i]["name"]:
+                storage.update(storage_data_from_csi[i])
+                logging.info(logf(
+                    "compare2",
+                    storage_name=storage["name"],
+                    storage_from_csi_name=storage_data_from_csi[i]["name"],
+                    storage=storage
+                ))
+                i += 1
+        except IndexError as error:
+            # Try using break here since we have reached end of storage_data_from_csi
+            continue
 
-        data = config_data['data']
+    logging.info(logf(
+        "json and metrics.storages",
+        json=json.loads(response.data)["storages"],
+        metrics_storages=metrics.storages
+    ))
+    metrics.provisioner.update({"pod_name": pod_name})
+    metrics.provisioner.update(json.loads(response.data)["pod"])
+    metrics.provisioner.update(pod_details)
 
-        key_data = []
-        brick_data = {}
 
-        for key, value in data.items():
-            if key.endswith('info'):
-                key_data.append(key)
+def set_server_data(response, metrics, pod_name, pod_details):
 
-        for key in key_data:
-            storage_data = json.loads(data[key])
-            brick_data[key.rstrip(".info")] = storage_data.get("bricks")
-            #brick_data.append(storage_data.get("bricks"))
+    brick_data = get_storage_config_data()["brick_data"]
+    # assumes provisioner is up and running
 
-        return brick_data
+    logging.info(logf(
+        "len of metrics.storages",
+        len=len(metrics.storages)
+    ))
+    for storage in metrics.storages:
+        if storage["name"] in pod_name:
+            # if not storage.get("bricks"):
+            #     # brick data has details of all bricks from
+            #     # configmap so update only once
+            #     storage.update({"bricks": brick_data[storage["name"]]})
 
-    except CommandError as err:
-        logging.error(logf(
-            "Failed to get brick data from configmap",
-            error=err
-        ))
-        return None
+            for brick in storage["bricks"]:
+                brick_name = brick["node"].rstrip("."+storage["name"])
+
+                if brick_name in pod_name:
+                    brick.update(json.loads(response.data)["pod"])
+                    brick.update(pod_details)
 
 
 def collect_all_metrics():
@@ -142,10 +263,15 @@ def collect_all_metrics():
 
     metrics = Metrics()
 
-    metrics = get_operator_data(metrics)
+    set_default_values(metrics)
+    set_operator_data(metrics)
+
+    logging.info(logf(
+        "collect_all_metrics[default]",
+        metrics_storages=metrics.storages
+    ))
 
     pod_data = get_pod_data()
-
     for pod_name, pod_details in pod_data.items():
 
         #Skip GET request to operator
@@ -154,50 +280,23 @@ def collect_all_metrics():
             metrics.operator.update(pod_details)
             continue
 
-        response = http.request('GET', 'http://'+ pod_details["ip_address"] +':8050/_api/metrics')
+        try:
+            response = http.request('GET', 'http://'+ pod_details["ip_address"] +':8050/_api/metrics')
+        except urllib3.exceptions.MaxRetryError as error:
+            logging.error(logf(
+                "Unable to reach the pod, displaying only default values",
+                pod_name=pod_name
+            ))
+
         if response.status == 200:
-
             if "nodeplugin" in pod_name:
-
-                metrics.nodeplugins.append(json.loads(response.data)["pod"])
-                # Is for reqd here?? Maybe yes... Multiple node not tested
-                for nodeplugin in metrics.nodeplugins:
-                    if nodeplugin["pod_name"] in pod_name:
-                        nodeplugin.update(pod_details)
+                set_nodeplugin_data(response, metrics, pod_name, pod_details)
 
             if "provisioner" in pod_name:
-
-                #storage_pool_name = json.loads(r.data)["storages"]["name"]
-                #metrics.storages[storage_pool_name] = json.loads(r.data)["storages"]
-                metrics.storages = json.loads(response.data)["storages"]
-                metrics.provisioner.update({"pod_name": pod_name})
-                metrics.provisioner.update(json.loads(response.data)["pod"])
-                metrics.provisioner.update(pod_details)
+                set_provisioner_data(response, metrics, pod_name, pod_details)
 
             if "server" in pod_name:
-
-                brick_data = collect_brick_data()
-                for storage in metrics.storages:
-
-                    if storage["name"] in pod_name:
-                        if not storage.get("bricks"):
-                            storage.update({"bricks": brick_data[storage["name"]]})
-
-                        for brick in storage["bricks"]:
-                            brick_name = brick["node"].rstrip("."+storage["name"])
-
-                            if brick_name in pod_name:
-                                # Is pod name required here?
-                                brick.update(json.loads(response.data)["pod"])
-                                brick.update(pod_details)
-        else:
-            logging.warning(logf(
-                "Some of the pods may not be ready. Try again"
-            ))
-            # Need to mark pods down? Dont know what type of pod is failing to append/update
-            # Ex:
-            # if "operator" in pod_name:
-            #     metrics.operator.update("pod_phase": down)
+                set_server_data(response, metrics, pod_name, pod_details)
 
     return metrics
 
@@ -207,22 +306,41 @@ def collect_and_set_prometheus_metrics():
 
     metrics = collect_all_metrics()
 
+    # Operator Metrics
     storage_metrics.memory_usage.labels(
         metrics.operator["pod_name"]).set(metrics.operator["memory_usage_in_bytes"])
     storage_metrics.cpu_usage.labels(
         metrics.operator["pod_name"]).set(metrics.operator["cpu_usage_in_nanoseconds"])
 
+    storage_metrics.total_number_of_containers.labels(
+        metrics.operator["pod_name"]).set(metrics.operator["total_number_of_containers"])
+    storage_metrics.number_of_ready_containers.labels(
+        metrics.operator["pod_name"]).set(metrics.operator["number_of_ready_containers"])
+
+    # Provisioner Metrics
     storage_metrics.memory_usage.labels(
         metrics.provisioner["pod_name"]).set(metrics.provisioner["memory_usage_in_bytes"])
     storage_metrics.cpu_usage.labels(
         metrics.provisioner["pod_name"]).set(metrics.provisioner["cpu_usage_in_nanoseconds"])
 
+    storage_metrics.total_number_of_containers.labels(
+        metrics.provisioner["pod_name"]).set(metrics.provisioner["total_number_of_containers"])
+    storage_metrics.number_of_ready_containers.labels(
+        metrics.provisioner["pod_name"]).set(metrics.provisioner["number_of_ready_containers"])
+
+    # Nodeplugin(s) Metrics
     for nodeplugin in metrics.nodeplugins:
         storage_metrics.memory_usage.labels(
             nodeplugin["pod_name"]).set(nodeplugin["memory_usage_in_bytes"])
         storage_metrics.cpu_usage.labels(
             nodeplugin["pod_name"]).set(nodeplugin["cpu_usage_in_nanoseconds"])
 
+        storage_metrics.total_number_of_containers.labels(
+            nodeplugin["pod_name"]).set(nodeplugin["total_number_of_containers"])
+        storage_metrics.number_of_ready_containers.labels(
+            nodeplugin["pod_name"]).set(nodeplugin["number_of_ready_containers"])
+
+    # Storage(s) Metrics
     for storage in metrics.storages:
         storage_metrics.total_capacity_bytes.labels(storage["name"]).set(storage["total_capacity_bytes"])
         storage_metrics.used_capacity_bytes.labels(storage["name"]).set(storage["used_capacity_bytes"])
@@ -240,6 +358,17 @@ def collect_and_set_prometheus_metrics():
             storage_metrics.total_pvc_inodes.labels(pvc["pvc_name"]).set(pvc["total_pvc_inodes"])
             storage_metrics.used_pvc_inodes.labels(pvc["pvc_name"]).set(pvc["used_pvc_inodes"])
             storage_metrics.free_pvc_inodes.labels(pvc["pvc_name"]).set(pvc["free_pvc_inodes"])
+
+        for brick in storage["bricks"]:
+            storage_metrics.memory_usage.labels(
+                brick["node"].rstrip("."+storage["name"])).set(brick["memory_usage_in_bytes"])
+            storage_metrics.cpu_usage.labels(
+                brick["node"].rstrip("."+storage["name"])).set(brick["cpu_usage_in_nanoseconds"])
+
+            storage_metrics.total_number_of_containers.labels(
+                brick["node"].rstrip("."+storage["name"])).set(brick["total_number_of_containers"])
+            storage_metrics.number_of_ready_containers.labels(
+                brick["node"].rstrip("."+storage["name"])).set(brick["number_of_ready_containers"])
 
 
 @app.middleware("http")
