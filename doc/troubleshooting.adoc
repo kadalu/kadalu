@@ -111,3 +111,18 @@ $ kubectl exec -it kadalu-csi-provisioner-0 -c kadalu-provisioner -- bash
 ----
 
 This disable check is 'runtime' only fix right now, so if the server pods are restarted, this command may need to be issued again. Similarly to enable the check again, just pass the value as `"0"`.
+
+=== Troubleshooting External GlusterFS with native directory quota
+
+When PVCs can grow outside of defined size while using External GlusterFS, and quota management is delegated to GlusterFS, you have to verify that:
+- Namespace 'Kadalu' is created prior the 'glusterquota-ssh-secret' secret 
+- SSH private key and user are defined in 'glusterquota-ssh-secret' secret and kadalu-provisioner has the correct values:
+----
+# kubectl get secret glusterquota-ssh-secret -o jsonpath='{.data}' -o json | jq '.data | map_values(@base64d)'
+# kubectl exec -it kadalu-csi-provisioner-0 -c kadalu-provisioner -- sh -c 'df -h | grep -P secret-volume; echo $SECRET_GLUSTERQUOTA_SSH_USERNAME'
+----
+- The value of 'ssh-privatekey' is not padded ("=" will be added when the base64 encoded string is too short)
+- glusterquota-ssh-username is a valid user on all Gluster nodes and can execute the gluster binaries
+- Verify that the quota is enabled on the gluster volume 
+- KadaluStorage is of type 'External'
+- You gave enough time for GlusterFS to realize that the PVC is full and to block any writes
