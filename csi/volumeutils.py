@@ -9,12 +9,13 @@ import shutil
 import threading
 import time
 from errno import ENOTCONN
+from pathlib import Path
 
 from jinja2 import Template
 from kadalulib import (PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, CommandException,
                        SizeAccounting, execute, get_volname_hash,
                        get_volume_path, is_gluster_mount_proc_running, logf,
-                       makedirs, retry_errors, reachable_host)
+                       makedirs, reachable_host, retry_errors)
 
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/bin/mount"
@@ -26,10 +27,15 @@ HOSTVOL_MOUNTDIR = "/mnt"
 VOLFILES_DIR = "/kadalu/volfiles"
 TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
+GLUSTER_LOG_DIR = "/var/log/gluster"
 
 # This variable contains in-memory map of all glusterfs processes (hash of volfile and pid)
 # Used while sending SIGHUP during any modifcation to storage config
 VOL_DATA = {}
+
+# Cpython dict is threadsafe and can be re-used across grpc calls
+# Used to store, target_path to tuple of mntdir, pvpath
+PVC_POOL = {}
 
 statfile_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 mount_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
@@ -615,6 +621,29 @@ def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize):
     ))
 
 
+def store_target(target, mntdir="", pvpath="", entry="remove"):
+    """Store mountdir and pvcpath corresponding to target_path"""
+
+    file_path = f"{GLUSTER_LOG_DIR}/pvc.json"
+    Path(file_path, exist_ok=True).touch()
+
+    # Update existing PV contents
+    with mount_lock:
+        with open(file_path, "r+") as info_file:
+            data = json.load(info_file)
+            if entry == "add":
+                data[target] = (mntdir, pvpath)
+            elif entry == "remove":
+                data.pop(target, None)
+
+            info_file.seek(0)
+            json.dump(data, info_file)
+            info_file.truncate()
+
+    logging.debug(logf("PVC metadata file is updated",
+                       metadata_file=file_path))
+
+
 def delete_volume(volname):
     """Delete virtual block, sub directory volume, or External"""
 
@@ -832,16 +861,16 @@ def unmount_glusterfs(mountpoint):
         execute(UNMOUNT_CMD, "-l", mountpoint)
 
 
-def unmount_volume(mountpoint):
+def unmount_volume(mountpoint, force=False):
     """Unmount a Volume"""
-    if os.path.ismount(mountpoint):
+    if os.path.ismount(mountpoint) or force:
         execute(UNMOUNT_CMD, "-l", mountpoint)
 
 
 def expand_volume(mountpoint):
     """Expand a Volume"""
     if os.path.ismount(mountpoint):
-        execute("xfs_growfs", "-d", mountpoint)
+        execute(XFS_GROWFS_CMD, "-d", mountpoint)
 
 
 def generate_client_volfile(volname):
@@ -1051,7 +1080,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
         generate_client_volfile(volname)
         # Fix the log, so we can check it out later
         # log_file = "/var/log/gluster/%s.log" % mountpoint.replace("/", "-")
-        log_file = "/var/log/gluster/gluster.log"
+        log_file = f"{GLUSTER_LOG_DIR}/gluster.log"
         cmd = [
             GLUSTERFS_CMD,
             "--process-name", "fuse",
@@ -1111,7 +1140,7 @@ def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None, is_clien
 
     # Fix the log, so we can check it out later
     # log_file = "/var/log/gluster/%s.log" % mountpoint.replace("/", "-")
-    log_file = "/var/log/gluster/gluster.log"
+    log_file = f"{GLUSTER_LOG_DIR}/gluster.log"
 
     cmd = [
         GLUSTERFS_CMD,
@@ -1196,6 +1225,57 @@ def check_external_volume(pv_request, host_volumes):
 
     return hvol
 
+
+def remount_storage():
+    """
+    Mount storage if any volumes exist after a pod reboot
+    """
+    host_volumes = get_pv_hosting_volumes({})
+    if os.environ.get("CSI_ROLE", "-") == "provisioner":
+        for volume in host_volumes:
+            if volume["kformat"] == "non-native":
+                # Need to skip mounting external non-native mounts in-order for
+                # kadalu-quotad not to set quota xattrs
+                continue
+            hvol = volume["name"]
+            mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
+            try:
+                mount_glusterfs(volume, mntdir)
+                logging.info(logf("Volume is mounted successfully", hvol=hvol))
+            except CommandException as err:
+                logging.error(
+                    logf("Unable to mount volume", hvol=hvol, err=err))
+    elif os.environ.get("CSI_ROLE", "-") == "nodeplugin":
+        data = {}
+        file_path = f"{GLUSTER_LOG_DIR}/pvc.json"
+        if Path(file_path).is_file():
+            with open(file_path) as handle:
+                data = json.load(handle)
+
+        for target, source in data:
+            pvpath_full = os.path.join(*source)
+            pvtype = source[1][0:source[1].find("/")]
+            try:
+                # TODO: Remount non-native PVCs
+                # Upon nodeplugin reboot PVC mounts go stale and first need
+                # to be fixed/unmounted
+                if not os.path.ismount(target):
+                    unmount_volume(target, force=True)
+                mount_volume(pvpath_full, target, pvtype)
+
+                # Fill the cache, not to faill if CO calls
+                # NodeUnpublishVolume
+                PVC_POOL[target] = source
+                logging.info(
+                    logf("PVC is re-mounted successfully",
+                         source=source,
+                         target=target))
+            except CommandException as err:
+                logging.error(
+                    logf("Unable to mount PVC at target",
+                         path=pvpath_full,
+                         target=target,
+                         error=err))
 
 # Methods starting with 'yield_*' upon not a single entry raise StopIteration
 # (via return "reason") and upon no entry for a specific scenario yields

@@ -1,15 +1,13 @@
+import logging
 import os
 import pathlib
 import time
-import logging
 
-from prometheus_client.core import GaugeMetricFamily, \
-     CounterMetricFamily, REGISTRY
+from kadalulib import logf, logging_setup
 from prometheus_client import start_http_server
-
-from volumeutils import (HOSTVOL_MOUNTDIR, PV_TYPE_SUBVOL,
-                         yield_pvc_from_mntdir)
-from kadalulib import logging_setup, logf
+from prometheus_client.core import (REGISTRY, CounterMetricFamily,
+                                    GaugeMetricFamily)
+from volumeutils import HOSTVOL_MOUNTDIR, PV_TYPE_SUBVOL, yield_pvc_from_mntdir
 
 
 class CsiMetricsCollector(object):

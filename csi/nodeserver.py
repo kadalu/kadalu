@@ -1,18 +1,17 @@
 """
 nodeserver implementation
 """
-import os
 import logging
+import os
 import time
-
-import grpc
 
 import csi_pb2
 import csi_pb2_grpc
-from volumeutils import mount_volume, unmount_volume, mount_glusterfs, \
-    mount_glusterfs_with_host
+import grpc
 from kadalulib import logf
-
+from volumeutils import (PVC_POOL, mount_glusterfs,
+                         mount_glusterfs_with_host, mount_volume,
+                         unmount_volume, store_target)
 
 HOSTVOL_MOUNTDIR = "/mnt"
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
@@ -110,6 +109,14 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         # Mount the PV
         # TODO: Handle Volume capability mount flags
         mount_volume(pvpath_full, request.target_path, pvtype, fstype=None)
+
+        # Store mountdir and pvcpath corresponding to target_path
+        if PVC_POOL.get(request.target_path) is None:
+            store_target(target=request.target_path,
+                         mntdir=mntdir,
+                         pvpath=pvpath,
+                         entry="add")
+            PVC_POOL[request.target_path] = (mntdir, pvpath)
         logging.info(logf(
             "Mounted PV",
             volume=request.volume_id,
@@ -138,10 +145,20 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             return csi_pb2.NodeUnpublishVolumeResponse()
 
-        logging.debug(logf(
-            "Received the unmount request",
-            volume=request.volume_id,
-        ))
+        logging.debug(
+            logf(
+                "Received the unmount request",
+                volume=request.volume_id,
+            ))
+
+        # Workload might be re-scheduled, so clear off existing target_path
+        # from pvc.json metadata and it should be idempotent
+        if PVC_POOL.get(request.target_path) is not None:
+            store_target(target=request.target_path, entry="remove")
+
+            # PVCs count may build-up overtime, so delete the key from global dict
+            PVC_POOL.pop(request.target_path, None)
+
         unmount_volume(request.target_path)
 
         return csi_pb2.NodeUnpublishVolumeResponse()

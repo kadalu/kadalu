@@ -178,6 +178,12 @@ function run_io(){
 
   echo Collecting arequal-checksum from pods under io-pod deployment
   first_sum=$(kubectl exec -i ${pods[0]} -- sh -c 'arequal-checksum /mnt/alpha') && echo "$first_sum"
+
+  # Reboot nodeplugins
+  kubectl delete pods -l app.kubernetes.io/name=kadalu-csi-nodeplugin --force
+  # kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kadalu-csi-nodeplugin --timeout=20s || fail=1
+  sleep 20
+
   second_sum=$(kubectl exec -i ${pods[1]} -- sh -c 'arequal-checksum /mnt/alpha') && echo "$second_sum"
 
   echo Validate checksum between first and second pod [Empty for checksum match]
