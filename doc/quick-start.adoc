@@ -5,6 +5,8 @@
 
 Download the latest release of Kadalu Kubectl plugin using,
 
+For using external gluster cluster volumes in HashiCorp Nomad, please refer https://github.com/kadalu/kadalu/tree/devel/nomad[Nomad folder] in Kadalu repo
+
 [source,console]
 ----
 
