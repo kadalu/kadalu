@@ -4,45 +4,15 @@
 #
 #    pip-compile --extra=csi --output-file=requirements/csi-requirements.txt
 #
-asgiref==3.4.1
-    # via uvicorn
-click==8.0.1
-    # via uvicorn
-fastapi==0.68.1
-    # via Kadalu (setup.py)
 googleapis-common-protos==1.53.0
     # via Kadalu (setup.py)
 grpcio==1.38.1
     # via Kadalu (setup.py)
-h11==0.12.0
-    # via uvicorn
-httptools==0.2.0
-    # via uvicorn
 protobuf==3.17.3
     # via googleapis-common-protos
-pydantic==1.8.2
-    # via fastapi
-python-dotenv==0.19.0
-    # via uvicorn
 pyxattr==0.7.2
     # via Kadalu (setup.py)
-pyyaml==5.4.1
-    # via uvicorn
 six==1.16.0
     # via
     #   grpcio
     #   protobuf
-starlette==0.14.2
-    # via fastapi
-typing-extensions==3.10.0.0
-    # via pydantic
-urllib3==1.26.6
-    # via Kadalu (setup.py)
-uvicorn[standard]==0.15.0
-    # via Kadalu (setup.py)
-uvloop==0.16.0
-    # via uvicorn
-watchgod==0.7
-    # via uvicorn
-websockets==9.1
-    # via uvicorn

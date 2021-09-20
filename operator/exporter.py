@@ -1,20 +1,21 @@
-# check for IndexError continue or break is required [mostly break since if i not present then end there]
-# check if brick update is required in both default or only in any one.[not required in server]
-# change key-data to list_of_storages
+"""
+Exporter gathers various metrics from various kadalu pod exporters
+by connecting to their respective API Endpoints through IP
+and makes available these aggregated metrics in JSON as metrics.json
+and Prometheus as metrics at PORT=8050
+"""
 
 import json
 import logging
-import urllib3
 import uvicorn
+import requests
 from utils import execute, CommandError
 from fastapi import FastAPI
 from prometheus_client import make_asgi_app
 from kadalulib import logf, logging_setup
 import metrics as storage_metrics
 
-http = urllib3.PoolManager()
 app = FastAPI()
-
 
 class Metrics:
     def __init__(self):
@@ -31,58 +32,58 @@ def get_pod_data():
 
     try:
         resp = execute(cmd)
-        data = json.loads(resp.stdout)
-        pod_data = {}
-
-        for item in data["items"]:
-
-            pod_name = item["metadata"]["name"]
-            pod_phase = item["status"]["phase"]
-
-            # Handle this as "Internal Server Err"
-            ip_addr = "0"
-            if "podIP" in item["status"]:
-                ip_addr = item["status"]["podIP"]
-
-            pod_data[pod_name] = {
-                "ip_address": ip_addr,
-                "pod_phase": pod_phase
-            }
-
-            # Container Information
-            containers = []
-            number_of_ready_containers = 0
-            for container in item["status"]["containerStatuses"]:
-
-                container_name = container["name"]
-                is_ready = container["ready"]
-                is_started = container["started"]
-                start_time = 0
-
-                if is_ready and is_started:
-                    number_of_ready_containers += 1
-                    start_time = container["state"]["running"].get("startedAt")
-
-                container = {
-                    "container_name": container_name,
-                    "is_ready": is_ready,
-                    "is_started": is_started,
-                    "start_time": start_time
-                }
-                containers.append(container)
-
-            pod_data[pod_name]["total_number_of_containers"] = len(containers)
-            pod_data[pod_name]["number_of_ready_containers"] = number_of_ready_containers
-            pod_data[pod_name]["containers"] = containers
-
-        return pod_data
-
-    except (CommandError, KeyError) as err:
+    except CommandError as err:
         logging.error(logf(
-            "Failed to get IP Addresses of pods in kadalu namespace",
+            "Failed to execute the command",
+            command=cmd,
             error=err
         ))
-        return pod_data
+
+    data = json.loads(resp.stdout)
+    pod_data = {}
+
+    for item in data["items"]:
+
+        pod_name = item["metadata"]["name"]
+        pod_phase = item["status"]["phase"]
+
+        # Handle this as "Internal Server Err"
+        ip_addr = "0"
+        if "podIP" in item["status"]:
+            ip_addr = item["status"]["podIP"]
+
+        pod_data[pod_name] = {
+            "ip_address": ip_addr,
+            "pod_phase": pod_phase
+        }
+
+        # Container Information
+        containers = []
+        number_of_ready_containers = 0
+        for container in item["status"]["containerStatuses"]:
+
+            container_name = container["name"]
+            is_ready = container["ready"]
+            is_started = container["started"]
+            start_time = 0
+
+            if is_ready and is_started:
+                number_of_ready_containers += 1
+                start_time = container["state"]["running"].get("startedAt")
+
+            container = {
+                "container_name": container_name,
+                "is_ready": is_ready,
+                "is_started": is_started,
+                "start_time": start_time
+            }
+            containers.append(container)
+
+        pod_data[pod_name]["total_number_of_containers"] = len(containers)
+        pod_data[pod_name]["number_of_ready_containers"] = number_of_ready_containers
+        pod_data[pod_name]["containers"] = containers
+
+    return pod_data
 
 
 def get_storage_config_data():
@@ -100,20 +101,24 @@ def get_storage_config_data():
 
         data = config_data['data']
 
-        key_data = []
+        list_of_storages = []
         brick_data = {}
         storage_type_data = {}
 
         for key, value in data.items():
             if key.endswith('info'):
                 key = key.rstrip(".info")
-                key_data.append(key)
-
                 value = json.loads(value)
+
+                # TODO: Add metrics for external storage type
+                if value["type"] == "External":
+                    continue
+
+                list_of_storages.append(key)
                 brick_data[key] = value["bricks"]
                 storage_type_data[key] = value["type"]
 
-        storage_config_data["key_data"] = key_data
+        storage_config_data["list_of_storages"] = list_of_storages
         storage_config_data["brick_data"] = brick_data
         storage_config_data["storage_type_data"] = storage_type_data
 
@@ -142,7 +147,7 @@ def set_default_values(metrics):
             metrics.nodeplugins.append({"pod_name": pod_name, "pod_phase": "unknown"})
 
     storage_config_data = get_storage_config_data()
-    list_of_storages = storage_config_data["key_data"]
+    list_of_storages = storage_config_data["list_of_storages"]
     storage_type_data = storage_config_data["storage_type_data"]
     brick_data = storage_config_data["brick_data"]
 
@@ -188,73 +193,54 @@ def set_operator_data(metrics):
 
 
 def set_nodeplugin_data(response, metrics, pod_name, pod_details):
-    """ Update nodeplugin related data """
+    """ Update nodeplugin related metrics"""
 
     for nodeplugin in metrics.nodeplugins:
         if nodeplugin["pod_name"] in pod_name:
-            nodeplugin.update(json.loads(response.data)["pod"])
+            nodeplugin.update(response.json()["pod"])
             nodeplugin.update(pod_details)
 
 
 def set_provisioner_data(response, metrics, pod_name, pod_details):
-    """ Update provisioner related data """
+    """ Update provisioner related metrics"""
 
     # Data from provisioner is the source of truth
     # Update only those metrics.storages data which is present in
     # provisioner, rest will remain with default values.
-    # Example:
-    # indices          0 1 2
-    # st_frm_csi       1 2
-    # metrics.storages 1 2 3
+    storage_data_from_csi = response.json()["storages"]
 
-    i = 0
-    storage_data_from_csi = json.loads(response.data)["storages"]
-    for storage in metrics.storages:
+    for index, storage in enumerate(metrics.storages):
         try:
-            if storage["name"] == storage_data_from_csi[i]["name"]:
-                storage.update(storage_data_from_csi[i])
-                logging.info(logf(
-                    "compare2",
-                    storage_name=storage["name"],
-                    storage_from_csi_name=storage_data_from_csi[i]["name"],
-                    storage=storage
-                ))
-                i += 1
-        except IndexError as error:
-            # Try using break here since we have reached end of storage_data_from_csi
-            continue
+            if storage["name"] == storage_data_from_csi[index]["name"]:
+                storage.update(storage_data_from_csi[index])
 
-    logging.info(logf(
-        "json and metrics.storages",
-        json=json.loads(response.data)["storages"],
-        metrics_storages=metrics.storages
-    ))
+        except IndexError:
+            # skip comparing rest of storages in metrics[default],
+            # since storage_data_from_csi has reached its end,
+            # and it contains no more data from healthy storage-pools
+            logging.debug(logf(
+                "Reached end of list of storages from csi. Skip comparing the rest."
+            ))
+            break
+
     metrics.provisioner.update({"pod_name": pod_name})
-    metrics.provisioner.update(json.loads(response.data)["pod"])
+    metrics.provisioner.update(response.json()["pod"])
     metrics.provisioner.update(pod_details)
 
 
 def set_server_data(response, metrics, pod_name, pod_details):
+    """ Updates server[storage-pool(s) & its brick(s)] related metrics"""
 
-    brick_data = get_storage_config_data()["brick_data"]
-    # assumes provisioner is up and running
-
-    logging.info(logf(
-        "len of metrics.storages",
-        len=len(metrics.storages)
-    ))
+    # Assumes CSI Pod is healthy and able to retrieve server data from its mount points,
+    # Else default values of storages will be used.
     for storage in metrics.storages:
         if storage["name"] in pod_name:
-            # if not storage.get("bricks"):
-            #     # brick data has details of all bricks from
-            #     # configmap so update only once
-            #     storage.update({"bricks": brick_data[storage["name"]]})
 
             for brick in storage["bricks"]:
                 brick_name = brick["node"].rstrip("."+storage["name"])
 
                 if brick_name in pod_name:
-                    brick.update(json.loads(response.data)["pod"])
+                    brick.update(response.json()["pod"])
                     brick.update(pod_details)
 
 
@@ -266,29 +252,27 @@ def collect_all_metrics():
     set_default_values(metrics)
     set_operator_data(metrics)
 
-    logging.info(logf(
-        "collect_all_metrics[default]",
-        metrics_storages=metrics.storages
-    ))
-
     pod_data = get_pod_data()
     for pod_name, pod_details in pod_data.items():
 
-        #Skip GET request to operator
+        # skip GET request to operator
         if "operator" in pod_name:
             metrics.operator.update({"pod_name": pod_name})
             metrics.operator.update(pod_details)
             continue
 
         try:
-            response = http.request('GET', 'http://'+ pod_details["ip_address"] +':8050/_api/metrics')
-        except urllib3.exceptions.MaxRetryError as error:
+            response = requests.get(
+                'http://'+ pod_details["ip_address"] +':8050/_api/metrics',
+                timeout=1)
+        except requests.exceptions.RequestException as err:
             logging.error(logf(
                 "Unable to reach the pod, displaying only default values",
-                pod_name=pod_name
+                pod_name=pod_name,
+                error=err
             ))
 
-        if response.status == 200:
+        if response.status_code == 200:
             if "nodeplugin" in pod_name:
                 set_nodeplugin_data(response, metrics, pod_name, pod_details)
 
@@ -391,5 +375,8 @@ app.mount("/metrics", make_asgi_app())
 if __name__ == "__main__":
 
     logging_setup()
+    logging.info(logf(
+        "Started metrics exporter process at port 8050"
+    ))
 
-    uvicorn.run("exporter:app", host="0.0.0.0", port=9003, log_level="info")
+    uvicorn.run("exporter:app", host="0.0.0.0", port=8050, log_level="info")

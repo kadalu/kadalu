@@ -4,8 +4,6 @@
 #
 #    pip-compile --extra=operator --output-file=requirements/operator-requirements.txt
 #
-asgiref==3.4.1
-    # via uvicorn
 cachetools==4.2.2
     # via google-auth
 certifi==2021.5.30
@@ -14,16 +12,8 @@ certifi==2021.5.30
     #   requests
 chardet==4.0.0
     # via requests
-click==8.0.1
-    # via uvicorn
-fastapi==0.68.1
-    # via Kadalu (setup.py)
 google-auth==1.32.1
     # via kubernetes
-h11==0.12.0
-    # via uvicorn
-httptools==0.2.0
-    # via uvicorn
 idna==2.10
     # via requests
 kubernetes==11.0.0
@@ -36,16 +26,10 @@ pyasn1==0.4.8
     #   rsa
 pyasn1-modules==0.2.8
     # via google-auth
-pydantic==1.8.2
-    # via fastapi
 python-dateutil==2.8.1
     # via kubernetes
-python-dotenv==0.19.0
-    # via uvicorn
 pyyaml==5.4.1
-    # via
-    #   kubernetes
-    #   uvicorn
+    # via kubernetes
 requests==2.25.1
     # via
     #   kubernetes
@@ -59,25 +43,12 @@ six==1.16.0
     #   google-auth
     #   kubernetes
     #   python-dateutil
-starlette==0.14.2
-    # via fastapi
-typing-extensions==3.10.0.0
-    # via pydantic
 urllib3==1.26.6
     # via
-    #   Kadalu (setup.py)
     #   kubernetes
     #   requests
-uvicorn[standard]==0.15.0
-    # via Kadalu (setup.py)
-uvloop==0.16.0
-    # via uvicorn
-watchgod==0.7
-    # via uvicorn
 websocket-client==1.1.0
     # via kubernetes
-websockets==9.1
-    # via uvicorn
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

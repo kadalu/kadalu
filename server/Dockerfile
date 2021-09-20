@@ -24,7 +24,7 @@ COPY --from=builder /kadalu /kadalu
 RUN ln -sfn /usr/local/bin/python3 /kadalu/bin/python3
 
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends net-tools netcat iputils-ping telnet attr xfsprogs libtirpc3 sqlite3 liburcu6 && \
+    apt-get install -y --no-install-recommends attr xfsprogs libtirpc3 sqlite3 liburcu6 && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 

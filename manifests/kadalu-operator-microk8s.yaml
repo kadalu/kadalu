@@ -282,6 +282,9 @@ spec:
     metadata:
       labels:
         name: kadalu
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8050"
     spec:
       serviceAccountName: kadalu-operator
       containers:
