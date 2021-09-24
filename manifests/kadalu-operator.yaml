@@ -314,3 +314,6 @@ spec:
               value: "kubernetes"
             - name: VERBOSE
               value: "no"
+            # If k8s api-server is behind a proxy this value should be set to that URL
+            - name: HTTP_PROXY
+              value: "HTTP_PROXY"

@@ -24,6 +24,7 @@ VERSION = os.environ.get("KADALU_VERSION", "latest")
 K8S_DIST = os.environ.get("K8S_DIST", "kubernetes")
 KUBELET_DIR = os.environ.get("KUBELET_DIR")
 VERBOSE = os.environ.get("VERBOSE", "no")
+HTTP_PROXY = os.environ.get("HTTP_PROXY", "HTTP_PROXY")
 MANIFESTS_DIR = "/kadalu/templates"
 KUBECTL_CMD = "/usr/bin/kubectl"
 KADALU_CONFIG_MAP = "kadalu-info"
@@ -984,6 +985,12 @@ def main():
     clnt = client.Configuration() #go and get a copy of the default config
     clnt.verify_ssl = False #set verify_ssl to false in that config
     client.Configuration.set_default(clnt) #make that config the default for all new clients
+
+    # 1. Setting HTTP_PROXY using class methods (set_default) doesn't seem to be
+    # working well https://github.com/kubernetes-client/python/issues/549#issuecomment-528769365
+    # 2. Directly set the value on non-public attr https://github.com/kubernetes-client/python/issues/333#issuecomment-398087826
+    if HTTP_PROXY != "HTTP_PROXY":
+        client.Configuration._default.proxy = HTTP_PROXY
 
     core_v1_client = client.CoreV1Api()
     k8s_client = client.ApiClient()

@@ -344,3 +344,6 @@ spec:
               value: "{{ k8s_dist }}"
             - name: VERBOSE
               value: "{{ verbose }}"
+            # If k8s api-server is behind a proxy this value should be set to that URL
+            - name: HTTP_PROXY
+              value: "{{ proxy }}"

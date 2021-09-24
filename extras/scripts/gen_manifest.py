@@ -32,6 +32,7 @@ if __name__ == "__main__":
     K8S_DIST = os.environ.get("K8S_DIST", "kubernetes")
     VERBOSE = os.environ.get("VERBOSE", "no")
     KUBELET_DIR = "/var/lib/kubelet"
+    HTTP_PROXY = "HTTP_PROXY"
     if K8S_DIST == "microk8s":
         KUBELET_DIR = "/var/snap/microk8s/common/var/lib/kubelet"
     elif K8S_DIST == "rke":
@@ -44,6 +45,7 @@ if __name__ == "__main__":
         "k8s_dist": K8S_DIST,
         "kubelet_dir": KUBELET_DIR,
         "verbose": VERBOSE,
+        "proxy": HTTP_PROXY,
     }
 
     template(sys.argv[1], template_file="operator.yaml.j2", template_args=TEMPLATE_ARGS)
