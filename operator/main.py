@@ -988,8 +988,10 @@ def main():
 
     # 1. Setting HTTP_PROXY using class methods (set_default) doesn't seem to be
     # working well https://github.com/kubernetes-client/python/issues/549#issuecomment-528769365
-    # 2. Directly set the value on non-public attr https://github.com/kubernetes-client/python/issues/333#issuecomment-398087826
+    # 2. Directly set the value on non-public attr
+    # https://github.com/kubernetes-client/python/issues/333#issuecomment-398087826
     if HTTP_PROXY != "HTTP_PROXY":
+        # pylint: disable=protected-access
         client.Configuration._default.proxy = HTTP_PROXY
 
     core_v1_client = client.CoreV1Api()
