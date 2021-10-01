@@ -38,6 +38,7 @@ COPY server/shd.py           /kadalu/shd.py
 COPY server/mount-glustervol /usr/bin/mount-glustervol
 COPY lib/startup.sh          /kadalu/startup.sh
 COPY server/stop-server.sh   /kadalu/stop-server.sh
+COPY server/exporter.py      /kadalu/exporter.py
 
 # Copy Volfile templates
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/

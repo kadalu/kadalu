@@ -517,7 +517,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                 "volume_id": value.get("name"),
                 "capacity_bytes": value.get("size"),
             }
-        } for value in pvcs]
+        } for value in pvcs if value is not None]
 
         return csi_pb2.ListVolumesResponse(entries=entries,
                                            next_token=next_token)

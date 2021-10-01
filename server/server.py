@@ -6,7 +6,7 @@ Prepares, Validates and then starts the Server process(glusterfsd, shd)
 
 import os
 
-from kadalulib import logging_setup, Monitor #, Proc
+from kadalulib import logging_setup, Monitor, Proc
 import glusterfsd
 import shd
 
@@ -16,6 +16,9 @@ def start_server_process():
     Start glusterfsd or glustershd process
     """
     mon = Monitor()
+
+    curr_dir = os.path.dirname(__file__)
+    mon.add_process(Proc("metrics", "python3", [curr_dir + "/exporter.py"]))
     glusterfsd_proc = glusterfsd.start_args()
 
     mon.add_process(glusterfsd_proc)
@@ -27,9 +30,8 @@ def start_server_process():
         mon.add_process(shd_proc)
 
     # # No need for quota process in bricks anymore
-    # curr_dir = os.path.dirname(__file__)
-    #
     # mon.add_process(Proc("quotad", "python3", [curr_dir + "/quotad.py"]))
+
 
     mon.start_all()
     mon.monitor()
