@@ -1,0 +1,50 @@
+
+= Upgrade Kadalu version
+
+Here the steps to upgrade a Kadalu service from v0.8.1 to v0.8.6 on a 11 nodes k8s v1.18.
+It should apply to any newer upgrade.
+
+== Upgrade kubectl-kadalu binary
+
+[source,console]
+----
+  curl -LO https://github.com/kadalu/kadalu/releases/download/0.8.6/kubectl-kadalu
+  chmod +x ./kubectl-kadalu
+  sudo mv ./kubectl-kadalu /usr/local/bin/kubectl-kadalu
+  kubectl-kadalu version
+
+  => kubectl-kadalu 0.8.6
+----
+
+== Apply kadalu operator file
+
+[source,console]
+----
+  curl -s https://raw.githubusercontent.com/kadalu/kadalu/0.8.6/manifests/kadalu-operator.yaml | sed -e 's/"no"/"yes"/g' | kubectl apply -f -
+  
+  namespace/kadalu unchanged
+  serviceaccount/kadalu-operator unchanged
+  serviceaccount/kadalu-csi-nodeplugin unchanged
+  serviceaccount/kadalu-csi-provisioner unchanged
+  serviceaccount/kadalu-server-sa unchanged
+  customresourcedefinition.apiextensions.k8s.io/kadalustorages.kadalu-operator.storage configured
+  clusterrole.rbac.authorization.k8s.io/pod-exec unchanged
+  clusterrole.rbac.authorization.k8s.io/kadalu-operator unchanged
+  clusterrolebinding.rbac.authorization.k8s.io/kadalu-operator unchanged
+  deployment.apps/operator configured
+----
+
+(wait for operator and csi-provisionner pods in kadalu namespace get in Running state)
+
+== Apply kadalu CSI-Nodeplugin
+
+[source,console]
+----
+curl -s https://raw.githubusercontent.com/kadalu/kadalu/0.8.6/manifests/csi-nodeplugin.yaml | sed -e 's/"no"/"yes"/g' | kubectl apply -f -
+
+clusterrole.rbac.authorization.k8s.io/kadalu-csi-nodeplugin unchanged
+clusterrolebinding.rbac.authorization.k8s.io/kadalu-csi-nodeplugin unchanged
+daemonset.apps/kadalu-csi-nodeplugin configured
+----
+
+Wait for the kadalu-csi-nodeplugin* pod got all replaced and get in Running state: it can take time since there's 1 pod per node and kadalu upgrade them one at a time
