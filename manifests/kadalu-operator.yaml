@@ -140,6 +140,8 @@ rules:
   - apiGroups: [""]
     resources:
       - pods
+      - pods/log
+      - pods/exec
       - services
       - endpoints
       - persistentvolumes
