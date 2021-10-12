@@ -895,6 +895,11 @@ def deploy_csi_pods(core_v1_client):
     # Deploy CSI Pods
     api_instance = client.VersionApi().get_code()
     if api_instance.major > "1" or api_instance.major == "1" and \
+       api_instance.minor >= "22":
+        filename = os.path.join(MANIFESTS_DIR, "csi-driver-object-v1.yaml")
+        template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
+        lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
+    elif api_instance.major > "1" or api_instance.major == "1" and \
        api_instance.minor >= "14":
         filename = os.path.join(MANIFESTS_DIR, "csi-driver-object.yaml")
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
