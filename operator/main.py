@@ -15,7 +15,7 @@ from jinja2 import Template
 from kadalulib import execute as lib_execute
 from kadalulib import logf, logging_setup, send_analytics_tracker, is_host_reachable
 from kubernetes import client, config, watch
-from urllib3.exceptions import ProtocolError
+from urllib3.exceptions import (ProtocolError, NewConnectionError)
 from utils import CommandError
 from utils import execute as utils_execute
 
@@ -871,7 +871,7 @@ def crd_watch(core_v1_client, k8s_client):
     while True:
         try:
             watch_stream(core_v1_client, k8s_client)
-        except ProtocolError:
+        except (ProtocolError, NewConnectionError):
             # It might so happen that this'll be logged for every hit in k8s
             # event stream in kadalu namespace and better to log at debug level
             logging.debug(
