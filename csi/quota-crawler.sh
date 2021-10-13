@@ -25,6 +25,7 @@ while true; do
     fi
     if [ $((count % 1000)) -eq 0 ]; then
       echo "Latest consumption on $dir : $used_size"
+      echo "Empty if setfattr is successful: --$out--"
     fi
   done
 
