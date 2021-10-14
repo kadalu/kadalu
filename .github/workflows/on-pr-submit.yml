@@ -48,11 +48,11 @@ jobs:
       run: make pylint
 
   run-on-minikube:
-    name: kube 1.20.0
+    name: kube 1.22.0
     runs-on: ubuntu-latest
     needs: get-info
     env:
-      KUBE_VERSION: v1.20.0
+      KUBE_VERSION: v1.22.0
       # Current conditions in minikube.sh which are using commit message:
       # [helm skip]: If contained in COMMIT MESSAGE, validating helm is skipped
       COMMIT_MSG: ${{needs.get-info.outputs.msg}}
