@@ -21,7 +21,13 @@ while true; do
     used_size=$(df -B1 ${dir}  | tail -n1 | awk '{print $3}');
     out=$(setfattr -n glusterfs.quota.total-usage -v ${used_size} $dir 2>&1);
     if ! [[ "$out" =~ "Operation not supported" ]]; then
-      echo "$out"
+	echo "$out"
+	# This error comes most probably after a server pod
+	# restart or after a self-heal. This is a quick fix.
+	# Ideal fix is handling it in glusterfs code, but
+	# that would take time. In worst case, it would be
+	# a no-op as namespace would be already set.
+	out1=$(setfattr -n trusted.glusterfs.namespace -v "true" $dir 2>&1);
     fi
     if [ $((count % 1000)) -eq 0 ]; then
       echo "Latest consumption on $dir : $used_size"
