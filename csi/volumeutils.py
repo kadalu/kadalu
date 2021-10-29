@@ -1097,19 +1097,6 @@ def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None, is_clien
     if not os.path.exists(mountpoint):
         makedirs(mountpoint)
 
-    # FIXME: make this better later (an issue for external contribution)
-    # opt_array = None
-    # if options:
-    #     opt_array = []
-    #     for opt in options.split(","):
-    #         if not opt or opt == "":
-    #             break
-    #         for k,v in opt.split("="):
-    #             if k == "log-level":
-    #                 opt_array.append("--log-level")
-    #                 opt_array.append(v)
-    #                 # TODO: handle more options, and document them
-
     # Fix the log, so we can check it out later
     # log_file = "/var/log/gluster/%s.log" % mountpoint.replace("/", "-")
     log_file = "/var/log/gluster/gluster.log"
@@ -1126,6 +1113,16 @@ def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None, is_clien
 
     for host in hosts.split(','):
         cmd.extend(["--volfile-server", host])
+
+    # Unless a specific issue is raised and found out an option isn't supported
+    # we are good to actually use that options in the mean time.
+    # It's also documented in kadalu_cli that 'gluster-opts' should be of below
+    # form as a single string:
+    # --gluster-options "backup-volfile-servers=volfile_server2:
+    # volfile_server3,log-level=WARNING,reader-thread-count=2,
+    # log-file=/var/log/gluster.log"
+    if options:
+        cmd.extend(["-o", options])
 
     cmd.append(mountpoint)
 
