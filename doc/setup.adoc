@@ -3,7 +3,7 @@
 == Pre-Requisites
 
 - Kubernetes 1.13.0 + version
-- The host should support xfs (`mkfs.xfs`)
+- The host should support xfs (`mkfs.xfs`) with the superblock v5 format
   - On some systems this might require installation of xfsprogs package
 
 == Setup
