@@ -26,13 +26,13 @@ def set_args(name, subparsers):
 
     arg("-c",
         "--container",
-        help="Specify container name to get log info.\n"
+        help="Specify the container name to get log info.\n"
         "To be used along with '--podname'")
 
     arg("-A",
         "--allcontainers",
         action="store_true",
-        help=("Show logs of all containers"
+        help=("Show logs of all containers "
               "of a particular pod.\n"
               "To be used along with '--podname'"))
 
