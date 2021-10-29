@@ -6,6 +6,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.7] - 2021-10-29
+
+- Troubleshooting guide updated for GlusterFS directory quota(External).
+- Documentation update to use Kadalu Storage(External) with Nomad.
+- Documentation update with upgrade steps.
+- Metrics APIs are redesigned. All the metrics related to Kadalu Pods are now accessible from Operator Pod.
+- Fixed an issue related to reachable host check(External).
+- Fixed an crash related to Connection error in Operator.
+- Fixed excessive logging of SETFATTR errors.
+- Added support for Kubernetes v1.22.
+- Fixed EPERM issues in CSI Provisioner.
+- Added support to print versions from all Pods of Kadalu namespace(`kubectl kadalu version`).
+- Added support for Setting Gluster options while adding External Storage pool.
+- Documentation update for `xfsprogs` requirements.
+
 ## [0.8.6] - 2021-09-09
 
 - Mounted Block Volume support - Create a Storage Class with `pv_type: Block` and all the PVs from this Storage Class will be created as Block Volumes. Refer documentation for the examples.
@@ -261,7 +276,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.6...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.7...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
@@ -283,3 +298,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.8.4]: https://github.com/kadalu/kadalu/compare/0.8.3...0.8.4
 [0.8.5]: https://github.com/kadalu/kadalu/compare/0.8.4...0.8.5
 [0.8.6]: https://github.com/kadalu/kadalu/compare/0.8.5...0.8.6
+[0.8.7]: https://github.com/kadalu/kadalu/compare/0.8.6...0.8.7
