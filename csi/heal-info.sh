@@ -30,4 +30,5 @@ for volfile in $(cd /kadalu/volfiles; ls *); do
     vol=${volfile%.client.vol}
     echo "Giving heal information of volume $vol"
     /opt/libexec/glusterfs/glfsheal $vol info-summary volfile-path /kadalu/volfiles/$volfile
+    echo
 done
