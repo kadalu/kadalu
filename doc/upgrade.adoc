@@ -1,14 +1,14 @@
 
-= Upgrade Kadalu version
+= Upgrade Kadalu version for K8S/K3S
 
-Here the steps to upgrade a Kadalu service from v0.8.1 to v0.8.6 on a 11 nodes k8s v1.18.
+Here the steps to upgrade a Kadalu service from v0.8.1 to the latest version k8s v1.18 or k3s v1.21.
 It should apply to any newer upgrade.
 
 == Upgrade kubectl-kadalu binary
 
 [source,console]
 ----
-  curl -LO https://github.com/kadalu/kadalu/releases/download/0.8.6/kubectl-kadalu
+  curl -LO https://github.com/kadalu/kadalu/releases/latest/download/kubectl-kadalu
   chmod +x ./kubectl-kadalu
   sudo mv ./kubectl-kadalu /usr/local/bin/kubectl-kadalu
   kubectl-kadalu version
@@ -20,7 +20,7 @@ It should apply to any newer upgrade.
 
 [source,console]
 ----
-  curl -s https://raw.githubusercontent.com/kadalu/kadalu/0.8.6/manifests/kadalu-operator.yaml | sed -e 's/"no"/"yes"/g' | kubectl apply -f -
+  curl -Ls https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator.yaml | sed -e 's/"no"/"yes"/g' | kubectl apply -f -
   
   namespace/kadalu unchanged
   serviceaccount/kadalu-operator unchanged
@@ -40,7 +40,7 @@ It should apply to any newer upgrade.
 
 [source,console]
 ----
-curl -s https://raw.githubusercontent.com/kadalu/kadalu/0.8.6/manifests/csi-nodeplugin.yaml | sed -e 's/"no"/"yes"/g' | kubectl apply -f -
+curl -Ls https://github.com/kadalu/kadalu/releases/latest/download/csi-nodeplugin.yaml | sed -e 's/"no"/"yes"/g' | kubectl apply -f -
 
 clusterrole.rbac.authorization.k8s.io/kadalu-csi-nodeplugin unchanged
 clusterrolebinding.rbac.authorization.k8s.io/kadalu-csi-nodeplugin unchanged
