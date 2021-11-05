@@ -37,10 +37,10 @@ for volfile in $(cd /kadalu/volfiles; ls *); do
     echo "$result" | grep "Total Number of entries" | cut -d ":" -f 2 |  grep -q -vE "0|-"
     if [ "$?" -eq 0 ]; then
 	    echo "List of files needing a heal on ${vol}:"
-            /opt/libexec/glusterfs/glfsheal $vol volfile-path /kadalu/volfiles/$volfile
+      /opt/libexec/glusterfs/glfsheal $vol volfile-path /kadalu/volfiles/$volfile
 	    echo
 	    echo "List of files in splitbrain on ${vol}:"
-            /opt/libexec/glusterfs/glfsheal $vol split-brain-info volfile-path /kadalu/volfiles/$volfile
+      /opt/libexec/glusterfs/glfsheal $vol split-brain-info volfile-path /kadalu/volfiles/$volfile
     fi
     echo;echo
 done
