@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 MOUNT_DIR=/mnt
 
 if [ $# -eq 1 ]; then
