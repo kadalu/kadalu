@@ -17,15 +17,20 @@ def metrics():
     }
 
     memory_usage_in_bytes = 0
-    cpu_usage_in_nanoseconds = 0
+    # Return -1 if unable to fetch 'cgroup' data,
+    # until new method is found to get CPU & Memory data in LXD containers.
+    memory_usage_in_bytes = -1
+    cpu_usage_in_nanoseconds = -1
 
     memory_usage_file_path = '/sys/fs/cgroup/memory/memory.usage_in_bytes'
-    with open(memory_usage_file_path, 'r') as memory_fd:
-        memory_usage_in_bytes = int(memory_fd.read().strip())
+    if os.path.exists(memory_usage_file_path):
+        with open(memory_usage_file_path, 'r') as memory_fd:
+            memory_usage_in_bytes = int(memory_fd.read().strip())
 
     cpu_usage_file_path = '/sys/fs/cgroup/cpu/cpuacct.usage'
-    with open(cpu_usage_file_path, 'r') as cpu_fd:
-        cpu_usage_in_nanoseconds = int(cpu_fd.read().strip())
+    if os.path.exists(cpu_usage_file_path):
+        with open(cpu_usage_file_path, 'r') as cpu_fd:
+            cpu_usage_in_nanoseconds = int(cpu_fd.read().strip())
 
     data["pod"] = {
         "memory_usage_in_bytes": memory_usage_in_bytes,
