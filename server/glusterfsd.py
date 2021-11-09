@@ -1,17 +1,16 @@
 """
 Starts Gluster Brick(fsd) process
 """
-import os
-import uuid
-import sys
 import logging
+import os
+import sys
+import uuid
 
-from jinja2 import Template
 import xattr
+from jinja2 import Template
 
-from kadalulib import execute, CommandException, logf, \
-     send_analytics_tracker, Proc
-
+from kadalulib import (CommandException, Proc, execute, logf,
+                       send_analytics_tracker)
 
 # noqa # pylint: disable=I1101
 VOLUME_ID_XATTR_NAME = "trusted.glusterfs.volume-id"

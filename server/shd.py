@@ -1,13 +1,12 @@
 """
 Starts Gluster Brick(fsd) process
 """
-import os
 import json
+import os
 
 from jinja2 import Template
 
 from kadalulib import Proc
-
 
 VOLFILES_DIR = "/kadalu/volfiles"
 TEMPLATES_DIR = "/kadalu/templates"

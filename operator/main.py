@@ -12,10 +12,12 @@ import uuid
 
 import urllib3
 from jinja2 import Template
-from kadalulib import execute as lib_execute
-from kadalulib import logf, logging_setup, send_analytics_tracker, is_host_reachable
 from kubernetes import client, config, watch
-from urllib3.exceptions import (ProtocolError, NewConnectionError)
+from urllib3.exceptions import NewConnectionError, ProtocolError
+
+from kadalulib import execute as lib_execute
+from kadalulib import (is_host_reachable, logf, logging_setup,
+                       send_analytics_tracker)
 from utils import CommandError
 from utils import execute as utils_execute
 

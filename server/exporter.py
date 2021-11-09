@@ -1,7 +1,9 @@
 import logging
+
 import uvicorn
 from fastapi import FastAPI
-from kadalulib import logging_setup, logf
+
+from kadalulib import logf, logging_setup
 
 app = FastAPI()
 
