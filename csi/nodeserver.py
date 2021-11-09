@@ -1,18 +1,17 @@
 """
 nodeserver implementation
 """
-import os
 import logging
+import os
 import time
-
-import grpc
 
 import csi_pb2
 import csi_pb2_grpc
-from volumeutils import mount_volume, unmount_volume, mount_glusterfs, \
-    mount_glusterfs_with_host
-from kadalulib import logf
+import grpc
+from volumeutils import (mount_glusterfs, mount_glusterfs_with_host,
+                         mount_volume, unmount_volume)
 
+from kadalulib import logf
 
 HOSTVOL_MOUNTDIR = "/mnt"
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"

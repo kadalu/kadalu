@@ -1,21 +1,22 @@
 """
 Manage Filesystem Quota
 """
-import os
-import time
 import json
 import logging
+import os
+import time
+
 try:
     from .glusterutils import get_automatic_bricks
 except ImportError:
     from glusterutils import get_automatic_bricks
 
 try:
-    from .kadalulib import execute, logf, CommandException, \
-        get_volname_hash, get_volume_path, PV_TYPE_SUBVOL
+    from .kadalulib import (PV_TYPE_SUBVOL, CommandException, execute,
+                            get_volname_hash, get_volume_path, logf)
 except ImportError:
-    from kadalulib import execute, logf, CommandException, \
-        get_volname_hash, get_volume_path, PV_TYPE_SUBVOL
+    from kadalulib import (PV_TYPE_SUBVOL, CommandException, execute,
+                           get_volname_hash, get_volume_path, logf)
 
 # Config file for kadalu info
 # Config file format:

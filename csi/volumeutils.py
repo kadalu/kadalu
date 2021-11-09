@@ -11,10 +11,11 @@ import time
 from errno import ENOTCONN
 
 from jinja2 import Template
+
 from kadalulib import (PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, CommandException,
                        SizeAccounting, execute, get_volname_hash,
                        get_volume_path, is_gluster_mount_proc_running, logf,
-                       makedirs, retry_errors, reachable_host)
+                       makedirs, reachable_host, retry_errors)
 
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/bin/mount"

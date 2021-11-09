@@ -1,9 +1,11 @@
-import os
 import logging
+import os
+
 import uvicorn
 from fastapi import FastAPI
 from volumeutils import HOSTVOL_MOUNTDIR, yield_pvc_from_mntdir
-from kadalulib import logging_setup, logf
+
+from kadalulib import logf, logging_setup
 
 app = FastAPI()
 

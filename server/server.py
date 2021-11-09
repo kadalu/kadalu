@@ -6,9 +6,10 @@ Prepares, Validates and then starts the Server process(glusterfsd, shd)
 
 import os
 
-from kadalulib import logging_setup, Monitor, Proc
 import glusterfsd
 import shd
+
+from kadalulib import Monitor, Proc, logging_setup
 
 
 def start_server_process():
