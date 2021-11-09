@@ -81,6 +81,7 @@ function get_pvc_and_check() {
     for p in $(kubectl get pods -o name); do
 	[[ $result -eq 1 ]] && kubectl describe $p
 	[[ $result -eq 0 ]] && kubectl logs $p
+	[[ $p =~ -4 ]] && kubectl logs $p
 	kubectl delete $p
     done
 
@@ -318,11 +319,11 @@ kadalu_operator)
 test_kadalu)
     date
 
-    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 3 90
+    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 4 120
 
-    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 3 90
+    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 4 120
 
-    get_pvc_and_check examples/sample-test-app4.yaml "Disperse" 3 90
+    get_pvc_and_check examples/sample-test-app4.yaml "Disperse" 4 120
 
     #get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 60
 
@@ -340,7 +341,7 @@ test_kadalu)
     # difference of ~2 min
     wait_till_pods_start 400
 
-    #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 3 60
+    #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 4 120
 
     # Run minimal IO test
     run_io

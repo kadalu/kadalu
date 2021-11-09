@@ -10,16 +10,17 @@ import time
 import csi_pb2
 import csi_pb2_grpc
 import grpc
-from volumeutils import (HOSTVOL_MOUNTDIR, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
-                         check_external_volume, create_block_volume,
-                         create_subdir_volume, delete_volume, expand_volume,
-                         get_pv_hosting_volumes, is_hosting_volume_free,
+from volumeutils import (HOSTVOL_MOUNTDIR, check_external_volume,
+                         create_block_volume, create_subdir_volume,
+                         delete_volume, expand_volume, get_pv_hosting_volumes,
+                         is_hosting_volume_free,
                          mount_and_select_hosting_volume, search_volume,
                          unmount_glusterfs, update_free_size,
                          update_subdir_volume, update_virtblock_volume,
                          yield_list_of_pvcs)
 
-from kadalulib import (CommandException, execute, logf, reachable_host,
+from kadalulib import (PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
+                       CommandException, execute, logf, reachable_host,
                        send_analytics_tracker)
 
 VOLINFO_DIR = "/var/lib/gluster"
@@ -71,7 +72,15 @@ def execute_gluster_quota_command(privkey, user, host, gvolname, path, size):
 
     return None
 
+# Assuming multiple volume_capabilities isn't requested
+def is_block_request(request):
+    """Returns True if the PVC requests rawblock"""
+    for vol_capability in request.volume_capabilities:
+        if vol_capability.WhichOneof("access_type") == "block":
+            return True
+    return False
 
+# Assuming multiple volume_capabilities isn't requested
 def pvc_access_mode(request):
     """Fetch Access modes from Volume capabilities"""
     for vol_capability in request.volume_capabilities:
@@ -120,6 +129,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         pvsize = request.capacity_range.required_bytes
 
         pvtype = PV_TYPE_SUBVOL
+        is_block = False
 
         # Mounted BlockVolume is requested via Storage Class.
         # GlusterFS File Volume may not be useful for some workloads
@@ -127,11 +137,18 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         # as default MountVolume.
         if request.parameters.get("pv_type", "").lower() == "block":
             pvtype = PV_TYPE_VIRTBLOCK
+            is_block = True
 
+        # RawBlock volume is requested via PVC
+        if is_block_request(request):
+            pvtype = PV_TYPE_RAWBLOCK
+            is_block = True
+
+        if is_block:
             single_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
                                          "SINGLE_NODE_WRITER")
 
-            # Multi node writer is not allowed for PV_TYPE_VIRTBLOCK
+            # Multi node writer is not allowed for PV_TYPE_VIRTBLOCK/PV_TYPE_RAWBLOCK
             if pvc_access_mode(request) != single_node_writer:
                 errmsg = "Only SINGLE_NODE_WRITER is allowed for block Volume"
                 logging.error(errmsg)
@@ -249,7 +266,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                     context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
                     return csi_pb2.CreateVolumeResponse()
 
-                if pvtype == PV_TYPE_VIRTBLOCK:
+                if pvtype in [PV_TYPE_VIRTBLOCK, PV_TYPE_RAWBLOCK]:
                     vol = create_block_volume(
                         pvtype, mntdir, request.name, pvsize)
                 else:
@@ -349,7 +366,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             )
 
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
-        if pvtype == PV_TYPE_VIRTBLOCK:
+        if pvtype in [PV_TYPE_VIRTBLOCK, PV_TYPE_RAWBLOCK]:
             vol = create_block_volume(
                 pvtype, mntdir, request.name, pvsize)
         else:

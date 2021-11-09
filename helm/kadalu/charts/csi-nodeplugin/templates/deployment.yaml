@@ -89,6 +89,13 @@ spec:
               mountPath: "/dev"
             - name: varlog
               mountPath: /var/log/gluster
+            - name: csi-dir
+              {{- if (eq .Values.kubernetesDistro "microk8s") }}
+              mountPath: /var/snap/microk8s/common/var/lib/kubelet/plugins/kubernetes.io/csi
+              {{- else }}
+              mountPath: /var/lib/kubelet/plugins/kubernetes.io/csi
+              {{- end }}
+              mountPropagation: "Bidirectional"
         - name: kadalu-logging
           image: docker.io/library/busybox
           command: ["/bin/sh"]
@@ -129,4 +136,11 @@ spec:
             path: "/dev"
         - name: varlog
           emptyDir: {}
-
+        - name: csi-dir
+          hostPath:
+            {{- if (eq .Values.kubernetesDistro "microk8s") }}
+            path: /var/snap/microk8s/common/var/lib/kubelet/plugins/kubernetes.io/csi/
+            {{- else }}
+            path: /var/lib/kubelet/plugins/kubernetes.io/csi/
+            {{- end }}
+            type: DirectoryOrCreate

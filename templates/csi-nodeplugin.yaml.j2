@@ -107,6 +107,9 @@ spec:
               mountPath: "/dev"
             - name: varlog
               mountPath: /var/log/gluster
+            - name: csi-dir
+              mountPath: {{ kubelet_dir }}/plugins/kubernetes.io/csi
+              mountPropagation: "Bidirectional"
         - name: kadalu-logging
           image: docker.io/library/busybox
           command: ["/bin/sh"]
@@ -135,3 +138,7 @@ spec:
             path: "/dev"
         - name: varlog
           emptyDir: {}
+        - name: csi-dir
+          hostPath:
+            path: {{ kubelet_dir }}/plugins/kubernetes.io/csi/
+            type: DirectoryOrCreate

@@ -1,13 +1,14 @@
 """Utility functions"""
 
-import subprocess
 import logging
-import sys
 import os
-import time
-import sqlite3
 import signal
 import socket
+import sqlite3
+import subprocess
+import sys
+import time
+
 import xxhash
 
 CREATE_TABLE_1 = """CREATE TABLE IF NOT EXISTS summary (
@@ -28,6 +29,7 @@ CREATE_TABLE_2 = """CREATE TABLE IF NOT EXISTS pv_stats (
 DB_NAME = "stat.db"
 PV_TYPE_VIRTBLOCK = "virtblock"
 PV_TYPE_SUBVOL = "subvol"
+PV_TYPE_RAWBLOCK = "rawblock"
 
 KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
 
