@@ -2,6 +2,19 @@
 
 MOUNT_DIR=/mnt
 
+declare -a arr=("$@")
+for i in "${arr[@]}"; do
+    if [[ $i == "trigger_full_heal" ]]; then
+        # Apply full client-side heal on all available volumes if volume is not specified
+        for volfile in $(cd /kadalu/volfiles; ls *); do
+            vol=${volfile%.client.vol}
+            echo "Applying full client-side self-heal on volume ${vol} by crawling recursively:"
+            find /mnt/* -type f -follow -print
+            exit 0
+        done
+    fi
+done
+
 if [ $# -eq 1 ]; then
     dir=$1
     if [ -f /kadalu/volfiles/$dir.client.vol ]; then
@@ -13,7 +26,7 @@ if [ $# -eq 1 ]; then
 fi
 
 if [ $# -gt 1 ]; then
-    echo "Expects zero or one options"
+    echo "Expects atmost one option"
     exit 1;
 fi
 
