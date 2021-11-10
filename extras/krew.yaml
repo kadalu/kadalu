@@ -3,7 +3,7 @@ kind: Plugin
 metadata:
   name: kadalu
 spec:
-  version: "0.8.2"
+  version: "v0.8.7"
   homepage: https://github.com/kadalu/kadalu
   shortDescription: "Deploy and manage Kadalu Operator, CSI and Storage pods"
   description: |
@@ -21,6 +21,6 @@ spec:
         values:
         - darwin
         - linux
-    uri: https://github.com/kadalu/kadalu/releases/download/0.8.2/kubectl-kadalu.tar.gz
-    sha256: ""
+    uri: https://github.com/kadalu/kadalu/releases/download/0.8.7/kubectl-kadalu.tar.gz
+    sha256: d0d754d6e4e08f7a09f25913bf787e9da5944488b7f630cc57d99655dc2b242b
     bin: kubectl-kadalu
