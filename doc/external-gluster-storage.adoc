@@ -7,7 +7,22 @@ server processes are not managed by kadalu operator.
 
 In both the ways please note `metadata.name` (let's say `e-vol`) in
 `kind: KadaluStorage` will create a StorageClass with name
-`kadalu.<volname>` (`volname` will be replaces with `e-vol`).
+`kadalu.<volname>` (`volname` will be replaced with `e-vol`).
+
+== Cleanup for re-using external gluster volume
+
+When you delete a previously used volume (pool) in external gluster from Kadalu, some
+folders and files will be left behind, since we do not run any commands on external
+gluster except quota commands.
+
+Please delete below files/dirs from root of gluster bricks after deleting the pool in Kadalu
+if exists
+
+[source,console]
+----
+info/ stat.db virtblock/ subvol/
+----
+
 
 == Using external gluster in kadalu native way
 
