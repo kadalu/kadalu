@@ -13,6 +13,13 @@ def set_args(name, subparsers):
     """ add arguments to argparser """
     # TODO: allow check of specific storage pool
     parser = subparsers.add_parser(name)
+    arg = parser.add_argument
+
+    arg("--trigger-full-heal",
+        action="store_true",
+        help="Trigger full client side self heal on all volumes"
+    )
+
     utils.add_global_flags(parser)
 
 
@@ -25,12 +32,15 @@ def run(args):
     """ perform log subcommand """
 
     try:
-        cmd = utils.kubectl_cmd(args) + ["exec",
-                                         "-nkadalu",
-                                         "kadalu-csi-provisioner-0",
-                                         "-c",
-                                         "kadalu-provisioner",
-                                         "--", "/kadalu/heal-info.sh"]
+        heal_info_cmd = ["exec",
+                        "-nkadalu",
+                        "kadalu-csi-provisioner-0",
+                        "-c",
+                        "kadalu-provisioner",
+                        "--", "/kadalu/heal-info.sh"]
+        if args.trigger_full_heal:
+            heal_info_cmd.append("trigger_full_heal")
+        cmd = utils.kubectl_cmd(args) + heal_info_cmd
         resp = utils.execute(cmd)
         print(resp.stdout)
         print()
