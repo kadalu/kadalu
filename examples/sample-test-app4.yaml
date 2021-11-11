@@ -70,7 +70,7 @@ spec:
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
-  name: kadalu.storage-pool-4-block
+  name: kadalu.storage-pool-4-virtblock
 provisioner: kadalu
 parameters:
   storage_name: "storage-pool-4"
@@ -81,7 +81,7 @@ apiVersion: v1
 metadata:
   name: pv4-3
 spec:
-  storageClassName: kadalu.storage-pool-4-block
+  storageClassName: kadalu.storage-pool-4-virtblock
   accessModes:
     - ReadWriteOnce
   resources:
@@ -107,3 +107,35 @@ spec:
     persistentVolumeClaim:
       claimName: pv4-3
   restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv4-4
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Block
+  storageClassName: kadalu.storage-pool-4
+  resources:
+    requests:
+      storage: 500Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod4-4
+spec:
+  containers:
+    - name: bash-block-vol
+      image: bash
+      command: ["/usr/local/bin/bash","-c"]
+      args: ["echo sample text > /tmp/original && dd if=/tmp/original of=/dev/xvda && dd if=/dev/xvda of=/tmp/copy bs=1 count=12 && cat /tmp/{original,copy} && diff <(cat /tmp/original) <(cat /tmp/copy) && echo all good"]
+      volumeDevices:
+        - devicePath: /dev/xvda
+          name: csivol4
+      imagePullPolicy: IfNotPresent
+  volumes:
+    - name: csivol4
+      persistentVolumeClaim:
+        claimName: pv4-4

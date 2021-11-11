@@ -5,17 +5,20 @@ Utility functions for Volume management
 import json
 import logging
 import os
+import re
 import shutil
 import threading
 import time
 from errno import ENOTCONN
+from pathlib import Path
 
 from jinja2 import Template
 
-from kadalulib import (PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK, CommandException,
-                       SizeAccounting, execute, get_volname_hash,
-                       get_volume_path, is_gluster_mount_proc_running, logf,
-                       makedirs, reachable_host, retry_errors)
+from kadalulib import (PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
+                       CommandException, SizeAccounting, execute,
+                       get_volname_hash, get_volume_path,
+                       is_gluster_mount_proc_running, logf, makedirs,
+                       reachable_host, retry_errors)
 
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/bin/mount"
@@ -779,6 +782,7 @@ def search_volume(volname):
     return None
 
 
+# TODO: Not being used, revisit and remove
 def get_subdir_virtblock_vols(mntdir, volumes, pvtype):
     """Get virtual block and subdir volumes list"""
     for dir1 in os.listdir(os.path.join(mntdir, pvtype)):
@@ -792,6 +796,7 @@ def get_subdir_virtblock_vols(mntdir, volumes, pvtype):
                 ))
 
 
+# TODO: Not being used, revisit and remove
 def volume_list(voltype=None):
     """List of Volumes"""
     host_volumes = get_pv_hosting_volumes({})
@@ -808,12 +813,33 @@ def volume_list(voltype=None):
             get_subdir_virtblock_vols(mntdir, volumes, PV_TYPE_SUBVOL)
         if voltype is None or voltype == PV_TYPE_VIRTBLOCK:
             get_subdir_virtblock_vols(mntdir, volumes, PV_TYPE_VIRTBLOCK)
+        if voltype is None or voltype == PV_TYPE_RAWBLOCK:
+            get_subdir_virtblock_vols(mntdir, volumes, PV_TYPE_RAWBLOCK)
 
     return volumes
 
 
 def mount_volume(pvpath, mountpoint, pvtype, fstype=None):
     """Mount a Volume"""
+
+    # TODO: Will losetup survive container reboot?
+    if pvtype == PV_TYPE_RAWBLOCK:
+        # losetup of truncated file
+        cmd = ["losetup", "-f", "--show", pvpath]
+        try:
+            loop, _, _ = execute(*cmd)
+        except CommandException as err:
+            # Better not to create loop devices manually
+            errmsg = "Please check availability of 'losetup' and 'loop' device"
+            logging.error(logf(errmsg, cmd=cmd, error=format(err)))
+            return False
+
+        # Bind mount loop device to target_path, stage_path may not be needed
+        makedirs(os.path.dirname(mountpoint))
+        Path(mountpoint).touch(mode=0o777)
+        execute(MOUNT_CMD, "--bind", loop, mountpoint)
+        return True
+
     # Need this after kube 1.20.0
     makedirs(mountpoint)
 
@@ -824,6 +850,7 @@ def mount_volume(pvpath, mountpoint, pvtype, fstype=None):
         execute(MOUNT_CMD, "--bind", pvpath, mountpoint)
 
     os.chmod(mountpoint, 0o777)
+    return True
 
 
 def unmount_glusterfs(mountpoint):
@@ -835,6 +862,16 @@ def unmount_glusterfs(mountpoint):
 
 def unmount_volume(mountpoint):
     """Unmount a Volume"""
+    if mountpoint.find("volumeDevices"):
+        # Should remove loop device as well or else duplicate loop devices will
+        # be setup everytime
+        cmd = ["findmnt", "-T", mountpoint, "-oSOURCE", "-n"]
+        device, _, _ = execute(*cmd)
+        if match := re.search(r'loop\d+', device):
+            loop = match.group(0)
+            cmd = ["losetup", "-d", f"/dev/{loop}"]
+            execute(*cmd)
+
     if os.path.ismount(mountpoint):
         execute(UNMOUNT_CMD, "-l", mountpoint)
 

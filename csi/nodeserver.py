@@ -108,17 +108,23 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         ))
         # Mount the PV
         # TODO: Handle Volume capability mount flags
-        mount_volume(pvpath_full, request.target_path, pvtype, fstype=None)
-        logging.info(logf(
-            "Mounted PV",
-            volume=request.volume_id,
-            pvpath=pvpath,
-            pvtype=pvtype,
-            hostvol=hostvol,
-            target_path=request.target_path,
-            duration_seconds=time.time() - start_time
-        ))
+        if mount_volume(pvpath_full, request.target_path, pvtype, fstype=None):
+            logging.info(logf(
+                "Mounted PV",
+                volume=request.volume_id,
+                pvpath=pvpath,
+                pvtype=pvtype,
+                hostvol=hostvol,
+                target_path=request.target_path,
+                duration_seconds=time.time() - start_time
+            ))
+        else:
+            errmsg = "Unable to bind PV to target path"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.FAILED_PRECONDITION)
         return csi_pb2.NodePublishVolumeResponse()
+
 
     def NodeUnpublishVolume(self, request, context):
         # TODO: Validation and handle target_path failures
