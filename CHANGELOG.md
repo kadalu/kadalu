@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.8] - 2021-11-12
+
+- Fixed issues with `kubectl kadalu healinfo` sub-command.
+- Add additional information about the heal pending and other details to healinfo command.
+- Fixed Kubernetes APIs comparison issue when minor version contains alpha numeric values.
+- Fixed issue while handling memory and CPU metrics when not available in some setup(LXD/LXC).
+- Updated documentation about External Volume cleanup before adding it to Kadalu.
+- Added support for CSI Block volume.
+
 ## [0.8.7] - 2021-10-29
 
 - Troubleshooting guide updated for GlusterFS directory quota(External).
@@ -276,7 +285,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.7...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.8...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
@@ -299,3 +308,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.8.5]: https://github.com/kadalu/kadalu/compare/0.8.4...0.8.5
 [0.8.6]: https://github.com/kadalu/kadalu/compare/0.8.5...0.8.6
 [0.8.7]: https://github.com/kadalu/kadalu/compare/0.8.6...0.8.7
+[0.8.8]: https://github.com/kadalu/kadalu/compare/0.8.7...0.8.8
