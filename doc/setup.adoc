@@ -8,6 +8,15 @@
 
 == Setup
 
+=== Krew based installation
+
+[source,console]
+----
+$ kubectl krew install kadalu
+----
+
+=== Binary based installation
+
 Download the latest release of Kadalu Kubectl plugin using,
 
 [source,console]
