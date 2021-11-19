@@ -1,7 +1,7 @@
 
-= Upgrade Kadalu version for K8S/K3S
+= Upgrade Kadalu
 
-Here the steps to upgrade a Kadalu service from v0.8.1 to the latest version k8s v1.18 or k3s v1.21.
+Here the steps to upgrade a Kadalu service from v0.8.1 to the latest version for Kubernetes.
 It should apply to any newer upgrade.
 
 == Upgrade kubectl-kadalu binary
@@ -17,6 +17,20 @@ It should apply to any newer upgrade.
 ----
 
 == Apply kadalu operator file
+
+1. Download the relevant Kadalu Operator file definition according to your Kubernetes Cluster:
+ - Generic Kubernetes: https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator.yaml[kadalu-operator.yaml]
+ - MicroK8s: https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator-microk8s.yaml[kadalu-operator-microk8s.yaml]
+ - RKE: https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator-rke.yaml[kadalu-operator-rke.yaml]
+ - OpenShift: https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator-openshift.yaml[kadalu-operator-openshift.yaml]
+2. Apply the file definition to the Kubernetes Cluster.
+
+[source,console]
+----
+kubectl apply -f kadalu-operator.yaml
+----
+
+Exemple for a generic Kubernetes Cluster in single command ligne:
 
 [source,console]
 ----
@@ -37,6 +51,20 @@ It should apply to any newer upgrade.
 (wait for operator and csi-provisionner pods in kadalu namespace get in Running state)
 
 == Apply kadalu CSI-Nodeplugin
+
+1. Download the relevant Kadalu CSI-Nodeplugin file definition according to your Kubernetes Cluster:
+ - Generic Kubernetes: https://github.com/kadalu/kadalu/releases/download/latest/csi-nodeplugin.yaml[csi-nodeplugin.yaml]
+ - MicroK8s: https://github.com/kadalu/kadalu/releases/download/latest/csi-nodeplugin-microk8s.yaml[csi-nodeplugin-microk8s.yaml]
+ - RKE: https://github.com/kadalu/kadalu/releases/download/latest/csi-nodeplugin-rke.yaml[csi-nodeplugin-rke.yaml]
+ - OpenShift: https://github.com/kadalu/kadalu/releases/download/latest/csi-nodeplugin-openshift.yaml[csi-nodeplugin-openshift.yaml]
+2. Apply the file definition to the Kubernetes Cluster.
+
+[source,console]
+----
+kubectl apply -f csi-nodeplugin.yaml
+----
+
+Exemple for a generic Kubernetes Cluster in single command ligne:
 
 [source,console]
 ----
