@@ -7,9 +7,9 @@ from volumeutils import HOSTVOL_MOUNTDIR, yield_pvc_from_mntdir
 
 from kadalulib import logf, logging_setup
 
-app = FastAPI()
+metrics_app = FastAPI()
 
-@app.get("/_api/metrics")
+@metrics_app.get("/_api/metrics")
 def metrics():
     """
     Gathers storage and pvcs metrics.
@@ -143,4 +143,4 @@ if __name__ == "__main__":
         "Started metrics exporter process at port 8050"
     ))
 
-    uvicorn.run("exporter:app", host="0.0.0.0", port=8050, log_level="info")
+    uvicorn.run("exporter:metrics_app", host="0.0.0.0", port=8050, log_level="info")

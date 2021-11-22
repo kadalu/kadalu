@@ -8,19 +8,19 @@ and Prometheus as metrics at PORT=8050
 import json
 import os
 import logging
-
-import metrics as storage_metrics
 import requests
 import uvicorn
+
 from fastapi import FastAPI
 from prometheus_client import make_asgi_app
-
+import metrics as storage_metrics
 from kadalulib import logf, logging_setup
 from utils import CommandError, execute
 
-app = FastAPI()
+metrics_app = FastAPI()
 
 class Metrics:
+    """ Metrics class with Kadalu Components """
     def __init__(self):
         self.operator = {}
         self.storages = []
@@ -137,7 +137,7 @@ def get_storage_config_data():
 
 def set_default_values(metrics):
     """
-    Set default values for all pods in case to display default
+    Set default values for all pods to display default
     values in case of unable to reach the pod api
     """
 
@@ -333,22 +333,34 @@ def collect_and_set_prometheus_metrics():
 
     # Storage(s) Metrics
     for storage in metrics.storages:
-        storage_metrics.total_capacity_bytes.labels(storage["name"]).set(storage["total_capacity_bytes"])
-        storage_metrics.used_capacity_bytes.labels(storage["name"]).set(storage["used_capacity_bytes"])
-        storage_metrics.free_capacity_bytes.labels(storage["name"]).set(storage["free_capacity_bytes"])
+        storage_metrics.total_capacity_bytes.labels(
+            storage["name"]).set(storage["total_capacity_bytes"])
+        storage_metrics.used_capacity_bytes.labels(
+            storage["name"]).set(storage["used_capacity_bytes"])
+        storage_metrics.free_capacity_bytes.labels(
+            storage["name"]).set(storage["free_capacity_bytes"])
 
-        storage_metrics.total_inodes.labels(storage["name"]).set(storage["total_inodes"])
-        storage_metrics.used_inodes.labels(storage["name"]).set(storage["used_inodes"])
-        storage_metrics.free_inodes.labels(storage["name"]).set(storage["free_inodes"])
+        storage_metrics.total_inodes.labels(
+            storage["name"]).set(storage["total_inodes"])
+        storage_metrics.used_inodes.labels(
+            storage["name"]).set(storage["used_inodes"])
+        storage_metrics.free_inodes.labels(
+            storage["name"]).set(storage["free_inodes"])
 
         for pvc in storage["pvc"]:
-            storage_metrics.total_pvc_capacity_bytes.labels(pvc["pvc_name"]).set(pvc["total_pvc_capacity_bytes"])
-            storage_metrics.used_pvc_capacity_bytes.labels(pvc["pvc_name"]).set(pvc["used_pvc_capacity_bytes"])
-            storage_metrics.free_pvc_capacity_bytes.labels(pvc["pvc_name"]).set(pvc["free_pvc_capacity_bytes"])
+            storage_metrics.total_pvc_capacity_bytes.labels(
+                pvc["pvc_name"]).set(pvc["total_pvc_capacity_bytes"])
+            storage_metrics.used_pvc_capacity_bytes.labels(
+                pvc["pvc_name"]).set(pvc["used_pvc_capacity_bytes"])
+            storage_metrics.free_pvc_capacity_bytes.labels(
+                pvc["pvc_name"]).set(pvc["free_pvc_capacity_bytes"])
 
-            storage_metrics.total_pvc_inodes.labels(pvc["pvc_name"]).set(pvc["total_pvc_inodes"])
-            storage_metrics.used_pvc_inodes.labels(pvc["pvc_name"]).set(pvc["used_pvc_inodes"])
-            storage_metrics.free_pvc_inodes.labels(pvc["pvc_name"]).set(pvc["free_pvc_inodes"])
+            storage_metrics.total_pvc_inodes.labels(
+                pvc["pvc_name"]).set(pvc["total_pvc_inodes"])
+            storage_metrics.used_pvc_inodes.labels(
+                pvc["pvc_name"]).set(pvc["used_pvc_inodes"])
+            storage_metrics.free_pvc_inodes.labels(
+                pvc["pvc_name"]).set(pvc["free_pvc_inodes"])
 
         for brick in storage["bricks"]:
             storage_metrics.memory_usage.labels(
@@ -362,7 +374,7 @@ def collect_and_set_prometheus_metrics():
                 brick["node"].rstrip("."+storage["name"])).set(brick["number_of_ready_containers"])
 
 
-@app.middleware("http")
+@metrics_app.middleware("http")
 async def collect_metrics(request, call_next):
     """ Collect metrics and set data to prometheus at /metrics """
     if request.url.path == "/metrics":
@@ -371,13 +383,13 @@ async def collect_metrics(request, call_next):
     return await call_next(request)
 
 
-@app.get("/metrics.json")
+@metrics_app.get("/metrics.json")
 async def metrics_json():
     """ Return collected metrics in JSON format at /metrics.json """
     return collect_all_metrics()
 
 
-app.mount("/metrics", make_asgi_app())
+metrics_app.mount("/metrics", make_asgi_app())
 
 if __name__ == "__main__":
 
@@ -386,4 +398,4 @@ if __name__ == "__main__":
         "Started metrics exporter process at port 8050"
     ))
 
-    uvicorn.run("exporter:app", host="0.0.0.0", port=8050, log_level="info")
+    uvicorn.run("exporter:metrics_app", host="0.0.0.0", port=8050, log_level="info")
