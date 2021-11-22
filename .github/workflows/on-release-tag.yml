@@ -71,6 +71,10 @@ jobs:
         tag: ${{ github.ref }}
         overwrite: true
         file_glob: true
+    - name: Update new version for plugin "kadalu" in krew-index
+      uses: rajatjindal/krew-release-bot@v0.0.40
+      with:
+        krew_template_file: krew/kadalu.yaml
 
   # Use no-cache while building images as they may break release and they are built
   # only during release so the delay/bandwidth worth the time
