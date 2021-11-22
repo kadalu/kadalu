@@ -1,14 +1,14 @@
 
-= Upgrade Kadalu version
+= Upgrade Kadalu
 
-Here the steps to upgrade a Kadalu service from v0.8.1 to v0.8.6 on a 11 nodes k8s v1.18.
+Here the steps to upgrade a Kadalu service from v0.8.1 to the latest version for Kubernetes.
 It should apply to any newer upgrade.
 
 == Upgrade kubectl-kadalu binary
 
 [source,console]
 ----
-  curl -LO https://github.com/kadalu/kadalu/releases/download/0.8.6/kubectl-kadalu
+  curl -LO https://github.com/kadalu/kadalu/releases/latest/download/kubectl-kadalu
   chmod +x ./kubectl-kadalu
   sudo mv ./kubectl-kadalu /usr/local/bin/kubectl-kadalu
   kubectl-kadalu version
@@ -18,9 +18,23 @@ It should apply to any newer upgrade.
 
 == Apply kadalu operator file
 
+1. Download the relevant Kadalu Operator file definition according to your Kubernetes Cluster:
+ - Generic Kubernetes: https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator.yaml[kadalu-operator.yaml]
+ - MicroK8s: https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator-microk8s.yaml[kadalu-operator-microk8s.yaml]
+ - RKE: https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator-rke.yaml[kadalu-operator-rke.yaml]
+ - OpenShift: https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator-openshift.yaml[kadalu-operator-openshift.yaml]
+2. Apply the file definition to the Kubernetes Cluster.
+
 [source,console]
 ----
-  curl -s https://raw.githubusercontent.com/kadalu/kadalu/0.8.6/manifests/kadalu-operator.yaml | sed -e 's/"no"/"yes"/g' | kubectl apply -f -
+kubectl apply -f kadalu-operator.yaml
+----
+
+Exemple for a generic Kubernetes Cluster in single command ligne:
+
+[source,console]
+----
+  curl -Ls https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator.yaml | sed -e 's/"no"/"yes"/g' | kubectl apply -f -
   
   namespace/kadalu unchanged
   serviceaccount/kadalu-operator unchanged
@@ -38,9 +52,23 @@ It should apply to any newer upgrade.
 
 == Apply kadalu CSI-Nodeplugin
 
+1. Download the relevant Kadalu CSI-Nodeplugin file definition according to your Kubernetes Cluster:
+ - Generic Kubernetes: https://github.com/kadalu/kadalu/releases/download/latest/csi-nodeplugin.yaml[csi-nodeplugin.yaml]
+ - MicroK8s: https://github.com/kadalu/kadalu/releases/download/latest/csi-nodeplugin-microk8s.yaml[csi-nodeplugin-microk8s.yaml]
+ - RKE: https://github.com/kadalu/kadalu/releases/download/latest/csi-nodeplugin-rke.yaml[csi-nodeplugin-rke.yaml]
+ - OpenShift: https://github.com/kadalu/kadalu/releases/download/latest/csi-nodeplugin-openshift.yaml[csi-nodeplugin-openshift.yaml]
+2. Apply the file definition to the Kubernetes Cluster.
+
 [source,console]
 ----
-curl -s https://raw.githubusercontent.com/kadalu/kadalu/0.8.6/manifests/csi-nodeplugin.yaml | sed -e 's/"no"/"yes"/g' | kubectl apply -f -
+kubectl apply -f csi-nodeplugin.yaml
+----
+
+Exemple for a generic Kubernetes Cluster in single command ligne:
+
+[source,console]
+----
+curl -Ls https://github.com/kadalu/kadalu/releases/latest/download/csi-nodeplugin.yaml | sed -e 's/"no"/"yes"/g' | kubectl apply -f -
 
 clusterrole.rbac.authorization.k8s.io/kadalu-csi-nodeplugin unchanged
 clusterrolebinding.rbac.authorization.k8s.io/kadalu-csi-nodeplugin unchanged
