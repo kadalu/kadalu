@@ -58,10 +58,20 @@ jobs:
       COMMIT_MSG: ${{needs.get-info.outputs.msg}}
       FILES: ${{needs.get-info.outputs.files}}
     steps:
-    # Build Containers
     - uses: actions/checkout@v2
     - name: Install Docker Dependencies
-      run: sudo apt-get install -y conntrack
+      run: sudo apt-get install -y conntrack ruby
+    # CLI Tests
+    - name: Install Binnacle and build kubectl-kadalu
+      run: |
+        curl -L https://github.com/kadalu/binnacle/releases/latest/download/binnacle -o binnacle
+        chmod +x ./binnacle
+        sudo mv ./binnacle /usr/local/bin/binnacle
+        binnacle --version
+        make cli-build
+    - name: kubectl-kadalu Tests
+      run: binnacle -v cli/tests/storage_add.t
+    # Build Containers
     - name: Build locally
       id: build_local
       run: |
