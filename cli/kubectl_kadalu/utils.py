@@ -50,6 +50,8 @@ def add_global_flags(parser):
                         help="Skip execution only preview")
     parser.add_argument("--script-mode", action="store_true",
                         help="Script mode, bypass Prompts")
+    parser.add_argument("--kubectl-context", default=None,
+                        help="Kubectl Context")
 
 
 def command_error(cmd, msg):
@@ -74,4 +76,7 @@ def kubectl_cmd(args):
     provides kubectl as subcommand. For example `k3s kubectl`.
     Split the given command to support these types.
     """
-    return args.kubectl_cmd.split()
+    cmd_args = args.kubectl_cmd.split()
+    if args.kubectl_context is not None:
+        cmd_args += ["--context", args.kubectl_context]
+    return cmd_args
