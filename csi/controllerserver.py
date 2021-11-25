@@ -131,6 +131,21 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         pvtype = PV_TYPE_SUBVOL
         is_block = False
 
+        # Debug request.parameters
+        logging.info(logf(
+            "Request Parameters",
+            parameters=request.parameters
+        ))
+        storage_options = None
+        if request.parameters.get("storage_options"):
+            storage_options = request.parameters.get("storage_options")
+            logging.info(logf(
+                "Received storage options",
+                volume=request.name,
+                storage_options=storage_options,
+                type=type(storage_options)
+            ))
+
         # Mounted BlockVolume is requested via Storage Class.
         # GlusterFS File Volume may not be useful for some workloads
         # they can request for the Virtual Block formated and mounted
@@ -386,6 +401,25 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         update_free_size(hostvol, request.name, -pvsize)
 
         send_analytics_tracker("pvc-%s" % hostvoltype, uid)
+
+        # CreateVolumeResponse does not allow to pass
+        # positional arguments or "None"
+        if storage_options:
+            return csi_pb2.CreateVolumeResponse(
+                volume={
+                    "volume_id": request.name,
+                    "capacity_bytes": pvsize,
+                    "volume_context": {
+                        "type": hostvoltype,
+                        "hostvol": hostvol,
+                        "pvtype": pvtype,
+                        "path": vol.volpath,
+                        "fstype": "xfs",
+                        "kformat": kformat,
+                        "storage_options": storage_options
+                    }
+                })
+
         return csi_pb2.CreateVolumeResponse(
             volume={
                 "volume_id": request.name,
@@ -396,10 +430,10 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                     "pvtype": pvtype,
                     "path": vol.volpath,
                     "fstype": "xfs",
-                    "kformat": kformat,
+                    "kformat": kformat
                 }
-            }
-        )
+            })
+
 
     def DeleteVolume(self, request, context):
         start_time = time.time()

@@ -7,8 +7,10 @@ import logging
 import os
 import re
 import shutil
+import tempfile
 import threading
 import time
+import xxhash
 from errno import ENOTCONN
 from pathlib import Path
 
@@ -889,6 +891,10 @@ def generate_client_volfile(volname):
     with open(info_file_path) as info_file:
         data = json.load(info_file)
 
+    # Generate client volfile again,
+    # in case of storage options
+    # Below logic is a blocker
+
     # If the hash of configmap is same for the given volume, then there
     # is no need to generate client volfile again.
     if not VOL_DATA.get(volname, None):
@@ -1009,12 +1015,154 @@ def reload_glusterfs(volume):
     return True
 
 
-def mount_glusterfs(volume, mountpoint, is_client=False):
+class VolfileElement:
+    def __init__(self, name):
+        self.name = name
+        self.type = None
+        self.options = {}
+        self.subvolumes = None
+
+
+class Volfile:
+    def __init__(self, volfile, elements):
+        self.volfile = volfile
+        self.elements = elements
+
+    @classmethod
+    def parse(cls, volfile):
+        element = None
+        elements = []
+        with open(volfile) as volf:
+            for line in volf:
+                line = line.strip()
+                if line.startswith("volume "):
+                    element = VolfileElement(line.split()[-1])
+                    #print(line.split()[-1])
+                elif line == "end-volume":
+                    elements.append(element)
+                    element = None
+                elif line.startswith("option "):
+                    _, name, value = line.split()
+                    element.options[name] = value
+                elif line.startswith("subvolumes "):
+                    element.subvolumes = line.split(" ", 1)[-1]
+                elif line.startswith("type "):
+                    element.type = line.split()[-1]
+                    # print("type")
+                    # print(line.split()[-1])
+        return Volfile(volfile, elements)
+
+    def update_options_by_type1(self, opts):
+        for element in self.elements:
+            if opts.get(element.type, None) is not None:
+                #print(opts.get(element.type))
+                element.options.update(opts[element.type])
+
+    def update_options_by_type2(self, opts):
+        opt = {}
+        for element in self.elements:
+            for types, values in opts.items():
+                #print(element.type, types, values)
+                if element.type in types:
+                    print("before update", element.name, element.type)
+                    print(element.options)
+                    print("\n")
+                    element.options.update(values)
+                    print("after update", element.name, element.type)
+                    print(element.options)
+                    print("\n")
+                    opt[element.type] = element.options
+        return opt
+
+
+    def save(self, volfile=None):
+        filepath = self.volfile
+        if volfile is not None:
+            filepath = volfile
+
+        logging.info(logf(
+            "volfile path",
+            filepath=filepath
+        ))
+        with open(filepath + ".tmp", "w") as volf:
+            for element in self.elements:
+                #print(element.type)
+                #print(element.options)
+                volf.write("volume {0}\n".format(element.name))
+                volf.write("    type {0}\n".format(element.type))
+                for name, value in element.options.items():
+                    volf.write("    option {0} {1}\n".format(name, value))
+                if element.subvolumes is not None:
+                    volf.write("    subvolumes {0}\n".format(element.subvolumes))
+                volf.write("end-volume\n\n")
+
+        os.rename(filepath + ".tmp", filepath)
+
+
+def get_storage_options_hash(storage_options_sorted):
+    return xxhash.xxh64_hexdigest(storage_options_sorted)
+
+
+def sort_storage_options(storage_options):
+
+    sorted_options_tuple = sorted(storage_options.items(), key = lambda kv: kv[1])
+    storage_options_sorted = dict(sorted_options_tuple)
+    return storage_options_sorted
+
+
+def mount_glusterfs(volume, mountpoint, storage_options=None, is_client=False):
     """Mount Glusterfs Volume"""
     if volume["type"] == "External":
         volname = volume['g_volname']
     else:
         volname = volume["name"]
+
+
+    generate_client_volfile(volname)
+    client_volfile_path = os.path.join(
+        VOLFILES_DIR,
+        "%s.client.vol" % volname
+    )
+    if storage_options is not None:
+
+        # Keep the default volfile untouched
+        fd, tmp_volfile_path = tempfile.mkstemp()
+        shutil.copy(client_volfile_path, tmp_volfile_path)
+
+        parsed_client_volfile_path = Volfile.parse(tmp_volfile_path)
+        #debug
+        opts = parsed_client_volfile_path.update_options_by_type2(storage_options)
+        logging.info(logf(
+            "opts",
+            opts_after_update=opts
+        ))
+        parsed_client_volfile_path.save()
+
+        # # Check below again to sort
+        # storage_options_sorted = sort_storage_options(storage_options)
+        # storage_options_hash = get_storage_options_hash(json.dumps(storage_options_sorted))
+
+        storage_options_hash = get_storage_options_hash(json.dumps(storage_options))
+        mountpoint = mountpoint + "_" + storage_options_hash
+        #hash client volfile
+
+        # Create a copy of default client volfile,
+        # which can be used to mount without storage_options configuration.
+        # os.makedirs(os.path)
+        # os.makedirs(os.path.dirname(
+        #     os.path.join(VOLFILES_DIR, 'configured'), exist_ok=True)
+        # shutil.copy(client_volfile_path,
+        #     os.path.join(VOLFILES_DIR, "configured", "%s.client.vol" % volname))
+
+
+        #shutil.copy(client_volfile_path, client_volfile_path)
+
+        # Rename client volfile path with hash
+        new_client_volfile_path = os.path.join(VOLFILES_DIR,
+            "%s_%s.client.vol" %(volname, storage_options_hash))
+        os.rename(tmp_volfile_path, new_client_volfile_path)
+        client_volfile_path = new_client_volfile_path
+
 
     # Ignore if already glusterfs process running for that volume
     if is_gluster_mount_proc_running(volname, mountpoint):
@@ -1087,7 +1235,6 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
         return
 
     with mount_lock:
-        generate_client_volfile(volname)
         # Fix the log, so we can check it out later
         # log_file = "/var/log/gluster/%s.log" % mountpoint.replace("/", "-")
         log_file = "/var/log/gluster/gluster.log"
@@ -1097,9 +1244,14 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             "-l", log_file,
             "--volfile-id", volname,
             "--fs-display-name", "kadalu:%s" % volname,
-            "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volname),
+            "-f", client_volfile_path,
             mountpoint
         ]
+
+        # debug
+        logging.info(logf(
+            "mount glusterfs complete"
+        ))
 
         ## required for 'simple-quota'
         if not is_client:
@@ -1117,7 +1269,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             ))
             raise err
 
-    return
+    return mountpoint
 
 
 # noqa # pylint: disable=unused-argument
