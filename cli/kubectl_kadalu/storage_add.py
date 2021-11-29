@@ -15,6 +15,7 @@ import tempfile
 
 import utils
 from storage_yaml import to_storage_yaml
+import storage_add_parser
 
 
 def set_args(name, subparsers):
@@ -25,6 +26,11 @@ def set_args(name, subparsers):
     arg = parser.add_argument
 
     arg("name", help="Storage Name")
+    arg("storage_units", help="List of Storage units (Alternate syntax)", nargs="*")
+    arg("--storage-unit-type",
+        help="Storage Unit Type",
+        choices=["path", "pvc", "device"],
+        default=None)
     arg("--type",
         help="Storage Type",
         choices=["Replica1", "Replica3", "External", "Replica2", "Disperse"],
@@ -136,6 +142,36 @@ def validate(args):
 
     if not args.type:
         args.type = "Replica1"
+
+    if len(args.storage_units) > 0:
+        # Try parsing the Gluster compatible syntax
+        tokens = storage_add_parser.tokenizer(args.storage_units)
+        req = storage_add_parser.parser(tokens)
+        try:
+            storage_add_parser.validate(req)
+            args.type = storage_add_parser.volume_type(req)
+            if args.type != "External" and args.storage_unit_type is None:
+                print("--storage-unit-type is not specified")
+                sys.exit(1)
+
+            if args.type == "Disperse":
+                dist_grp1 = req.distribute_groups[0]
+                args.disperse_data = dist_grp1.disperse_count - dist_grp1.redundancy_count
+                args.disperse_redundancy = dist_grp1.redundancy_count
+
+            storage_units = storage_add_parser.get_all_storage_units(req)
+
+            if args.storage_unit_type == "device":
+                args.device = storage_units
+            elif args.storage_unit_type == "path":
+                args.path = storage_units
+            elif args.storage_unit_type == "pvc":
+                args.pvc = storage_units
+            elif args.type == "External":
+                args.external = storage_units[0]
+        except storage_add_parser.InvalidVolumeCreateRequest as ex:
+            print(ex)
+            sys.exit(1)
 
     num_storages = (len(args.device) + len(args.path) + len(args.pvc)) or \
                    (1 if args.external is not None else 0)
