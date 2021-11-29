@@ -375,7 +375,10 @@ test_kadalu)
 
     # Display metrics output
     echo "Displaying Kadalu metrics"
-    kubectl exec -i -nkadalu deploy/operator -- python -c 'import requests; print(requests.get("http://localhost:8050/metrics.json").json())'
+    kubectl exec -i -nkadalu deploy/operator -- python -c 'import requests; import json; print(json.dumps(requests.get("http://localhost:8050/metrics.json").json(), indent=2))'
+
+    echo "Displaying Kadalu Prometheus metrics"
+    kubectl exec -i -nkadalu deploy/operator -- python -c 'import requests; print(requests.get("http://localhost:8050/metrics").text)'
 
     # Return failure if fail variable is set to 1
     if [ $fail -eq 1 ]; then
