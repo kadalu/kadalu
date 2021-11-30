@@ -1053,19 +1053,56 @@ class Volfile:
         return Volfile(volfile, elements)
 
     def update_options_by_type1(self, opts):
+        opt = {}
         for element in self.elements:
-            if opts.get(element.type, None) is not None:
-                logging.info(logf(
-                    "opts[element.type]",
-                    opts_element_type=opts[element.type],
-                    element_type=element.type
-                ))
-                element.options.update(opts[element.type])
-                logging.info(logf(
-                    "opts[element.type]",
-                    opts_element_type=opts[element.type],
-                    element_type=element.type
-                ))
+
+            # Example: 'cluster/replicate' & 'performance/open-behind'
+            # Below logic to get only 'replicate' from 'cluster/replicate',
+            # Exception being for 'performance/open-behind' keep only 'performance',
+            # As vol-options under type 'performance' starts with it.
+            # e_type = [element.type.split("/")[0] if "performance" in element.type.split("/")\
+            #         else element.type.split("/")[-1]][0]
+
+            #print(element.type)
+            e_type = element.type
+            #print(element.type)
+            if opts.get(e_type, None) is not None: #and\
+                #print(opts.get(e_type))
+                #opts[e_type] in element.options:
+                #print("updated options", opts.get(e_type))
+                #print(opts[e_type], element.options)
+                # if e_type == "performance" and opts[e_type] not in element.options.get(e_type, None):
+                #     element.options.update(opts[e_type])
+                #     opt[element.type] = element.options
+
+                #print("e_type",opts[e_type].keys(), element.options.keys())
+
+                for key, value in opts[e_type].items():
+                    #print("key", key, "value", value)
+                    if element.options.get(key):
+                        option = {}
+                        option[key] = value
+                        #print("before update", element.name, element.type)
+                        # if list(opts[e_type].keys()) in list(element.options.keys()):
+                        #     print("yes")
+                        #     element.options.update(opts[e_type])
+                        #     opt[element.type] = element.options
+                        logging.info(logf(
+                            "before update",
+                            e_name=element.name,
+                            e_type=element.type
+                        ))
+                        element.options.update(option)
+                        opt[element.type] = element.options
+                        logging.info(logf(
+                            "after update",
+                            e_name=element.name,
+                            e_type=element.type
+                        ))
+                        #print("after update", element.name, element.type)
+
+        #print("/n opt",opt)
+        return opt
 
     def update_options_by_type2(self, opts):
         opt = {}
@@ -1113,7 +1150,7 @@ class Volfile:
                             # print(element.options)
                             # print("\n")
                             logging.info(logf(
-                                "before update",
+                                "after update",
                                 e_name=element.name,
                                 e_type=element.type
                             ))
@@ -1150,10 +1187,7 @@ def get_storage_options_hash(storage_options_sorted):
 
 
 def sort_storage_options(storage_options):
-
-    sorted_options_tuple = sorted(storage_options.items(), key = lambda kv: kv[1])
-    storage_options_sorted = dict(sorted_options_tuple)
-    return storage_options_sorted
+    return dict(sorted(storage_options.items()))
 
 
 def storage_options_parse(opts_raw):
@@ -1200,38 +1234,23 @@ def mount_glusterfs(volume, mountpoint, storage_options=None, is_client=False):
 
         parsed_client_volfile_path = Volfile.parse(tmp_volfile_path)
         #debug
-        opts = parsed_client_volfile_path.update_options_by_type2(storage_options)
+        opts = parsed_client_volfile_path.update_options_by_type1(storage_options)
         logging.info(logf(
             "opts",
             opts_after_update=opts
         ))
         parsed_client_volfile_path.save()
 
-        # # Check below again to sort
-        # storage_options_sorted = sort_storage_options(storage_options)
-        # storage_options_hash = get_storage_options_hash(json.dumps(storage_options_sorted))
-
+        # sort storage-options and generate hash
+        storage_options_sorted = sort_storage_options(storage_options)
         storage_options_hash = get_storage_options_hash(json.dumps(storage_options))
+
+        # Rename mountpoint & client volfile path with hash
         mountpoint = mountpoint + "_" + storage_options_hash
-        #hash client volfile
-
-        # Create a copy of default client volfile,
-        # which can be used to mount without storage_options configuration.
-        # os.makedirs(os.path)
-        # os.makedirs(os.path.dirname(
-        #     os.path.join(VOLFILES_DIR, 'configured'), exist_ok=True)
-        # shutil.copy(client_volfile_path,
-        #     os.path.join(VOLFILES_DIR, "configured", "%s.client.vol" % volname))
-
-
-        #shutil.copy(client_volfile_path, client_volfile_path)
-
-        # Rename client volfile path with hash
         new_client_volfile_path = os.path.join(VOLFILES_DIR,
             "%s_%s.client.vol" %(volname, storage_options_hash))
         os.rename(tmp_volfile_path, new_client_volfile_path)
         client_volfile_path = new_client_volfile_path
-
 
     # Ignore if already glusterfs process running for that volume
     if is_gluster_mount_proc_running(volname, mountpoint):
