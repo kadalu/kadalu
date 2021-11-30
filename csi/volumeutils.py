@@ -1016,6 +1016,8 @@ def reload_glusterfs(volume):
 
 
 class VolfileElement:
+    """Class to represent multiple elements within a volfile"""
+
     def __init__(self, name):
         self.name = name
         self.type = None
@@ -1030,6 +1032,8 @@ class Volfile:
 
     @classmethod
     def parse(cls, volfile):
+        """Parse volfile into multiple volfile elements"""
+
         element = None
         elements = []
         with open(volfile) as volf:
@@ -1037,7 +1041,6 @@ class Volfile:
                 line = line.strip()
                 if line.startswith("volume "):
                     element = VolfileElement(line.split()[-1])
-                    #print(line.split()[-1])
                 elif line == "end-volume":
                     elements.append(element)
                     element = None
@@ -1048,117 +1051,46 @@ class Volfile:
                     element.subvolumes = line.split(" ", 1)[-1]
                 elif line.startswith("type "):
                     element.type = line.split()[-1]
-                    # print("type")
-                    # print(line.split()[-1])
         return Volfile(volfile, elements)
 
-    def update_options_by_type1(self, opts):
+
+    def update_options_by_type(self, opts):
+        """
+        Update existing storage-options with the options
+        passed by user through storage-class
+        """
+
         opt = {}
         for element in self.elements:
+            if opts.get(element.type, None) is not None:
 
-            # Example: 'cluster/replicate' & 'performance/open-behind'
-            # Below logic to get only 'replicate' from 'cluster/replicate',
-            # Exception being for 'performance/open-behind' keep only 'performance',
-            # As vol-options under type 'performance' starts with it.
-            # e_type = [element.type.split("/")[0] if "performance" in element.type.split("/")\
-            #         else element.type.split("/")[-1]][0]
-
-            #print(element.type)
-            e_type = element.type
-            #print(element.type)
-            if opts.get(e_type, None) is not None: #and\
-                #print(opts.get(e_type))
-                #opts[e_type] in element.options:
-                #print("updated options", opts.get(e_type))
-                #print(opts[e_type], element.options)
-                # if e_type == "performance" and opts[e_type] not in element.options.get(e_type, None):
-                #     element.options.update(opts[e_type])
-                #     opt[element.type] = element.options
-
-                #print("e_type",opts[e_type].keys(), element.options.keys())
-
-                for key, value in opts[e_type].items():
-                    #print("key", key, "value", value)
+                for key, value in opts[element.type].items():
                     if element.options.get(key):
                         option = {}
                         option[key] = value
-                        #print("before update", element.name, element.type)
-                        # if list(opts[e_type].keys()) in list(element.options.keys()):
-                        #     print("yes")
-                        #     element.options.update(opts[e_type])
-                        #     opt[element.type] = element.options
-                        logging.info(logf(
-                            "before update",
-                            e_name=element.name,
-                            e_type=element.type
-                        ))
+                        # # debug
+                        # logging.info(logf(
+                        #     "before update",
+                        #     e_name=element.name,
+                        #     e_type=element.type
+                        # ))
                         element.options.update(option)
                         opt[element.type] = element.options
-                        logging.info(logf(
-                            "after update",
-                            e_name=element.name,
-                            e_type=element.type
-                        ))
-                        #print("after update", element.name, element.type)
-
-        #print("/n opt",opt)
-        return opt
-
-    def update_options_by_type2(self, opts):
-        opt = {}
-        for element in self.elements:
-
-            # Example: 'cluster/replicate' & 'performance/open-behind'
-            # Below logic to get only 'replicate' from 'cluster/replicate',
-            # Exception being for 'performance/open-behind' keep only 'performance',
-            # As vol-options under type 'performance' starts with it.
-            e_type = [element.type.split("/")[0] if "performance" in element.type.split("/")\
-                    else element.type.split("/")[-1]][0]
-            for types, values in opts.items():
-                #print(element.type, element.options, types, values)
-                if e_type in types:
-
-                    # #without check for individual option
-                    # print("before update", element.name, element.type)
-                    # print(element.options)
-                    # print("\n")
-                    # #option = {}
-                    # #option[key] = value
-                    # #print("values, values[key]", values, values[key], option)
-                    # element.options.update(values)
-                    # print("after update", element.name, element.type)
-                    # print(element.options)
-                    # print("\n")
-                    # opt[element.type] = element.options
-                    # # #values = {}, ele.options = {}
-
-                    for key, value in values.items():
-                        if element.options.get(key):
-                            # print("before update", element.name, element.type)
-                            # print(element.options)
-                            # print("\n")
-                            logging.info(logf(
-                                "before update",
-                                e_name=element.name,
-                                e_type=element.type
-                            ))
-                            option = {}
-                            option[key] = value
-                            #print("values, values[key]", values, values[key], option)
-                            element.options.update(option)
-                            # print("after update", element.name, element.type)
-                            # print(element.options)
-                            # print("\n")
-                            logging.info(logf(
-                                "after update",
-                                e_name=element.name,
-                                e_type=element.type
-                            ))
-                            opt[element.type] = element.options
+                        # logging.info(logf(
+                        #     "after update",
+                        #     e_name=element.name,
+                        #     e_type=element.type
+                        # ))
+        #debug
         return opt
 
 
     def save(self, volfile=None):
+        """
+        Reconstruct and saves the volfile
+        with changes made to its elements
+        """
+
         filepath = self.volfile
         if volfile is not None:
             filepath = volfile
@@ -1169,8 +1101,6 @@ class Volfile:
         ))
         with open(filepath + ".tmp", "w") as volf:
             for element in self.elements:
-                #print(element.type)
-                #print(element.options)
                 volf.write("volume {0}\n".format(element.name))
                 volf.write("    type {0}\n".format(element.type))
                 for name, value in element.options.items():
@@ -1183,14 +1113,17 @@ class Volfile:
 
 
 def get_storage_options_hash(storage_options_sorted):
+    """Return hash for storage options sorted by key"""
+
     return xxhash.xxh64_hexdigest(storage_options_sorted)
 
 
-def sort_storage_options(storage_options):
-    return dict(sorted(storage_options.items()))
-
-
 def storage_options_parse(opts_raw):
+    """
+    Parse the storage options specified in 'str' and
+    construct to much more usable 'dict' format
+    """
+
     opts_list = [opt.strip() for opt in opts_raw.split(",") if opt.strip() != ""]
     opts = {}
     for opt in opts_list:
@@ -1234,7 +1167,7 @@ def mount_glusterfs(volume, mountpoint, storage_options=None, is_client=False):
 
         parsed_client_volfile_path = Volfile.parse(tmp_volfile_path)
         #debug
-        opts = parsed_client_volfile_path.update_options_by_type1(storage_options)
+        opts = parsed_client_volfile_path.update_options_by_type(storage_options)
         logging.info(logf(
             "opts",
             opts_after_update=opts
@@ -1242,7 +1175,7 @@ def mount_glusterfs(volume, mountpoint, storage_options=None, is_client=False):
         parsed_client_volfile_path.save()
 
         # sort storage-options and generate hash
-        storage_options_sorted = sort_storage_options(storage_options)
+        storage_options_sorted = dict(sorted(storage_options.items()))
         storage_options_hash = get_storage_options_hash(json.dumps(storage_options))
 
         # Rename mountpoint & client volfile path with hash
