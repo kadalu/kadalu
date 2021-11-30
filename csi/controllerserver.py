@@ -598,6 +598,16 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         # Get existing volume
         existing_volume = search_volume(request.volume_id)
+        if not existing_volume:
+            errmsg = logf(
+                "Unable to find volume",
+                volume_id=request.volume_id
+            )
+            logging.error(errmsg)
+            context.set_details(str(errmsg))
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.ControllerExpandVolumeResponse()
+
         if existing_volume.extra['kformat'] == 'non-native':
             errmsg = "PV with kadalu_format == non-native doesn't support Expansion"
             logging.error(errmsg)
