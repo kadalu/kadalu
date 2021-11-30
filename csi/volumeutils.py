@@ -1055,23 +1055,69 @@ class Volfile:
     def update_options_by_type1(self, opts):
         for element in self.elements:
             if opts.get(element.type, None) is not None:
-                #print(opts.get(element.type))
+                logging.info(logf(
+                    "opts[element.type]",
+                    opts_element_type=opts[element.type],
+                    element_type=element.type
+                ))
                 element.options.update(opts[element.type])
+                logging.info(logf(
+                    "opts[element.type]",
+                    opts_element_type=opts[element.type],
+                    element_type=element.type
+                ))
 
     def update_options_by_type2(self, opts):
         opt = {}
         for element in self.elements:
+
+            # Example: 'cluster/replicate' & 'performance/open-behind'
+            # Below logic to get only 'replicate' from 'cluster/replicate',
+            # Exception being for 'performance/open-behind' keep only 'performance',
+            # As vol-options under type 'performance' starts with it.
+            e_type = [element.type.split("/")[0] if "performance" in element.type.split("/")\
+                    else element.type.split("/")[-1]][0]
             for types, values in opts.items():
-                #print(element.type, types, values)
-                if element.type in types:
-                    print("before update", element.name, element.type)
-                    print(element.options)
-                    print("\n")
-                    element.options.update(values)
-                    print("after update", element.name, element.type)
-                    print(element.options)
-                    print("\n")
-                    opt[element.type] = element.options
+                #print(element.type, element.options, types, values)
+                if e_type in types:
+
+                    # #without check for individual option
+                    # print("before update", element.name, element.type)
+                    # print(element.options)
+                    # print("\n")
+                    # #option = {}
+                    # #option[key] = value
+                    # #print("values, values[key]", values, values[key], option)
+                    # element.options.update(values)
+                    # print("after update", element.name, element.type)
+                    # print(element.options)
+                    # print("\n")
+                    # opt[element.type] = element.options
+                    # # #values = {}, ele.options = {}
+
+                    for key, value in values.items():
+                        if element.options.get(key):
+                            # print("before update", element.name, element.type)
+                            # print(element.options)
+                            # print("\n")
+                            logging.info(logf(
+                                "before update",
+                                e_name=element.name,
+                                e_type=element.type
+                            ))
+                            option = {}
+                            option[key] = value
+                            #print("values, values[key]", values, values[key], option)
+                            element.options.update(option)
+                            # print("after update", element.name, element.type)
+                            # print(element.options)
+                            # print("\n")
+                            logging.info(logf(
+                                "before update",
+                                e_name=element.name,
+                                e_type=element.type
+                            ))
+                            opt[element.type] = element.options
         return opt
 
 
@@ -1110,6 +1156,22 @@ def sort_storage_options(storage_options):
     return storage_options_sorted
 
 
+def storage_options_parse(opts_raw):
+    opts_list = [opt.strip() for opt in opts_raw.split(",") if opt.strip() != ""]
+    opts = {}
+    for opt in opts_list:
+        key, value = opt.split(":")
+        xlator, opt_name = key.split(".")
+        xlator = xlator.strip()
+        opt_name = opt_name.strip()
+        value = value.strip()
+        if opts.get(xlator, None) is None:
+            opts[xlator] = {}
+
+        opts[xlator][opt_name] = value
+    return opts
+
+
 def mount_glusterfs(volume, mountpoint, storage_options=None, is_client=False):
     """Mount Glusterfs Volume"""
     if volume["type"] == "External":
@@ -1124,6 +1186,13 @@ def mount_glusterfs(volume, mountpoint, storage_options=None, is_client=False):
         "%s.client.vol" % volname
     )
     if storage_options is not None:
+
+        storage_options = storage_options_parse(storage_options)
+        logging.info(logf(
+            "storage_options after str to dict",
+            storage_options=storage_options,
+            type=type(storage_options)
+        ))
 
         # Keep the default volfile untouched
         fd, tmp_volfile_path = tempfile.mkstemp()

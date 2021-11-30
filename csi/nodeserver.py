@@ -65,9 +65,6 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
 
         # Storage volfile options
         storage_options = request.volume_context.get("storage_options", None)
-        # Convert 'str' to 'dict'
-        if storage_options:
-            storage_options = json.loads(storage_options)
 
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
 
