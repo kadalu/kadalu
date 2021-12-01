@@ -70,9 +70,9 @@ def set_args(name, subparsers):
         help=(
             "Can only be used in conjunction with '--external' argument. "
             "Supply options to be used while mounting external gluster cluster"
-            "Example: --gluster-options backup-volfile-servers=volfile_server2:"
-            "volfile_server3,log-level=WARNING,reader-thread-count=2,"
-            "log-file=/var/log/gluster.log"),
+            "Example: --gluster-options 'log-level=WARNING,"
+            "reader-thread-count=2,log-file=/var/log/gluster.log'"
+         ),
         default=None)
     arg("--data",
         help="Number of Disperse data Storage units",
