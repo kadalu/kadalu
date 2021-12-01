@@ -181,7 +181,7 @@ def get_pv_hosting_volumes(filters={}, iteration=40):
                 "type": data["type"],
                 "g_volname": data.get("gluster_volname", None),
                 "g_host": data.get("gluster_hosts", None),
-                "g_options": data.get("gluster_options", None),
+                "g_options": data.get("gluster_options", ""),
                 "kformat": data.get("kadalu_format", None),
             }
 
