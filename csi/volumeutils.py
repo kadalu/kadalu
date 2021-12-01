@@ -10,9 +10,9 @@ import shutil
 import tempfile
 import threading
 import time
-import xxhash
 from errno import ENOTCONN
 from pathlib import Path
+import xxhash
 
 from jinja2 import Template
 
@@ -891,10 +891,6 @@ def generate_client_volfile(volname):
     with open(info_file_path) as info_file:
         data = json.load(info_file)
 
-    # Generate client volfile again,
-    # in case of storage options
-    # Below logic is a blocker
-
     # If the hash of configmap is same for the given volume, then there
     # is no need to generate client volfile again.
     if not VOL_DATA.get(volname, None):
@@ -1015,6 +1011,10 @@ def reload_glusterfs(volume):
     return True
 
 
+# noqa # pylint: disable=too-many-locals
+# noqa # pylint: disable=too-many-statements
+# noqa # pylint: disable=too-few-public-methods
+# noqa # pylint: disable=too-many-branches
 class VolfileElement:
     """Class to represent multiple elements within a volfile"""
 
@@ -1026,6 +1026,8 @@ class VolfileElement:
 
 
 class Volfile:
+    """Class with volfile utils methods"""
+
     def __init__(self, volfile, elements):
         self.volfile = volfile
         self.elements = elements
@@ -1060,29 +1062,25 @@ class Volfile:
         passed by user through storage-class
         """
 
-        opt = {}
         for element in self.elements:
             if opts.get(element.type, None) is not None:
-
-                for key, value in opts[element.type].items():
-                    if element.options.get(key):
-                        option = {}
-                        option[key] = value
-                        # # debug
-                        # logging.info(logf(
-                        #     "before update",
-                        #     e_name=element.name,
-                        #     e_type=element.type
-                        # ))
-                        element.options.update(option)
-                        opt[element.type] = element.options
-                        # logging.info(logf(
-                        #     "after update",
-                        #     e_name=element.name,
-                        #     e_type=element.type
-                        # ))
-        #debug
-        return opt
+                logging.info(logf(
+                    "before update",
+                    type=element.type,
+                    options=element.options
+                ))
+                element.options.update(opts.get(element.type, {}))
+                logging.info(logf(
+                    "after update",
+                    type=element.type,
+                    options=element.options
+                ))
+                # for key, value in opts[element.type].items():
+                #     if element.options.get(key):
+                #         option = {}
+                #         option[key] = value
+                #         element.options.update(option)
+                #         opt[element.type] = element.options
 
 
     def save(self, volfile=None):
@@ -1095,10 +1093,6 @@ class Volfile:
         if volfile is not None:
             filepath = volfile
 
-        logging.info(logf(
-            "volfile path",
-            filepath=filepath
-        ))
         with open(filepath + ".tmp", "w") as volf:
             for element in self.elements:
                 volf.write("volume {0}\n".format(element.name))
@@ -1112,10 +1106,10 @@ class Volfile:
         os.rename(filepath + ".tmp", filepath)
 
 
-def get_storage_options_hash(storage_options_sorted):
+def get_storage_options_hash(storage_options_sorted_str):
     """Return hash for storage options sorted by key"""
 
-    return xxhash.xxh64_hexdigest(storage_options_sorted)
+    return xxhash.xxh64_hexdigest(storage_options_sorted_str)
 
 
 def storage_options_parse(opts_raw):
@@ -1139,7 +1133,7 @@ def storage_options_parse(opts_raw):
     return opts
 
 
-def mount_glusterfs(volume, mountpoint, storage_options=None, is_client=False):
+def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
     """Mount Glusterfs Volume"""
     if volume["type"] == "External":
         volname = volume['g_volname']
@@ -1152,31 +1146,24 @@ def mount_glusterfs(volume, mountpoint, storage_options=None, is_client=False):
         VOLFILES_DIR,
         "%s.client.vol" % volname
     )
-    if storage_options is not None:
 
+    if storage_options != "":
+
+        # Construct 'dict' from passed storage-options in 'str'
         storage_options = storage_options_parse(storage_options)
-        logging.info(logf(
-            "storage_options after str to dict",
-            storage_options=storage_options,
-            type=type(storage_options)
-        ))
 
         # Keep the default volfile untouched
-        fd, tmp_volfile_path = tempfile.mkstemp()
+        tmp_volfile_path = tempfile.mkstemp()[1]
         shutil.copy(client_volfile_path, tmp_volfile_path)
 
+        # Parse the client-volfile, update passed storage-options & save
         parsed_client_volfile_path = Volfile.parse(tmp_volfile_path)
-        #debug
-        opts = parsed_client_volfile_path.update_options_by_type(storage_options)
-        logging.info(logf(
-            "opts",
-            opts_after_update=opts
-        ))
+        parsed_client_volfile_path.update_options_by_type(storage_options)
         parsed_client_volfile_path.save()
 
-        # sort storage-options and generate hash
-        storage_options_sorted = dict(sorted(storage_options.items()))
-        storage_options_hash = get_storage_options_hash(json.dumps(storage_options))
+        # Sort storage-options and generate hash
+        storage_options_hash = get_storage_options_hash(
+            json.dumps(storage_options, sort_keys=True))
 
         # Rename mountpoint & client volfile path with hash
         mountpoint = mountpoint + "_" + storage_options_hash
@@ -1268,11 +1255,6 @@ def mount_glusterfs(volume, mountpoint, storage_options=None, is_client=False):
             "-f", client_volfile_path,
             mountpoint
         ]
-
-        # debug
-        logging.info(logf(
-            "mount glusterfs complete"
-        ))
 
         ## required for 'simple-quota'
         if not is_client:

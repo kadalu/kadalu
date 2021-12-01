@@ -4,7 +4,6 @@ nodeserver implementation
 import logging
 import os
 import time
-import json
 import csi_pb2
 import csi_pb2_grpc
 import grpc
@@ -18,6 +17,8 @@ GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/bin/mount"
 UNMOUNT_CMD = "/bin/umount"
 
+# noqa # pylint: disable=too-many-locals
+# noqa # pylint: disable=too-many-statements
 
 class NodeServer(csi_pb2_grpc.NodeServicer):
     """
@@ -64,14 +65,12 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         options = request.volume_context.get("options", None)
 
         # Storage volfile options
-        storage_options = request.volume_context.get("storage_options", None)
-
+        storage_options = request.volume_context.get("storage_options", "")
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
 
         pvpath_full = os.path.join(mntdir, pvpath)
 
-
-        logging.info(logf(
+        logging.debug(logf(
             "Received a valid mount request",
             request=request,
             voltype=voltype,
@@ -79,8 +78,7 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             pvpath=pvpath,
             pvtype=pvtype,
             pvpath_full=pvpath_full,
-            storage_options=storage_options,
-            type=type(storage_options)
+            storage_options=storage_options
         ))
 
         if voltype == "External":
@@ -110,14 +108,8 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
 
         # When 'storage_options' is configured mountpoint & volfile path change,
         # Update pvpath_full accordingly.
-        # debug
-        if storage_options:
+        if storage_options != "":
             pvpath_full = os.path.join(mountpoint, pvpath)
-            logging.debug(logf(
-                "update pvpath_full",
-                pvpath_full=pvpath_full,
-                request_target_path=request.target_path
-            ))
 
         logging.debug(logf(
             "Mounted Hosting Volume",

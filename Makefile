@@ -88,7 +88,7 @@ pylint:
 	@pylint --disable=W0511 -s n csi/identityserver.py
 	@pylint --disable=W0511,R1732 -s n csi/main.py
 	@pylint --disable=W0511 -s n csi/nodeserver.py
-	@pylint --disable=W0511,C0302,R0912,W1514,R1710 -s n csi/volumeutils.py
+	@pylint --disable=W0511,C0302,W1514,R1710 -s n csi/volumeutils.py
 	@pylint --disable=W0511,C0302,W1514 -s n operator/main.py
 	@pylint --disable=W0511,W1514 -s n extras/scripts/gen_manifest.py
 	@rm csi/kadalulib.py
