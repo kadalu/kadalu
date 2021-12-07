@@ -1064,23 +1064,7 @@ class Volfile:
 
         for element in self.elements:
             if opts.get(element.type, None) is not None:
-                logging.info(logf(
-                    "before update",
-                    type=element.type,
-                    options=element.options
-                ))
                 element.options.update(opts.get(element.type, {}))
-                logging.info(logf(
-                    "after update",
-                    type=element.type,
-                    options=element.options
-                ))
-                # for key, value in opts[element.type].items():
-                #     if element.options.get(key):
-                #         option = {}
-                #         option[key] = value
-                #         element.options.update(option)
-                #         opt[element.type] = element.options
 
 
     def save(self, volfile=None):
@@ -1179,7 +1163,7 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
             "Already mounted",
             mount=mountpoint
         ))
-        return
+        return mountpoint
 
     # Ignore if already mounted
     if is_gluster_mount_proc_running(volname, mountpoint):
@@ -1188,7 +1172,7 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
             "Already mounted (2nd try)",
             mount=mountpoint
         ))
-        return
+        return mountpoint
 
     if not os.path.exists(mountpoint):
         makedirs(mountpoint)

@@ -103,7 +103,6 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             'type': voltype,
         }
 
-
         mountpoint = mount_glusterfs(volume, mntdir, storage_options, True)
 
         # When 'storage_options' is configured mountpoint & volfile path change,
@@ -115,7 +114,7 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             "Mounted Hosting Volume",
             pv=request.volume_id,
             hostvol=hostvol,
-            mntdir=mntdir,
+            mntdir=mntdir
         ))
         # Mount the PV
         # TODO: Handle Volume capability mount flags
