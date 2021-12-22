@@ -44,6 +44,7 @@ VOLUME_TYPE_DISPERSE = "Disperse"
 CREATE_CMD = "create"
 APPLY_CMD = "apply"
 DELETE_CMD = "delete"
+PATCH_CMD = "patch"
 
 def template(filename, **kwargs):
     """Substitute the template with provided fields"""
@@ -571,6 +572,18 @@ def handle_modified(core_v1_client, obj):
     volname = obj["metadata"]["name"]
 
     voltype = obj["spec"]["type"]
+
+    # Handle case when a storage is finalized,
+    # the k8s event is "MODFIFIED" with a 'deletion timestamp'.
+    # Pass on this request to be treated as "DELETED".
+    if obj["metadata"]["finalizers"] and obj["metadata"]["deletionTimestamp"]:
+        logging.info(logf(
+            "Storage has been finalized. Storage delete request sent.",
+            finalizer=obj["metadata"]["finalizers"]
+        ))
+        handle_deleted(core_v1_client, obj)
+        return
+
     if voltype == VOLUME_TYPE_EXTERNAL:
         # Modification of 'External' volume type is not supported
         logging.info(logf(
@@ -650,19 +663,26 @@ def handle_deleted(core_v1_client, obj):
 
         hostvol_type = storage_info_data.get("type")
 
+        if hostvol_type != "External":
+
+            filename = os.path.join(MANIFESTS_DIR, "services.yaml")
+            with open(filename, 'r') as f:
+                logging.info(logf(
+                    "services.yaml",
+                    services=f.read()
+                ))
+            resource_to_be_patched = "kadalustorages.kadalu-operator.storage/" + volname
+            lib_execute(KUBECTL_CMD, PATCH_CMD, resource_to_be_patched, "-p",
+                '{"metadata":{"finalizers":[]}}', "--type=merge")
+            delete_server_pods(storage_info_data, obj)
+            lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
+            logging.info(
+                logf("Deleted Service", volname=volname, manifest=filename))
+
         # We can't delete external volume but cleanup StorageClass and Configmap
         # Delete Configmap and Storage class for both Native & External
         delete_storage_class(volname, hostvol_type)
         delete_config_map(core_v1_client, obj)
-
-        if hostvol_type != "External":
-
-            delete_server_pods(storage_info_data, obj)
-            filename = os.path.join(MANIFESTS_DIR, "services.yaml")
-            template(filename, namespace=NAMESPACE, volname=volname)
-            lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
-            logging.info(
-                logf("Deleted Service", volname=volname, manifest=filename))
 
     return
 
@@ -857,7 +877,11 @@ def watch_stream(core_v1_client, k8s_client):
             continue
         metadata = obj.get("metadata")
         resource_version = metadata['resourceVersion']
-        logging.debug(logf("Event", operation=operation, object=repr(obj)))
+        logging.info(logf(
+                "event",
+                event=event
+        ))
+        logging.info(logf("Event", operation=operation, object=repr(obj)))
         if operation == "ADDED":
             handle_added(core_v1_client, obj)
         elif operation == "MODIFIED":
