@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.9] - 2021-12-30
+
+- Kadalu Kubectl extension is submitted to Krew! https://krew.sigs.k8s.io/plugins/
+- Added documentation to use Kadalu with Krew
+- Added support for Kubectl context via `--kubectl-context` option
+- Added Upgrade documentation https://github.com/kadalu/kadalu/blob/devel/doc/upgrade.adoc
+- Fixed metrics exporter issues
+- Added alternative syntax for Storage add. Storage add syntax to help GlusterFS users.
+- Fix Gluster mount options issues of external Volumes.
+- Added framework to support Storage options(Gluster Volume options) via Storage classes.
+- Fixed Mount reload notification on `kadalu-info` configMap update.
+- Added a Validation to check existing Volume in `csi:ControllerExpandVolume`
+
 ## [0.8.8] - 2021-11-12
 
 - Fixed issues with `kubectl kadalu healinfo` sub-command.
@@ -285,7 +298,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.8...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.9...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
@@ -309,3 +322,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.8.6]: https://github.com/kadalu/kadalu/compare/0.8.5...0.8.6
 [0.8.7]: https://github.com/kadalu/kadalu/compare/0.8.6...0.8.7
 [0.8.8]: https://github.com/kadalu/kadalu/compare/0.8.7...0.8.8
+[0.8.9]: https://github.com/kadalu/kadalu/compare/0.8.8...0.8.9
