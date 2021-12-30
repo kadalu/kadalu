@@ -13,7 +13,7 @@ function wait_till_pods_start() {
 	cnt=$((cnt + 1))
 	sleep 2
 	ret=$(kubectl get pods -nkadalu -o wide | grep 'Running' | wc -l)
-	if [[ $ret -ge 12 ]]; then
+	if [[ $ret -ge 21 ]]; then
 	    echo "Successful after $cnt seconds"
 	    break
 	fi
@@ -223,11 +223,11 @@ up)
     if [[ "${VM_DRIVER}" != "none" ]]; then
 	wait_for_ssh
 	# shellcheck disable=SC2086
-	minikube ssh "sudo mkdir -p /mnt/${DISK};sudo rm -rf /mnt/${DISK}/*; sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3}; sudo mkdir -p /mnt/${DISK}/{dir3.2,dir3.2_modified,pvc}"
+	minikube ssh "sudo mkdir -p /mnt/${DISK};sudo rm -rf /mnt/${DISK}/*; sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9}; sudo mkdir -p /mnt/${DISK}/{dir3.2,dir3.2_modified,pvc}"
     else
 	sudo mkdir -p /mnt/${DISK}
   sudo rm -rf /mnt/${DISK}/*
-	sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3}
+	sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9}
 	sudo mkdir -p /mnt/${DISK}/dir3.2
 	sudo mkdir -p /mnt/${DISK}/dir3.2_modified
 	sudo mkdir -p /mnt/${DISK}/pvc
@@ -319,7 +319,7 @@ kadalu_operator)
 test_kadalu)
     date
 
-    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 4 120
+    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 6 180
 
     get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 4 120
 
@@ -369,6 +369,15 @@ test_kadalu)
       echo "====================== Start $p ======================"
       kubectl logs -nkadalu --all-containers=true --tail=$lines $p
       echo "======================= End $p ======================="
+    done
+
+    # Test Storage-Options
+    echo "List of storage-class"
+    kubectl get sc -nkadalu
+    for p in $(kubectl -n kadalu get pods -o name); do
+        if [[ $p == *"nodeplugin"* ]]; then
+            kubectl exec -i -nkadalu $p -c 'kadalu-nodeplugin' -- bash -c 'grep -e "data-self-heal off" -e "nl-cache off" /kadalu/volfiles/* | cat'
+        fi
     done
 
     date

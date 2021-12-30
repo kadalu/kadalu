@@ -139,3 +139,83 @@ spec:
     - name: csivol4
       persistentVolumeClaim:
         claimName: pv3-4
+
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: kadalu.storage-pool-3-storage-options
+provisioner: kadalu
+parameters:
+  storage_name: "storage-pool-3-with-9-pods"
+  storage_options:
+    "cluster/replicate.data-self-heal: off,\
+      performance/nl-cache.nl-cache: off"
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv3-5
+spec:
+  storageClassName: kadalu.storage-pool-3-storage-options
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 600Mi
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod3-5
+  labels:
+    app: sample-app
+spec:
+  containers:
+  - name: sample-app
+    image: docker.io/kadalu/sample-pv-check-app:latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - mountPath: "/mnt/pv"
+      name: csivol
+  volumes:
+  - name: csivol
+    persistentVolumeClaim:
+      claimName: pv3-5
+  restartPolicy: OnFailure
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pv3-6
+spec:
+  storageClassName: kadalu.storage-pool-3-storage-options
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 800Mi
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod3-6
+  labels:
+    app: sample-app
+spec:
+  containers:
+  - name: sample-app
+    image: docker.io/kadalu/sample-pv-check-app:latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - mountPath: "/mnt/pv"
+      name: csivol
+  volumes:
+  - name: csivol
+    persistentVolumeClaim:
+      claimName: pv3-6
+  restartPolicy: OnFailure

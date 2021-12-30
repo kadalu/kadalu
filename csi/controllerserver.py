@@ -131,6 +131,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         pvtype = PV_TYPE_SUBVOL
         is_block = False
 
+        storage_options = request.parameters.get("storage_options", "")
+
         # Mounted BlockVolume is requested via Storage Class.
         # GlusterFS File Volume may not be useful for some workloads
         # they can request for the Virtual Block formated and mounted
@@ -386,6 +388,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         update_free_size(hostvol, request.name, -pvsize)
 
         send_analytics_tracker("pvc-%s" % hostvoltype, uid)
+
         return csi_pb2.CreateVolumeResponse(
             volume={
                 "volume_id": request.name,
@@ -397,9 +400,10 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                     "path": vol.volpath,
                     "fstype": "xfs",
                     "kformat": kformat,
+                    "storage_options": storage_options
                 }
-            }
-        )
+            })
+
 
     def DeleteVolume(self, request, context):
         start_time = time.time()

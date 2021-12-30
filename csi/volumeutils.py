@@ -7,10 +7,12 @@ import logging
 import os
 import re
 import shutil
+import tempfile
 import threading
 import time
 from errno import ENOTCONN
 from pathlib import Path
+import xxhash
 
 from jinja2 import Template
 
@@ -1009,12 +1011,150 @@ def reload_glusterfs(volume):
     return True
 
 
-def mount_glusterfs(volume, mountpoint, is_client=False):
+# noqa # pylint: disable=too-many-locals
+# noqa # pylint: disable=too-many-statements
+# noqa # pylint: disable=too-few-public-methods
+# noqa # pylint: disable=too-many-branches
+class VolfileElement:
+    """Class to represent multiple elements within a volfile"""
+
+    def __init__(self, name):
+        self.name = name
+        self.type = None
+        self.options = {}
+        self.subvolumes = None
+
+
+class Volfile:
+    """Class with volfile utils methods"""
+
+    def __init__(self, volfile, elements):
+        self.volfile = volfile
+        self.elements = elements
+
+    @classmethod
+    def parse(cls, volfile):
+        """Parse volfile into multiple volfile elements"""
+
+        element = None
+        elements = []
+        with open(volfile) as volf:
+            for line in volf:
+                line = line.strip()
+                if line.startswith("volume "):
+                    element = VolfileElement(line.split()[-1])
+                elif line == "end-volume":
+                    elements.append(element)
+                    element = None
+                elif line.startswith("option "):
+                    _, name, value = line.split()
+                    element.options[name] = value
+                elif line.startswith("subvolumes "):
+                    element.subvolumes = line.split(" ", 1)[-1]
+                elif line.startswith("type "):
+                    element.type = line.split()[-1]
+        return Volfile(volfile, elements)
+
+
+    def update_options_by_type(self, opts):
+        """
+        Update existing storage-options with the options
+        passed by user through storage-class
+        """
+
+        for element in self.elements:
+            if opts.get(element.type, None) is not None:
+                element.options.update(opts.get(element.type, {}))
+
+
+    def save(self, volfile=None):
+        """
+        Reconstruct and saves the volfile
+        with changes made to its elements
+        """
+
+        filepath = self.volfile
+        if volfile is not None:
+            filepath = volfile
+
+        with open(filepath + ".tmp", "w") as volf:
+            for element in self.elements:
+                volf.write("volume {0}\n".format(element.name))
+                volf.write("    type {0}\n".format(element.type))
+                for name, value in element.options.items():
+                    volf.write("    option {0} {1}\n".format(name, value))
+                if element.subvolumes is not None:
+                    volf.write("    subvolumes {0}\n".format(element.subvolumes))
+                volf.write("end-volume\n\n")
+
+        os.rename(filepath + ".tmp", filepath)
+
+
+def get_storage_options_hash(storage_options_sorted_str):
+    """Return hash for storage options sorted by key"""
+
+    return xxhash.xxh64_hexdigest(storage_options_sorted_str)
+
+
+def storage_options_parse(opts_raw):
+    """
+    Parse the storage options specified in 'str' and
+    construct to much more usable 'dict' format
+    """
+
+    opts_list = [opt.strip() for opt in opts_raw.split(",") if opt.strip() != ""]
+    opts = {}
+    for opt in opts_list:
+        key, value = opt.split(":")
+        xlator, opt_name = key.split(".")
+        xlator = xlator.strip()
+        opt_name = opt_name.strip()
+        value = value.strip()
+        if opts.get(xlator, None) is None:
+            opts[xlator] = {}
+
+        opts[xlator][opt_name] = value
+    return opts
+
+
+def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
     """Mount Glusterfs Volume"""
     if volume["type"] == "External":
         volname = volume['g_volname']
     else:
         volname = volume["name"]
+
+
+    generate_client_volfile(volname)
+    client_volfile_path = os.path.join(
+        VOLFILES_DIR,
+        "%s.client.vol" % volname
+    )
+
+    if storage_options != "":
+
+        # Construct 'dict' from passed storage-options in 'str'
+        storage_options = storage_options_parse(storage_options)
+
+        # Keep the default volfile untouched
+        tmp_volfile_path = tempfile.mkstemp()[1]
+        shutil.copy(client_volfile_path, tmp_volfile_path)
+
+        # Parse the client-volfile, update passed storage-options & save
+        parsed_client_volfile_path = Volfile.parse(tmp_volfile_path)
+        parsed_client_volfile_path.update_options_by_type(storage_options)
+        parsed_client_volfile_path.save()
+
+        # Sort storage-options and generate hash
+        storage_options_hash = get_storage_options_hash(
+            json.dumps(storage_options, sort_keys=True))
+
+        # Rename mountpoint & client volfile path with hash
+        mountpoint = mountpoint + "_" + storage_options_hash
+        new_client_volfile_path = os.path.join(VOLFILES_DIR,
+            "%s_%s.client.vol" %(volname, storage_options_hash))
+        os.rename(tmp_volfile_path, new_client_volfile_path)
+        client_volfile_path = new_client_volfile_path
 
     # Ignore if already glusterfs process running for that volume
     if is_gluster_mount_proc_running(volname, mountpoint):
@@ -1023,7 +1163,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             "Already mounted",
             mount=mountpoint
         ))
-        return
+        return mountpoint
 
     # Ignore if already mounted
     if is_gluster_mount_proc_running(volname, mountpoint):
@@ -1032,7 +1172,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             "Already mounted (2nd try)",
             mount=mountpoint
         ))
-        return
+        return mountpoint
 
     if not os.path.exists(mountpoint):
         makedirs(mountpoint)
@@ -1087,7 +1227,6 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
         return
 
     with mount_lock:
-        generate_client_volfile(volname)
         # Fix the log, so we can check it out later
         # log_file = "/var/log/gluster/%s.log" % mountpoint.replace("/", "-")
         log_file = "/var/log/gluster/gluster.log"
@@ -1097,7 +1236,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             "-l", log_file,
             "--volfile-id", volname,
             "--fs-display-name", "kadalu:%s" % volname,
-            "-f", "%s/%s.client.vol" % (VOLFILES_DIR, volname),
+            "-f", client_volfile_path,
             mountpoint
         ]
 
@@ -1117,7 +1256,7 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             ))
             raise err
 
-    return
+    return mountpoint
 
 
 # noqa # pylint: disable=unused-argument
