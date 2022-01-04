@@ -732,8 +732,12 @@ def get_num_pvs(storage_info_data):
         # created in SQLITE3
         # 2. If we fail to create 'server' pod then there'll be no 'server'
         # container (this'll be hit if supplied 'storageClass' is invalid)
+        # 3. If 'server' pod does not have a host assigned,
+        # TODO: find out root cause, repro - use incorrect device and edit with
+        # correct device later
         if msg.stderr.find("no such table") != -1 or msg.stderr.find(
-                "container not found") != -1:
+                "container not found") != -1 or msg.stderr.find(
+                "not have a host assigned") != -1:
             # We are good to delete server pods
             return 0
         logging.error(
