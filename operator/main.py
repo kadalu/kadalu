@@ -838,6 +838,27 @@ def delete_storage_class(hostvol_name, _):
     ))
 
 
+def csi_driver_object_api_version():
+    """
+    Return API Version of CSI Driver object"
+    """
+
+    cmd = ["kubectl", "get", "csidriver", "kadalu", "-ojson"]
+
+    try:
+        resp = utils_execute(cmd)
+        csi_driver_data = json.loads(resp.stdout)
+        version = csi_driver_data["apiVersion"]
+        return version
+
+    except CommandError as err:
+        logging.error(logf(
+            "Failed to get version of csi driver object",
+            error=err
+        ))
+        return None
+
+
 def watch_stream(core_v1_client, k8s_client):
     """
     Watches kubernetes event stream for kadalustorages in Kadalu namespace
@@ -899,6 +920,11 @@ def deploy_csi_pods(core_v1_client):
 
     if api_instance.major > "1" or api_instance.major == "1" and \
        api_instance.minor >= "22":
+
+        if csi_driver_object_api_version() is not None and \
+           csi_driver_object_api_version() != "v1":
+            lib_execute(KUBECTL_CMD, DELETE_CMD, "csidriver", "kadalu")
+
         filename = os.path.join(MANIFESTS_DIR, "csi-driver-object-v1.yaml")
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
