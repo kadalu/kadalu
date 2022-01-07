@@ -921,9 +921,14 @@ def deploy_csi_pods(core_v1_client):
     if api_instance.major > "1" or api_instance.major == "1" and \
        api_instance.minor >= "22":
 
-        if csi_driver_object_api_version() is not None and \
-           csi_driver_object_api_version() != "v1":
+        csi_driver_version = csi_driver_object_api_version()
+        if csi_driver_version is not None and \
+           csi_driver_version != "v1":
             lib_execute(KUBECTL_CMD, DELETE_CMD, "csidriver", "kadalu")
+            logging.info(logf(
+                "Deleted existing CSI Driver object",
+                csi_driver_version=csi_driver_version
+            ))
 
         filename = os.path.join(MANIFESTS_DIR, "csi-driver-object-v1.yaml")
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
