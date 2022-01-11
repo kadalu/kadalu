@@ -17,32 +17,11 @@ $ kubectl krew install kadalu
 
 === Binary based installation
 
-Download the latest release of Kadalu Kubectl plugin using,
+Download and install the latest release of Kadalu Kubectl plugin using,
 
 [source,console]
 ----
-$ curl -LO https://github.com/kadalu/kadalu/releases/latest/download/kubectl-kadalu
-----
-
-Make the kubectl binary executable.
-
-[source,console]
-----
-$ chmod +x ./kubectl-kadalu
-----
-
-Move the binary in to your PATH.
-
-[source,console]
-----
-$ sudo mv ./kubectl-kadalu /usr/local/bin/kubectl-kadalu
-----
-
-Note: In the case of Openshift,
-
-[source,console]
-----
-$ sudo mv ./kubectl-kadalu /usr/local/bin/oc-kadalu
+$ curl -fsSL https://github.com/kadalu/kadalu/releases/latest/download/install.sh | sudo bash -x
 ----
 
 Test to ensure the version you installed is up-to-date

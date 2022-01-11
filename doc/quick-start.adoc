@@ -9,21 +9,8 @@ For using external gluster cluster volumes in HashiCorp Nomad, please refer http
 
 [source,console]
 ----
-
-curl -LO https://github.com/kadalu/kadalu/releases/latest/download/kubectl-kadalu
-chmod +x ./kubectl-kadalu
-sudo mv ./kubectl-kadalu /usr/local/bin/kubectl-kadalu
+$ curl -fsSL https://github.com/kadalu/kadalu/releases/latest/download/install.sh | sudo bash -x
 ----
-
-Note: In the case of Openshift,
-
-[source,console]
-----
-curl -LO https://github.com/kadalu/kadalu/releases/latest/download/kubectl-kadalu
-chmod +x ./kubectl-kadalu
-sudo mv ./kubectl-kadalu /usr/local/bin/oc-kadalu
-----
-
 
 Test the version you installed is up-to-date and install Operator.
 
