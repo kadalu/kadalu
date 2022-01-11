@@ -143,6 +143,4 @@ kubectl -n kadalu exec -it kadalu-csi-provisioner-0 -c kadalu-provisioner -- bas
 df -h /mnt/<KadaluStorage's name>
 dd if=/dev/zero of=/mnt/<KadaluStorage's name>/iotest_file bs=1M count=10
 ```
-
-- Verify that the PVC is requested with at least 10% less than the KadaluStorage    
-Kadalu adheres to Gluster's reserve (10%) and will refuse to create the PV/PVC if the PVC request > (total size - reserve)
+- Verify that the PVC is requested with at least 10% less than the KadaluStorage. Kadalu adheres to Gluster's reserve requirements (10%) and will refuse to create the PV/PVC if the PVC request > (total size - reserve)
