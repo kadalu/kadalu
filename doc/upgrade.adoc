@@ -8,12 +8,9 @@ It should apply to any newer upgrade.
 
 [source,console]
 ----
-  curl -LO https://github.com/kadalu/kadalu/releases/latest/download/kubectl-kadalu
-  chmod +x ./kubectl-kadalu
-  sudo mv ./kubectl-kadalu /usr/local/bin/kubectl-kadalu
-  kubectl-kadalu version
-
-  => kubectl-kadalu 0.8.6
+$ curl -fsSL https://github.com/kadalu/kadalu/releases/latest/download/install.sh | sudo bash -x
+$ kubectl-kadalu version
+kubectl-kadalu 0.8.6
 ----
 
 == Apply kadalu operator file
