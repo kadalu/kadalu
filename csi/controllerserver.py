@@ -198,7 +198,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
             hostvol = mount_and_select_hosting_volume(host_volumes, pvsize)
             if hostvol.volume is None:
-                errmsg = f"No Hosting Volumes available, add more storage (freespace: { hostvol.free_size },requested:{ hostvol.required_size }"
+                errmsg = f"No Hosting Volumes available, add more storage (freespace: { hostvol.free_size },requested:{ hostvol.required_size })"
                 logging.error(errmsg)
                 context.set_details(errmsg)
                 context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
