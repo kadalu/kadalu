@@ -249,7 +249,11 @@ def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
             if required_size < (pv_stats["free_size_bytes"] - reserved_size):
                 return hvol
 
-    return { "volume": None, "free_size": free_size_bytes, "required_size": required_size }
+    return { 
+        "volume": None,
+        "free_size_bytes": free_size_bytes,
+        "required_size": required_size
+        }
 
 
 def create_block_volume(pvtype, hostvol_mnt, volname, size):
