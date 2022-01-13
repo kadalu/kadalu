@@ -168,4 +168,4 @@ Events:
   Warning  FailedMount             11s (x13 over 10m)  kubelet                  MountVolume.MountDevice failed for volume "pvc-a047ee57-d5b3-4f37-a217-995e26d2f066" : kubernetes.io/csi: attacher.MountDevice failed to create newCsiDriverClient: driver name kadalu not found in the list of registered CSI drivers
 ----
 
-Reapply the csi-nodeplugin-<PLATFORM>.yaml manifest from https://github.com/kadalu/kadalu/releases/latest[Kadalu Latest Release]
+Reapply the csi-nodeplugin-`platform`.yaml manifest from https://github.com/kadalu/kadalu/releases/latest[Kadalu Latest Release]
