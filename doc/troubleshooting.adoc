@@ -127,3 +127,45 @@ When PVCs can grow outside of defined size while using External GlusterFS, and q
 - Verify that the quota is enabled on the gluster volume
 - KadaluStorage is of type 'External'
 - You gave enough time for GlusterFS to realize that the PVC is full and to block any write
+
+=== PVC is pending, Error 'No Hosting Volumes available, add more storage' is observed in the logs but there is enough space.
+
+In case the PVC is remaining in pending state and the PV is not created, you can check:
+
+- Check the logs. Sample error message:
++
+----
+W0111 07:10:42.877267       1 controller.go:943] Retrying syncing claim "056b1267-2f62-4554-8625-5fc1686b1ac8", failure 0
+E0111 07:10:42.878137       1 controller.go:966] error syncing claim "056b1267-2f62-4554-8625-5fc1686b1ac8": failed to provision volume with StorageClass "kadalu.gluster": rpc error: code = ResourceExhausted desc = No Hosting Volumes available, add more storage
+----
++
+- Connect to the provisioner and test verify the volume is mounted and write-able:
++
+----
+kubectl -n kadalu exec -it kadalu-csi-provisioner-0 -c kadalu-provisioner -- bash
+df -h /mnt/<KadaluStorage's name>
+dd if=/dev/zero of=/mnt/<KadaluStorage's name>/iotest_file bs=1M count=10
+----
++
+- Verify that the PVC is requested with at least 10% less than the KadaluStorage. Kadalu adheres to Gluster's reserve requirements (10%) and will refuse to create the PV/PVC if the PVC request > (total size - reserve)
+
+=== POD is unable to attach or mount volumes "driver name kadalu not found in the list of registered CSI drivers"
+
+Describing a pod shows the following events:
+
+----
+Events:
+  Type     Reason                  Age                 From                     Message
+  ----     ------                  ----                ----                     -------
+  Warning  FailedScheduling        10m                 default-scheduler        0/5 nodes are available: 5 pod has unbound immediate PersistentVolumeClaims.
+  Warning  FailedScheduling        10m                 default-scheduler        0/5 nodes are available: 5 pod has unbound immediate PersistentVolumeClaims.
+  Normal   Scheduled               10m                 default-scheduler        Successfully assigned openshift-monitoring/alertmanager-main-0 to okd4-compute-1
+  Normal   SuccessfulAttachVolume  10m                 attachdetach-controller  AttachVolume.Attach succeeded for volume "pvc-a047ee57-d5b3-4f37-a217-995e26d2f066"
+  Warning  FailedMount             8m32s               kubelet                  Unable to attach or mount volumes: unmounted volumes=[alertmanager], unattached volumes=[alertmanager-trusted-ca-bundle kube-api-access-srkrv config-volume tls-assets alertmanager secret-alertmanager-main-tls secret-alertmanager-main-proxy secret-alertmanager-kube-rbac-proxy]: timed out waiting for the condition
+  Warning  FailedMount             6m18s               kubelet                  Unable to attach or mount volumes: unmounted volumes=[alertmanager], unattached volumes=[config-volume tls-assets alertmanager secret-alertmanager-main-tls secret-alertmanager-main-proxy secret-alertmanager-kube-rbac-proxy alertmanager-trusted-ca-bundle kube-api-access-srkrv]: timed out waiting for the condition
+  Warning  FailedMount             4m4s                kubelet                  Unable to attach or mount volumes: unmounted volumes=[alertmanager], unattached volumes=[secret-alertmanager-main-tls secret-alertmanager-main-proxy secret-alertmanager-kube-rbac-proxy alertmanager-trusted-ca-bundle kube-api-access-srkrv config-volume tls-assets alertmanager]: timed out waiting for the condition
+  Warning  FailedMount             106s                kubelet                  Unable to attach or mount volumes: unmounted volumes=[alertmanager], unattached volumes=[tls-assets alertmanager secret-alertmanager-main-tls secret-alertmanager-main-proxy secret-alertmanager-kube-rbac-proxy alertmanager-trusted-ca-bundle kube-api-access-srkrv config-volume]: timed out waiting for the condition
+  Warning  FailedMount             11s (x13 over 10m)  kubelet                  MountVolume.MountDevice failed for volume "pvc-a047ee57-d5b3-4f37-a217-995e26d2f066" : kubernetes.io/csi: attacher.MountDevice failed to create newCsiDriverClient: driver name kadalu not found in the list of registered CSI drivers
+----
+
+Reapply the csi-nodeplugin manifest from https://github.com/kadalu/kadalu/releases/latest/download/[Kadalu Manifests]
