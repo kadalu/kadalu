@@ -1294,8 +1294,6 @@ def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None, is_clien
         for option in options.split(","):
             g_ops.append(f"--{option}")
 
-    cmd.append(mountpoint)
-
     logging.debug(logf(
         "glusterfs command",
         cmd=cmd,
