@@ -922,17 +922,17 @@ def generate_client_volfile(volname):
             data["disperse_redundancy"] = data["disperse"]["redundancy"]
 
         data["subvol_bricks_count"] = count
-        for i in range(0, int(len(data["bricks"]) / count)):
+        for i in range(0, int(len(data.get("bricks", [])) / count)):
             brick_name = "%s-%s-%d" % (
                 data["volname"],
                 "disperse" if data["type"] == "Disperse" else "replica",
                 i
             )
             data["dht_subvol"].append(brick_name)
-            if data["bricks"][(i * count)].get("decommissioned", "") != "":
+            if data.get("bricks", [])[(i * count)].get("decommissioned", "") != "":
                 decommissioned.append(brick_name)
 
-    data['decommissioned'] = "" if decommissioned == [] else ",".join(decommissioned)
+    data.get("decommissioned", "") = "" if decommissioned == [] else ",".join(decommissioned)
     template_file_path = os.path.join(
         TEMPLATES_DIR,
         "%s.client.vol.j2" % data["type"]
