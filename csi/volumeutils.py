@@ -1124,6 +1124,54 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
     else:
         volname = volume["name"]
 
+    if volume['type'] == 'External':
+        # Try to mount the Host Volume, handle failure if
+        # already mounted
+        with mount_lock:
+            mount_glusterfs_with_host(volname,
+                                      mountpoint,
+                                      volume['g_host'],
+                                      volume['g_options'],
+                                      is_client)
+        use_gluster_quota = False
+        if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
+            and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
+            use_gluster_quota = True
+        secret_private_key = "/etc/secret-volume/ssh-privatekey"
+        secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
+
+        # SSH into only first reachable host in volume['g_host'] entry
+        g_host = reachable_host(volume['g_host'])
+
+        if g_host is None:
+            logging.error(logf("All hosts are not reachable"))
+            return
+
+        if use_gluster_quota is False:
+            logging.debug(logf("Do not set quota-deem-statfs"))
+        else:
+            logging.debug(logf("Set quota-deem-statfs for gluster directory Quota"))
+            quota_deem_cmd = [
+                "ssh",
+                "-oStrictHostKeyChecking=no",
+                "-i",
+                "%s" % secret_private_key,
+                "%s@%s" % (secret_username, g_host),
+                "sudo",
+                "gluster",
+                "volume",
+                "set",
+                "%s" % volume['g_volname'],
+                "quota-deem-statfs",
+                "on"
+            ]
+            try:
+                execute(*quota_deem_cmd)
+            except CommandException as err:
+                errmsg = "Unable to set quota-deem-statfs via ssh"
+                logging.error(logf(errmsg, error=err))
+                raise err
+        return mountpoint
 
     generate_client_volfile(volname)
     client_volfile_path = os.path.join(
@@ -1176,55 +1224,6 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
 
     if not os.path.exists(mountpoint):
         makedirs(mountpoint)
-
-    if volume['type'] == 'External':
-        # Try to mount the Host Volume, handle failure if
-        # already mounted
-        with mount_lock:
-            mount_glusterfs_with_host(volname,
-                                      mountpoint,
-                                      volume['g_host'],
-                                      volume['g_options'],
-                                      is_client)
-        use_gluster_quota = False
-        if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
-            and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
-            use_gluster_quota = True
-        secret_private_key = "/etc/secret-volume/ssh-privatekey"
-        secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
-
-        # SSH into only first reachable host in volume['g_host'] entry
-        g_host = reachable_host(volume['g_host'])
-
-        if g_host is None:
-            logging.error(logf("All hosts are not reachable"))
-            return
-
-        if use_gluster_quota is False:
-            logging.debug(logf("Do not set quota-deem-statfs"))
-        else:
-            logging.debug(logf("Set quota-deem-statfs for gluster directory Quota"))
-            quota_deem_cmd = [
-                "ssh",
-                "-oStrictHostKeyChecking=no",
-                "-i",
-                "%s" % secret_private_key,
-                "%s@%s" % (secret_username, g_host),
-                "sudo",
-                "gluster",
-                "volume",
-                "set",
-                "%s" % volume['g_volname'],
-                "quota-deem-statfs",
-                "on"
-            ]
-            try:
-                execute(*quota_deem_cmd)
-            except CommandException as err:
-                errmsg = "Unable to set quota-deem-statfs via ssh"
-                logging.error(logf(errmsg, error=err))
-                raise err
-        return
 
     with mount_lock:
         # Fix the log, so we can check it out later
