@@ -1355,11 +1355,9 @@ def check_external_volume(pv_request, host_volumes):
         logging.warning("No host volume found to provide PV")
         return None
 
-    mount_glusterfs_with_host(hvol['g_volname'], mntdir, hvol['g_host'], hvol['g_options'])
+    mountpoint = mount_glusterfs(hvol, mntdir)
 
-    time.sleep(0.37)
-
-    if not is_gluster_mount_proc_running(hvol['g_volname'], mntdir):
+    if not mountpoint:
         logging.debug(logf(
             "Mount failed",
             hvol=hvol,
