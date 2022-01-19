@@ -40,7 +40,7 @@ def set_args(name, subparsers):
         default=None)
     arg("--pv-reclaim-policy",
         help="PV Reclaim Policy",
-        choices=["delete", "archive"],
+        choices=["delete", "archive", "retain"],
         default=None)
     arg("--device",
         help=("Storage device in <node>:<device> format, "

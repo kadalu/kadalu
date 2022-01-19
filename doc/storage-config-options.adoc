@@ -194,7 +194,7 @@ The example config file added for CI/CD gives an idea about options. Note that t
 
 == Archiving Persistent Volume Claims
 
-Archiving a PVC retains its data when `delete` is called on it. This option can be enabled by specifying `pvReclaimPolicy` either through `StorageClass` or `Kadalu CLI`. The `pvReclaimPolicy` takes either `delete` or `archive`. Default value is `delete` which deletes the PVC along with its data. `archive` option retains the data by renaming `pvc-123` to `archived-pvc-123`.
+Archiving a PVC retains its data when `delete` is called on it. This option can be enabled by specifying `pvReclaimPolicy` either through `StorageClass` or `Kadalu CLI`. The `pvReclaimPolicy` takes either `delete`, `archive` or `retain`. Default value is `delete` which deletes the PVC along with its data. `archive` option retains the data by renaming `pvc-123` to `archived-pvc-123`. `retain` option retains the data in place.
 
 * Adding 'pvReclaimPolicy' through config file:
 +
