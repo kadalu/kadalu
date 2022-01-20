@@ -6,6 +6,22 @@
 fail=0
 
 ARCH=$(uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|')
+
+function check_test_fail() {
+
+  if [ $fail -eq 1 ]; then
+    echo "Marking the test as 'FAIL'"
+    for p in $(kubectl -n kadalu get pods -o name); do
+      echo "====================== Start $p ======================"
+      kubectl -nkadalu --all-containers=true --tail 300 logs $p
+      kubectl -nkadalu describe $p
+      echo "======================= End $p ======================="
+    done
+    exit 1
+  fi
+
+}
+
 function wait_till_pods_start() {
   # give it some time
 
@@ -32,18 +48,11 @@ function wait_till_pods_start() {
 
   kubectl get sc
   kubectl get pods -nkadalu -o wide
-  # Return failure if fail variable is set to 1
-  if [ $fail -eq 1 ]; then
-    echo "Marking the test as 'FAIL'"
-    for p in $(kubectl -n kadalu get pods -o name); do
-      echo "====================== Start $p ======================"
-      kubectl -nkadalu --all-containers=true --tail 300 logs $p
-      kubectl -nkadalu describe $p
-      echo "======================= End $p ======================="
-    done
-    exit 1
-  fi
+
+  check_test_fail
 }
+
+
 function get_pvc_and_check() {
   yaml_file=$1
   log_text=$2
@@ -91,6 +100,9 @@ function get_pvc_and_check() {
     [[ $result -eq 1 ]] && kubectl describe $p
     kubectl delete $p
   done
+
+  check_test_fail
+
 }
 
 function wait_for_ssh() {
