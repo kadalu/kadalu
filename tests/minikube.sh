@@ -314,6 +314,11 @@ kadalu_operator)
     kubectl apply -f /tmp/kadalu-storage.yaml
 
     wait_till_pods_start
+
+    # Adding some extra sleep here to make sure we have all brick
+    # processes are in 'Running 1/1' state, not 'Running 0/1' state
+    sleep 42;
+
     ;;
 
 test_kadalu)
