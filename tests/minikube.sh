@@ -13,7 +13,7 @@ function wait_till_pods_start() {
 	cnt=$((cnt + 1))
 	sleep 2
 	ret=$(kubectl get pods -nkadalu -o wide | grep 'Running' | wc -l)
-	if [[ $ret -ge 21 ]]; then
+	if [[ $ret -ge 12 ]]; then
 	    echo "Successful after $cnt seconds"
 	    break
 	fi
