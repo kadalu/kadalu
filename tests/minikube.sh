@@ -27,9 +27,20 @@ function check_test_fail() {
 function wait_for_kadalu_pods() {
   # make sure operator, csi and server pods are all in ready state
 
-  local_timeout=${1:-200}
-
   local k="kubectl -nkadalu "
+  local local_timeout=${1:-200}
+  local end_time=$(($(data +%s) + $local_timeout))
+
+  # wait for kadalu pods creation
+  while [[ \
+    $($k get pod --ignore-not-found -o name -l name=kadalu | wc -l) -eq 0 || \
+    $($k get pod --ignore-not-found -o name -l app.kubernetes.io/name=kadalu-csi-provisioner | wc -l) -eq 0 || \
+    $($k get pod --ignore-not-found -o name -l app.kubernetes.io/name=kadalu-csi-nodeplugin | wc -l) -eq 0 || \
+    $($k get pod --ignore-not-found -o name -l app.kubernetes.io/name=server | wc -l) -eq 0 ]] \
+      ; do
+    [[ $end_time -lt $(date +%s) ]] && echo Kadalu pods are not created && fail=1 && return
+    sleep 2
+  done
 
   # check for operator
   $k wait --for=condition=ready pod -l name=kadalu --timeout=${local_timeout}s || {
@@ -190,6 +201,24 @@ function run_io() {
   return 0
 }
 
+function run_sanity() {
+
+  # Deploy and run CSI Sanity tests
+  kubectl apply -f tests/test-csi/sanity-app.yaml
+  kubectl wait --for=condition=ready pod -l app=sanity-app --timeout=15s
+
+  exp_pass=33
+
+  # Set expand vol size to 10MB
+  kubectl exec sanity-app -i -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination -csi.testvolumesize 10485760 -csi.testvolumeexpandsize 10485760' | tee /tmp/sanity-result.txt
+
+  # Make sure no more failures than above stats
+  act_pass=$(grep -Po '(\d+)(?= Passed)' /tmp/sanity-result.txt 2>/dev/null || echo 0)
+  [ $act_pass -ge $exp_pass ] || fail=1
+  echo Sanity [Pass %]: Expected: $exp_pass and Actual: $act_pass
+
+}
+
 # configure minikube
 MINIKUBE_VERSION=${MINIKUBE_VERSION:-"v1.15.1"}
 KUBE_VERSION=${KUBE_VERSION:-"v1.20.0"}
@@ -344,8 +373,6 @@ case "${1:-}" in
 
     echo "After modification"
 
-    # Observing intermittent failures due to timeout after modification with a
-    # difference of ~2 min
     wait_for_kadalu_pods 400
 
     # type: Replica2
@@ -354,19 +381,8 @@ case "${1:-}" in
     # Run minimal IO test
     run_io
 
-    # Deploy and run CSI Sanity tests
-    kubectl apply -f tests/test-csi/sanity-app.yaml
-    kubectl wait --for=condition=ready pod -l app=sanity-app --timeout=15s
-
-    exp_pass=33
-
-    # Set expand vol size to 10MB
-    kubectl exec sanity-app -i -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination -csi.testvolumesize 10485760 -csi.testvolumeexpandsize 10485760' | tee /tmp/sanity-result.txt
-
-    # Make sure no more failures than above stats
-    act_pass=$(grep -Po '(\d+)(?= Passed)' /tmp/sanity-result.txt 2>/dev/null || echo 0)
-    [ $act_pass -ge $exp_pass ] || fail=1
-    echo Sanity [Pass %]: Expected: $exp_pass and Actual: $act_pass
+    # Run CSI Sanity tests
+    run_sanity
 
     # Unless there is a failure or COMMIT_MSG contains 'full log' just log last 100 lines
     lines=100
