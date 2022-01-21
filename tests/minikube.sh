@@ -8,20 +8,27 @@ fail=0
 ARCH=$(uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|')
 
 function check_test_fail() {
-
   if [ $fail -eq 1 ]; then
     echo "Marking the test as 'FAIL'"
-    kubectl get sc
-    kubectl get pvc
-    for p in $(kubectl -n kadalu get pods -o name); do
-      echo "====================== Start $p ======================"
-      kubectl -nkadalu --all-containers=true --tail 300 logs $p
-      kubectl -nkadalu describe $p
-      echo "======================= End $p ======================="
-    done
+    _log_msgs
     exit 1
   fi
+}
 
+function _log_msgs() {
+  local lines=100
+  if [[ $fail -eq 1 || $COMMIT_MSG =~ 'full log' ]]; then
+    lines=1000
+  fi
+  kubectl get kds --all-namespaces
+  kubectl get sc --all-namespaces
+  kubectl get pvc --all-namespaces
+  for p in $(kubectl -n kadalu get pods -o name); do
+    echo "====================== Start $p ======================"
+    kubectl logs -nkadalu --all-containers=true --tail=$lines $p
+    kubectl -nkadalu describe $p
+    echo "======================= End $p ======================="
+  done
 }
 
 function wait_for_kadalu_pods() {
@@ -29,7 +36,7 @@ function wait_for_kadalu_pods() {
 
   local k="kubectl -nkadalu "
   local local_timeout=${1:-200}
-  local end_time=$(($(data +%s) + $local_timeout))
+  local end_time=$(($(date +%s) + $local_timeout))
 
   # wait for kadalu pods creation
   while [[ \
@@ -70,10 +77,11 @@ function wait_for_kadalu_pods() {
 }
 
 function get_pvc_and_check() {
-  yaml_file=$1
-  log_text=$2
-  pod_count=$3
-  time_limit=$4
+  local yaml_file=$1
+  local log_text=$2
+  local pod_count=$3
+  local time_limit=$4
+  local end_time=$(($(date +%s) + $time_limit))
 
   local k="kubectl -nkadalu "
 
@@ -81,12 +89,21 @@ function get_pvc_and_check() {
   kubectl apply -f ${yaml_file}
 
   # lower case the type of pool, compatible with bash >= v4
-  label="${log_text,,}"
+  local label="${log_text,,}"
+
+  echo Waiting for sample pods creation with label $label
+  while [[ \
+    $($k get pod -l type=${label} -o name | wc -l) -eq 0 ]] \
+      ; do
+    [[ $end_time -lt $(date +%s) ]] && echo Sample pods are not created with label $label && fail=1 && return
+    sleep 2
+  done
 
   # check for pod completion status
   $k wait --for=condition=complete pod -l type=${label} --timeout=${time_limit}s || {
     echo Sample pods for pool type "${log_text}" are not in complete state within ${time_limit}s && fail=1
   }
+  echo Sample pods of type $log_text are in Complete state
 
   # delete app pods after above validation
   for p in $(kubectl get pods -o name -l type=${label}); do
@@ -219,6 +236,120 @@ function run_sanity() {
 
 }
 
+function verify_storage_options() {
+  echo "List of storage-class"
+  kubectl get sc -nkadalu
+  for p in $(kubectl -n kadalu get pods -o name); do
+    if [[ $p == *"nodeplugin"* ]]; then
+      kubectl exec -i -nkadalu $p -c 'kadalu-nodeplugin' -- bash -c 'grep -e "data-self-heal off" -e "nl-cache off" /kadalu/volfiles/* | cat'
+    fi
+  done
+}
+
+function display_metrics() {
+
+  echo "Displaying Kadalu metrics"
+  kubectl exec -i -nkadalu deploy/operator -- python -c 'import requests; import json; print(json.dumps(requests.get("http://localhost:8050/metrics.json").json(), indent=2))'
+
+  echo "Displaying Kadalu Prometheus metrics"
+  kubectl exec -i -nkadalu deploy/operator -- python -c 'import requests; print(requests.get("http://localhost:8050/metrics").text)'
+
+}
+
+function validate_helm() {
+
+  if [[ ! "$COMMIT_MSG" =~ 'helm skip' ]]; then
+
+    # As per https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
+    # `helm` is already part of github runner
+    for distro in kubernetes rke microk8s openshift; do
+      if [ "$distro" != "kubernetes" ]; then
+        export operator="kadalu-operator-$distro"
+        export nodeplugin="csi-nodeplugin-$distro"
+      else
+        export operator="kadalu-operator"
+        export nodeplugin="csi-nodeplugin"
+      fi
+      export verbose="yes" dist=$distro
+      echo Validating helm template for "'$distro'" against "'$operator'" [Empty for no diff]
+      echo
+
+      # Helm templates will not have 'kind: Namespace' so need to skip first 6 lines from operator manifest
+      if [ "$distro" == "openshift" ]; then
+        # Helm follows a specific order while installing/uninstalling (https://github.com/helm/helm/blob/release-3.0/pkg/releaseutil/kind_sorter.go#L27)
+        # resources and it doesn't contain OpenShift 'SecurityContextConstraints' kind, so need to sort lines before 'diff'
+        diff <(helm template --namespace kadalu helm/kadalu --set operator.enabled=true --set-string operator.kubernetesDistro=$distro,operator.verbose=$verbose | grep -v '#' | sort) \
+          <(grep -v '#' manifests/"$operator.yaml" | tail -n +6 | sed '/^kind: CustomResourceDefinition/,/^spec:/{/namespace/d}' | sort) --ignore-blank-lines
+      else
+        diff <(helm template --namespace kadalu helm/kadalu --set operator.enabled=true --set-string operator.kubernetesDistro=$distro,operator.verbose=$verbose | grep -v '#') \
+          <(grep -v '#' manifests/"$operator.yaml" | tail -n +6 | sed '/^kind: CustomResourceDefinition/,/^spec:/{/namespace/d}') --ignore-blank-lines
+      fi
+
+      echo Validating helm template for "'$distro'" against "'$nodeplugin'" [Empty for no diff]
+      echo
+      diff <(helm template --namespace kadalu helm/kadalu --set csi-nodeplugin.enabled=true --set-string csi-nodeplugin.kubernetesDistro=$distro,csi-nodeplugin.verbose=$verbose | grep -v '#') \
+        <(grep -v '#' manifests/"$nodeplugin.yaml") --ignore-blank-lines
+    done
+    unset operator nodeplugin verbose dist
+
+  fi
+}
+
+function deploy_kadalu_resources() {
+  echo "Deploying kadalu operator and csi driver"
+
+  # pick the operator file from repo
+  sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator.yaml
+  kubectl apply -f manifests/kadalu-operator.yaml
+  kubectl apply -f manifests/csi-nodeplugin.yaml
+
+  sleep 1
+  # Start storage
+  output=$(kubectl get nodes -o=name)
+  # output will be in format 'node/hostname'. We need 'hostname'
+  HOSTNAME=$(basename $output)
+  echo "Hostname is ${HOSTNAME}"
+  cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
+  sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
+  sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
+
+  # Prepare PVC also as a storage
+  sed -i -e "s/DISK/${DISK}/g" tests/get-minikube-pvc.yaml
+  kubectl apply -f tests/get-minikube-pvc.yaml
+  kubectl apply -f /tmp/kadalu-storage.yaml
+
+}
+
+function deploy_app_pods() {
+
+  # type: Replica3
+  get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 6 180
+
+  # type: Replica1
+  get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 4 120
+
+  # type: Disperse
+  get_pvc_and_check examples/sample-test-app4.yaml "Disperse" 4 120
+
+  # type: Replica2
+  # get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 4 120
+
+  # type: External-non-native
+  # get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 60
+
+  # type: External-native
+  # get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 2 90
+
+}
+
+function modify_pool() {
+  cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
+  sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
+  sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
+  sed -i -e "s/dir3.2/dir3.2_modified/g" /tmp/kadalu-storage.yaml
+  kubectl apply -f /tmp/kadalu-storage.yaml
+}
+
 # configure minikube
 MINIKUBE_VERSION=${MINIKUBE_VERSION:-"v1.15.1"}
 KUBE_VERSION=${KUBE_VERSION:-"v1.20.0"}
@@ -281,102 +412,31 @@ case "${1:-}" in
     ;;
 
   kadalu_operator)
+
+    # list docker images
     docker images
 
-    if [[ ! "$COMMIT_MSG" =~ 'helm skip' ]]; then
+    # validates helm templates against jinja generated manifests
+    validate_helm
 
-      # As per https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
-      # `helm` is already part of github runner
-      for distro in kubernetes rke microk8s openshift; do
-        if [ "$distro" != "kubernetes" ]; then
-          export operator="kadalu-operator-$distro"
-          export nodeplugin="csi-nodeplugin-$distro"
-        else
-          export operator="kadalu-operator"
-          export nodeplugin="csi-nodeplugin"
-        fi
-        export verbose="yes" dist=$distro
-        echo Validating helm template for "'$distro'" against "'$operator'" [Empty for no diff]
-        echo
+    # deploys kadalu operator, csi driver and storage pools
+    deploy_kadalu_resources
 
-        # Helm templates will not have 'kind: Namespace' so need to skip first 6 lines from operator manifest
-        if [ "$distro" == "openshift" ]; then
-          # Helm follows a specific order while installing/uninstalling (https://github.com/helm/helm/blob/release-3.0/pkg/releaseutil/kind_sorter.go#L27)
-          # resources and it doesn't contain OpenShift 'SecurityContextConstraints' kind, so need to sort lines before 'diff'
-          diff <(helm template --namespace kadalu helm/kadalu --set operator.enabled=true --set-string operator.kubernetesDistro=$distro,operator.verbose=$verbose | grep -v '#' | sort) \
-            <(grep -v '#' manifests/"$operator.yaml" | tail -n +6 | sed '/^kind: CustomResourceDefinition/,/^spec:/{/namespace/d}' | sort) --ignore-blank-lines
-        else
-          diff <(helm template --namespace kadalu helm/kadalu --set operator.enabled=true --set-string operator.kubernetesDistro=$distro,operator.verbose=$verbose | grep -v '#') \
-            <(grep -v '#' manifests/"$operator.yaml" | tail -n +6 | sed '/^kind: CustomResourceDefinition/,/^spec:/{/namespace/d}') --ignore-blank-lines
-        fi
-
-        echo Validating helm template for "'$distro'" against "'$nodeplugin'" [Empty for no diff]
-        echo
-        diff <(helm template --namespace kadalu helm/kadalu --set csi-nodeplugin.enabled=true --set-string csi-nodeplugin.kubernetesDistro=$distro,csi-nodeplugin.verbose=$verbose | grep -v '#') \
-          <(grep -v '#' manifests/"$nodeplugin.yaml") --ignore-blank-lines
-      done
-      unset operator nodeplugin verbose dist
-
-    fi
-
-    echo "Starting the kadalu Operator"
-
-    # pick the operator file from repo
-    sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator.yaml
-    kubectl apply -f manifests/kadalu-operator.yaml
-    kubectl apply -f manifests/csi-nodeplugin.yaml
-
-    sleep 1
-    # Start storage
-    output=$(kubectl get nodes -o=name)
-    # output will be in format 'node/hostname'. We need 'hostname'
-    HOSTNAME=$(basename $output)
-    echo "Hostname is ${HOSTNAME}"
-    cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
-    sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
-    sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
-
-    # Prepare PVC also as a storage
-    sed -i -e "s/DISK/${DISK}/g" tests/get-minikube-pvc.yaml
-    kubectl apply -f tests/get-minikube-pvc.yaml
-
-    # Generally it needs some time for operator to get started, give it time, so some logs are reduced in tests
-    sleep 15
-    kubectl apply -f /tmp/kadalu-storage.yaml
-
+    # validates all kadalu resource pods are up or not
     wait_for_kadalu_pods
 
     ;;
 
   test_kadalu)
 
-    date
+    # deploy and validate app pods on storage pools created as part of 'kadalu_operator' case
+    deploy_app_pods
 
-    # type: Replica3
-    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 6 180
+    # modifies existing storage pool to check for changes in kadalu resources
+    modify_pool
 
-    # type: Replica1
-    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 4 120
-
-    # type: Disperse
-    get_pvc_and_check examples/sample-test-app4.yaml "Disperse" 4 120
-
-    # get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 60
-
-    # get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 2 90
-
-    cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
-    sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
-    sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
-    sed -i -e "s/dir3.2/dir3.2_modified/g" /tmp/kadalu-storage.yaml
-    kubectl apply -f /tmp/kadalu-storage.yaml
-
-    echo "After modification"
-
+    # validates all kadalu resource pods are up or not after modifying pools
     wait_for_kadalu_pods 400
-
-    # type: Replica2
-    # get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 4 120
 
     # Run minimal IO test
     run_io
@@ -384,42 +444,17 @@ case "${1:-}" in
     # Run CSI Sanity tests
     run_sanity
 
-    # Unless there is a failure or COMMIT_MSG contains 'full log' just log last 100 lines
-    lines=100
-    if [[ $fail -eq 1 || $COMMIT_MSG =~ 'full log' ]]; then
-      lines=1000
-    fi
-    for p in $(kubectl -n kadalu get pods -o name); do
-      echo "====================== Start $p ======================"
-      kubectl logs -nkadalu --all-containers=true --tail=$lines $p
-      echo "======================= End $p ======================="
-    done
-
     # Test Storage-Options
-    echo "List of storage-class"
-    kubectl get sc -nkadalu
-    for p in $(kubectl -n kadalu get pods -o name); do
-      if [[ $p == *"nodeplugin"* ]]; then
-        kubectl exec -i -nkadalu $p -c 'kadalu-nodeplugin' -- bash -c 'grep -e "data-self-heal off" -e "nl-cache off" /kadalu/volfiles/* | cat'
-      fi
-    done
-
-    date
+    verify_storage_options
 
     # Display metrics output
-    echo "Displaying Kadalu metrics"
-    kubectl exec -i -nkadalu deploy/operator -- python -c 'import requests; import json; print(json.dumps(requests.get("http://localhost:8050/metrics.json").json(), indent=2))'
+    display_metrics
 
-    echo "Displaying Kadalu Prometheus metrics"
-    kubectl exec -i -nkadalu deploy/operator -- python -c 'import requests; print(requests.get("http://localhost:8050/metrics").text)'
+    # check for test failure
+    check_test_fail
 
-    # Return failure if fail variable is set to 1
-    if [ $fail -eq 1 ]; then
-      echo "Marking the test as 'FAIL'"
-      exit 1
-    else
-      echo "Tests SUCCESSFUL"
-    fi
+    # log required containers logs to stdout
+    _log_msgs
 
     ;;
 
