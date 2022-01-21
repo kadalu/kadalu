@@ -445,7 +445,7 @@ case "${1:-}" in
     run_sanity
 
     # Test Storage-Options
-    verify_storage_options
+    # verify_storage_options
 
     # Display metrics output
     display_metrics
