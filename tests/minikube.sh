@@ -83,7 +83,7 @@ function get_pvc_and_check() {
   local time_limit=$4
   local end_time=$(($(date +%s) + $time_limit))
 
-  local k="kubectl -nkadalu "
+  local k="kubectl "
 
   echo "Running sample test app ${log_text} yaml from repo "
   kubectl apply -f ${yaml_file}
@@ -92,9 +92,7 @@ function get_pvc_and_check() {
   local label="${log_text,,}"
 
   echo Waiting for sample pods creation with label $label
-  while [[ \
-    $($k get pod -l type=${label} -o name | wc -l) -eq 0 ]] \
-      ; do
+  while [[ $($k get pod -l type=${label} -o name | wc -l) -eq 0 ]]; do
     [[ $end_time -lt $(date +%s) ]] && echo Sample pods are not created with label $label && fail=1 && return
     sleep 2
   done
