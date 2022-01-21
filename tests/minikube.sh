@@ -193,7 +193,7 @@ function run_io() {
   kubectl apply -f tests/test-io/io-app.yaml
 
   # Compressed image is ~25MB and so it shouldn't take much time to reach ready state
-  kubectl wait --for=condition=ready pod -l app=io-app --timeout=45s || fail=1
+  kubectl wait --for=condition=ready pod -l app=io-app --timeout=60s || fail=1
   if [ $fail == 1 ]; then
     return 0
   fi
@@ -217,7 +217,7 @@ function run_io() {
   echo Validate checksum between first and second pod [Empty for checksum match]
   diff <(echo "$first_sum") <(echo "$second_sum") || fail=1
 
-  return 0
+  check_test_fail
 }
 
 function run_sanity() {
@@ -236,6 +236,7 @@ function run_sanity() {
   [ $act_pass -ge $exp_pass ] || fail=1
   echo Sanity [Pass %]: Expected: $exp_pass and Actual: $act_pass
 
+  check_test_fail
 }
 
 function verify_storage_options() {
