@@ -77,6 +77,7 @@ function wait_for_kadalu_pods() {
 }
 
 function get_pvc_and_check() {
+
   local yaml_file=$1
   local log_text=$2
   local pod_count=$3
@@ -98,9 +99,14 @@ function get_pvc_and_check() {
   done
 
   # check for pod completion status
-  $k wait --for=condition=complete pod -l type=${label} --timeout=${time_limit}s || {
-    echo Sample pods for pool type "${log_text}" are not in complete state within ${time_limit}s && fail=1
-  }
+  # for kubectl >= v1.23 -> k wait --for=jsonpath='{.status.phase}'=Succeeded pod -l type=${label}
+  # status should be Succeeded for all app pods
+  end_time=$(($(date +%s) + $time_limit))
+  while [[ $($k get pod -l type=${label} -ojsonpath={'.items[].status.phase'} | grep -cv Succeeded) -eq 0 ]]; do
+    [[ $end_time -lt $(date +%s) ]] && echo Sample pods for pool type "${log_text}" are not in complete state within ${time_limit}s && fail=1 && return
+    sleep 2
+  done
+
   echo Sample pods of type $log_text are in Complete state
 
   # delete app pods after above validation
@@ -115,8 +121,6 @@ function get_pvc_and_check() {
     [[ $fail -eq 1 ]] && kubectl describe $p
     kubectl delete $p
   done
-
-  check_test_fail
 
 }
 
@@ -322,12 +326,15 @@ function deploy_app_pods() {
 
   # type: Replica3
   get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 6 180
+  check_test_fail
 
   # type: Replica1
   get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 4 120
+  check_test_fail
 
   # type: Disperse
   get_pvc_and_check examples/sample-test-app4.yaml "Disperse" 4 120
+  check_test_fail
 
   # type: Replica2
   # get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 4 120

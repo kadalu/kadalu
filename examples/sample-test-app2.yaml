@@ -152,3 +152,4 @@ spec:
     - name: csivol4
       persistentVolumeClaim:
         claimName: pv2-4
+  restartPolicy: OnFailure
