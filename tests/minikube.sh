@@ -11,6 +11,8 @@ function check_test_fail() {
 
   if [ $fail -eq 1 ]; then
     echo "Marking the test as 'FAIL'"
+    kubectl get sc
+    kubectl get pvc
     for p in $(kubectl -n kadalu get pods -o name); do
       echo "====================== Start $p ======================"
       kubectl -nkadalu --all-containers=true --tail 300 logs $p
@@ -22,36 +24,39 @@ function check_test_fail() {
 
 }
 
-function wait_till_pods_start() {
-  # give it some time
+function wait_for_kadalu_pods() {
+  # make sure operator, csi and server pods are all in ready state
 
-  cnt=0
   local_timeout=${1:-200}
-  while true; do
-    cnt=$((cnt + 1))
-    sleep 2
-    ret=$(kubectl get pods -nkadalu -o wide | grep 'Running' | wc -l)
-    if [[ $ret -ge 21 ]]; then
-      echo "Successful after $cnt seconds"
-      break
-    fi
-    if [[ $cnt -eq ${local_timeout} ]]; then
-      kubectl get pods -o wide
-      echo "giving up after ${local_timeout} seconds"
-      fail=1
-      break
-    fi
-    if [[ $((cnt % 15)) -eq 0 ]]; then
-      echo "$cnt: Waiting for pods to come up..."
-    fi
-  done
 
-  kubectl get sc
-  kubectl get pods -nkadalu -o wide
+  local k="kubectl -nkadalu "
+
+  # check for operator
+  $k wait --for=condition=ready pod -l name=kadalu --timeout=${local_timeout}s || {
+    echo Kadalu Operator is not up within ${local_timeout}s && fail=1 && return
+  }
+  echo Kadalu Operator is in Ready state
+
+  # check for csi provisioner
+  $k wait --for=condition=ready pod -l app.kubernetes.io/name=kadalu-csi-provisioner --timeout=${local_timeout}s || {
+    echo Kadalu CSI Provisioner is not up within ${local_timeout}s && fail=1 && return
+  }
+  echo Kadalu CSI Provisioner is in Ready state
+
+  # check for csi nodeplugin
+  $k wait --for=condition=ready pod -l app.kubernetes.io/name=kadalu-csi-nodeplugin --timeout=${local_timeout}s || {
+    echo Kadalu CSI NodePlugin is not up within ${local_timeout}s && fail=1 && return
+  }
+  echo Kadalu CSI Nodeplugin is in Ready state
+
+  # check for kadalu server
+  $k wait --for=condition=ready pod -l app.kubernetes.io/name=server --timeout=${local_timeout}s || {
+    echo Kadalu Server pods are not up within ${local_timeout}s && fail=1 && return
+  }
+  echo Kadalu Server pods are in Ready state
 
   check_test_fail
 }
-
 
 function get_pvc_and_check() {
   yaml_file=$1
@@ -59,45 +64,29 @@ function get_pvc_and_check() {
   pod_count=$3
   time_limit=$4
 
+  local k="kubectl -nkadalu "
+
   echo "Running sample test app ${log_text} yaml from repo "
   kubectl apply -f ${yaml_file}
 
-  cnt=0
-  result=0
-  while true; do
-    cnt=$((cnt + 1))
-    sleep 1
-    ret=$(kubectl get pods -o wide | grep 'Completed' | wc -l)
-    if [[ $ret -eq ${pod_count} ]]; then
-      echo "Successful after $cnt seconds"
-      break
-    fi
-    if [[ $cnt -eq ${time_limit} ]]; then
-      kubectl get pvc
-      kubectl get pods -nkadalu -o wide
-      kubectl get pods -o wide
-      echo "exiting after ${time_limit} seconds"
-      result=1
-      fail=1
-      break
-    fi
-    if [[ $((cnt % 25)) -eq 0 ]]; then
-      echo "$cnt: Waiting for pods to come up..."
-    fi
-  done
-  kubectl get pvc
-  kubectl get pods -o wide
+  # lower case the type of pool, compatible with bash >= v4
+  label="${log_text,,}"
 
-  # Delete the pods/pvc
-  for p in $(kubectl get pods -o name); do
-    [[ $result -eq 1 ]] && kubectl describe $p
-    [[ $result -eq 0 ]] && kubectl logs $p
-    [[ $p =~ -4 ]] && kubectl logs $p
+  # check for pod completion status
+  $k wait --for=condition=complete pod -l type=${label} --timeout=${time_limit}s || {
+    echo Sample pods for pool type "${log_text}" are not in complete state within ${time_limit}s && fail=1
+  }
+
+  # delete app pods after above validation
+  for p in $(kubectl get pods -o name -l type=${label}); do
+    [[ $fail -eq 1 ]] && kubectl describe $p
+    [[ $fail -eq 0 ]] && kubectl logs $p
     kubectl delete $p
   done
 
-  for p in $(kubectl get pvc -o name); do
-    [[ $result -eq 1 ]] && kubectl describe $p
+  # delete PVCs
+  for p in $(kubectl get pvc -o name -l type=${label}); do
+    [[ $fail -eq 1 ]] && kubectl describe $p
     kubectl delete $p
   done
 
@@ -326,10 +315,12 @@ case "${1:-}" in
     sleep 15
     kubectl apply -f /tmp/kadalu-storage.yaml
 
-    wait_till_pods_start
+    wait_for_kadalu_pods
+
     ;;
 
   test_kadalu)
+
     date
 
     # type: Replica3
@@ -351,11 +342,11 @@ case "${1:-}" in
     sed -i -e "s/dir3.2/dir3.2_modified/g" /tmp/kadalu-storage.yaml
     kubectl apply -f /tmp/kadalu-storage.yaml
 
-    sleep 5
     echo "After modification"
+
     # Observing intermittent failures due to timeout after modification with a
     # difference of ~2 min
-    wait_till_pods_start 400
+    wait_for_kadalu_pods 400
 
     # type: Replica2
     # get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 4 120
@@ -422,7 +413,7 @@ case "${1:-}" in
     HOSTNAME=$(basename $output)
     echo "Hostname is ${HOSTNAME}"
     bash tests/kubectl_kadalu_tests.sh "$DISK" "${HOSTNAME}"
-    wait_till_pods_start
+    wait_for_kadalu_pods
     ;;
 
   clean)
