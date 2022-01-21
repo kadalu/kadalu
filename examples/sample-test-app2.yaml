@@ -4,6 +4,8 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: pv2-1
+  labels:
+    type: replica2
 spec:
   storageClassName: kadalu.storage-pool-2
   accessModes:
@@ -19,6 +21,7 @@ metadata:
   name: pod2-1
   labels:
     app: sample-app
+    type: replica2
 spec:
   containers:
   - name: sample-app
@@ -38,6 +41,8 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: pv2-2
+  labels:
+    type: replica2
 spec:
   storageClassName: kadalu.storage-pool-2
   accessModes:
@@ -53,6 +58,7 @@ metadata:
   name: pod2-2
   labels:
     app: sample-app
+    type: replica2
 spec:
   containers:
   - name: sample-app
@@ -80,6 +86,8 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: pv2-3
+  labels:
+    type: replica2
 spec:
   storageClassName: kadalu.storage-pool-2-virtblock
   accessModes:
@@ -94,6 +102,7 @@ metadata:
   name: pod2-3
   labels:
     app: sample-app
+    type: replica2
 spec:
   containers:
   - name: sample-app
@@ -108,10 +117,12 @@ spec:
       claimName: pv2-3
   restartPolicy: OnFailure
 ---
-apiVersion: v1
 kind: PersistentVolumeClaim
+apiVersion: v1
 metadata:
   name: pv2-4
+  labels:
+    type: replica2
 spec:
   accessModes:
     - ReadWriteOnce
@@ -125,6 +136,8 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: pod2-4
+  labels:
+    type: replica2
 spec:
   containers:
     - name: bash-block-vol

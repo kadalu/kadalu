@@ -332,10 +332,13 @@ case "${1:-}" in
   test_kadalu)
     date
 
+    # type: Replica3
     get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 6 180
 
+    # type: Replica1
     get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 4 120
 
+    # type: Disperse
     get_pvc_and_check examples/sample-test-app4.yaml "Disperse" 4 120
 
     # get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 60
@@ -354,6 +357,7 @@ case "${1:-}" in
     # difference of ~2 min
     wait_till_pods_start 400
 
+    # type: Replica2
     # get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 4 120
 
     # Run minimal IO test

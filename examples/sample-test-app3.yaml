@@ -4,6 +4,8 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: pv3-1
+  labels:
+    type: replica3
 spec:
   storageClassName: kadalu.storage-pool-3
   accessModes:
@@ -19,6 +21,7 @@ metadata:
   name: pod3-1
   labels:
     app: sample-app
+    type: replica3
 spec:
   containers:
   - name: sample-app
@@ -38,6 +41,8 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: pv3-2
+  labels:
+    type: replica3
 spec:
   storageClassName: kadalu.storage-pool-3
   accessModes:
@@ -53,6 +58,7 @@ metadata:
   name: pod3-2
   labels:
     app: sample-app
+    type: replica3
 spec:
   containers:
   - name: sample-app
@@ -80,6 +86,8 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: pv3-3
+  labels:
+    type: replica3
 spec:
   storageClassName: kadalu.storage-pool-3-virtblock
   accessModes:
@@ -94,6 +102,7 @@ metadata:
   name: pod3-3
   labels:
     app: sample-app
+    type: replica3
 spec:
   containers:
   - name: sample-app
@@ -108,10 +117,12 @@ spec:
       claimName: pv3-3
   restartPolicy: OnFailure
 ---
-apiVersion: v1
 kind: PersistentVolumeClaim
+apiVersion: v1
 metadata:
   name: pv3-4
+  labels:
+    type: replica3
 spec:
   accessModes:
     - ReadWriteOnce
@@ -125,6 +136,8 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: pod3-4
+  labels:
+    type: replica3
 spec:
   containers:
     - name: bash-block-vol
@@ -157,6 +170,8 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: pv3-5
+  labels:
+    type: replica3
 spec:
   storageClassName: kadalu.storage-pool-3-storage-options
   accessModes:
@@ -172,6 +187,7 @@ metadata:
   name: pod3-5
   labels:
     app: sample-app
+    type: replica3
 spec:
   containers:
   - name: sample-app
@@ -191,6 +207,8 @@ kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: pv3-6
+  labels:
+    type: replica3
 spec:
   storageClassName: kadalu.storage-pool-3-storage-options
   accessModes:
@@ -206,6 +224,7 @@ metadata:
   name: pod3-6
   labels:
     app: sample-app
+    type: replica3
 spec:
   containers:
   - name: sample-app
