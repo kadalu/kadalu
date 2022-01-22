@@ -824,6 +824,10 @@ def volume_list(voltype=None):
 def mount_volume(pvpath, mountpoint, pvtype, fstype=None):
     """Mount a Volume"""
 
+    # Create subvol dir if PV is manually created
+    if not os.path.exists(pvpath):
+        makedirs(pvpath)
+
     # TODO: Will losetup survive container reboot?
     if pvtype == PV_TYPE_RAWBLOCK:
         # losetup of truncated file

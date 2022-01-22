@@ -93,12 +93,11 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         if voltype == "External":
             logging.debug(logf(
                 "Mounted Volume for PV",
-                volume=request.volume_id,
+                volume=volume,
                 mntdir=mntdir,
-                pvpath=gserver,
-                options=options
+                storage_options=storage_options
             ))
-            return csi_pb2.NodePublishVolumeResponse()
+            # return csi_pb2.NodePublishVolumeResponse()
 
         # When 'storage_options' is configured mountpoint & volfile path change,
         # Update pvpath_full accordingly.
