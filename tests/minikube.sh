@@ -1,168 +1,201 @@
 #!/bin/bash -e
 
-#Based on ideas from https://github.com/rook/rook/blob/master/tests/scripts/minikube.sh
+# Format via shfmt -> shfmt -i 2 -ci -w tests/minikube.sh
+
+# Based on ideas from https://github.com/rook/rook/blob/master/tests/scripts/minikube.sh
 fail=0
 
-ARCH=`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'`
-function wait_till_pods_start() {
-    # give it some time
+ARCH=$(uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|')
 
-    cnt=0
-    local_timeout=${1:-200}
-    while true; do
-	cnt=$((cnt + 1))
-	sleep 2
-	ret=$(kubectl get pods -nkadalu -o wide | grep 'Running' | wc -l)
-	if [[ $ret -ge 21 ]]; then
-	    echo "Successful after $cnt seconds"
-	    break
-	fi
-	if [[ $cnt -eq ${local_timeout} ]]; then
-	    kubectl get pods -o wide
-	    echo "giving up after ${local_timeout} seconds"
-	    fail=1
-	    break
-	fi
-	if [[ $((cnt % 15)) -eq 0 ]]; then
-	    echo "$cnt: Waiting for pods to come up..."
-	fi
-    done
-
-    kubectl get sc
-    kubectl get pods -nkadalu -o wide
-    # Return failure if fail variable is set to 1
-    if [ $fail -eq 1 ]; then
-	echo "Marking the test as 'FAIL'"
-	for p in $(kubectl -n kadalu get pods -o name); do
-	    echo "====================== Start $p ======================"
-	    kubectl -nkadalu --all-containers=true --tail 300 logs $p
-	    kubectl -nkadalu describe $p
-	    echo "======================= End $p ======================="
-	done
-	exit 1
-    fi
+function check_test_fail() {
+  if [ $fail -eq 1 ]; then
+    echo "Marking the test as 'FAIL'"
+    _log_msgs
+    exit 1
+  fi
 }
+
+function _log_msgs() {
+  local lines=100
+  if [[ $fail -eq 1 || $COMMIT_MSG =~ 'full log' ]]; then
+    lines=1000
+  fi
+  kubectl get kds --all-namespaces
+  kubectl get sc --all-namespaces
+  kubectl get pvc --all-namespaces
+  for p in $(kubectl -n kadalu get pods -o name); do
+    echo "====================== Start $p ======================"
+    kubectl logs -nkadalu --all-containers=true --tail=$lines $p
+    kubectl -nkadalu describe $p
+    echo "======================= End $p ======================="
+  done
+}
+
+function wait_for_kadalu_pods() {
+  # make sure operator, csi and server pods are all in ready state
+
+  local k="kubectl -nkadalu "
+  local local_timeout=${1:-200}
+  local end_time=$(($(date +%s) + $local_timeout))
+
+  # wait for kadalu pods creation
+  while [[ \
+    $($k get pod --ignore-not-found -o name -l name=kadalu | wc -l) -eq 0 || \
+    $($k get pod --ignore-not-found -o name -l app.kubernetes.io/name=kadalu-csi-provisioner | wc -l) -eq 0 || \
+    $($k get pod --ignore-not-found -o name -l app.kubernetes.io/name=kadalu-csi-nodeplugin | wc -l) -eq 0 || \
+    $($k get pod --ignore-not-found -o name -l app.kubernetes.io/name=server | wc -l) -eq 0 ]] \
+      ; do
+    [[ $end_time -lt $(date +%s) ]] && echo Kadalu pods are not created && fail=1 && return
+    sleep 2
+  done
+
+  # check for operator
+  $k wait --for=condition=ready pod -l name=kadalu --timeout=${local_timeout}s || {
+    echo Kadalu Operator is not up within ${local_timeout}s && fail=1 && return
+  }
+  echo Kadalu Operator is in Ready state
+
+  # check for csi provisioner
+  $k wait --for=condition=ready pod -l app.kubernetes.io/name=kadalu-csi-provisioner --timeout=${local_timeout}s || {
+    echo Kadalu CSI Provisioner is not up within ${local_timeout}s && fail=1 && return
+  }
+  echo Kadalu CSI Provisioner is in Ready state
+
+  # check for csi nodeplugin
+  $k wait --for=condition=ready pod -l app.kubernetes.io/name=kadalu-csi-nodeplugin --timeout=${local_timeout}s || {
+    echo Kadalu CSI NodePlugin is not up within ${local_timeout}s && fail=1 && return
+  }
+  echo Kadalu CSI Nodeplugin is in Ready state
+
+  # check for kadalu server
+  $k wait --for=condition=ready pod -l app.kubernetes.io/name=server --timeout=${local_timeout}s || {
+    echo Kadalu Server pods are not up within ${local_timeout}s && fail=1 && return
+  }
+  echo Kadalu Server pods are in Ready state
+
+  check_test_fail
+}
+
 function get_pvc_and_check() {
-    yaml_file=$1
-    log_text=$2
-    pod_count=$3
-    time_limit=$4
 
-    echo "Running sample test app ${log_text} yaml from repo "
-    kubectl apply -f ${yaml_file}
+  local yaml_file=$1
+  local log_text=$2
+  local pod_count=$3
+  local time_limit=$4
+  local end_time=$(($(date +%s) + $time_limit))
 
-    cnt=0
-    result=0
-    while true; do
-	cnt=$((cnt + 1))
-	sleep 1
-	ret=$(kubectl get pods -o wide | grep 'Completed' | wc -l)
-	if [[ $ret -eq ${pod_count} ]]; then
-	    echo "Successful after $cnt seconds"
-	    break
-	fi
-	if [[ $cnt -eq ${time_limit} ]]; then
-	    kubectl get pvc
-	    kubectl get pods -nkadalu -o wide
-	    kubectl get pods -o wide
-	    echo "exiting after ${time_limit} seconds"
-	    result=1
-	    fail=1
-	    break
-	fi
-	if [[ $((cnt % 25)) -eq 0 ]]; then
-	    echo "$cnt: Waiting for pods to come up..."
-	fi
-    done
-    kubectl get pvc
-    kubectl get pods -o wide
+  local k="kubectl "
 
-    #Delete the pods/pvc
-    for p in $(kubectl get pods -o name); do
-	[[ $result -eq 1 ]] && kubectl describe $p
-	[[ $result -eq 0 ]] && kubectl logs $p
-	[[ $p =~ -4 ]] && kubectl logs $p
-	kubectl delete $p
-    done
+  echo "Running sample test app ${log_text} yaml from repo "
+  kubectl apply -f ${yaml_file}
 
-    for p in $(kubectl get pvc -o name); do
-	[[ $result -eq 1 ]] && kubectl describe $p
-	kubectl delete $p
-    done
+  # lower case the type of pool, compatible with bash >= v4
+  local label="${log_text,,}"
+
+  echo Waiting for sample pods creation with label $label
+  while [[ $($k get pod -l type=${label} -o name | wc -l) -eq 0 ]]; do
+    [[ $end_time -lt $(date +%s) ]] && echo Sample pods are not created with label $label && fail=1 && return
+    sleep 2
+  done
+
+  # check for pod completion status
+  # for kubectl >= v1.23 -> k wait --for=jsonpath='{.status.phase}'=Succeeded pod -l type=${label}
+  # status should be Succeeded for all app pods
+  end_time=$(($(date +%s) + $time_limit))
+  while [[ $($k get pod -l type=${label} -ojsonpath={'.items[].status.phase'} | grep -cv Succeeded) -eq 0 ]]; do
+    [[ $end_time -lt $(date +%s) ]] && echo Sample pods for pool type "${log_text}" are not in complete state within ${time_limit}s && fail=1 && return
+    sleep 2
+  done
+
+  echo Sample pods of type $log_text are in Complete state
+
+  # delete app pods after above validation
+  for p in $(kubectl get pods -o name -l type=${label}); do
+    [[ $fail -eq 1 ]] && kubectl describe $p
+    [[ $fail -eq 0 ]] && kubectl logs $p
+    kubectl delete $p
+  done
+
+  # delete PVCs
+  for p in $(kubectl get pvc -o name -l type=${label}); do
+    [[ $fail -eq 1 ]] && kubectl describe $p
+    kubectl delete $p
+  done
+
 }
 
 function wait_for_ssh() {
-    local tries=100
-    while ((tries > 0)); do
-	if minikube ssh echo connected &>/dev/null; then
-	    return 0
-	fi
-	tries=$((tries - 1))
-	sleep 0.1
-    done
-    echo ERROR: ssh did not come up >&2
-    exit 1
+  local tries=100
+  while ((tries > 0)); do
+    if minikube ssh echo connected &>/dev/null; then
+      return 0
+    fi
+    tries=$((tries - 1))
+    sleep 0.1
+  done
+  echo ERROR: ssh did not come up >&2
+  exit 1
 }
 
 function copy_image_to_cluster() {
-    local build_image=$1
-    local final_image=$2
-    if [ -z "$(docker images -q "${build_image}")" ]; then
-	docker pull "${build_image}"
-    fi
-    if [[ "${VM_DRIVER}" == "none" ]]; then
-	docker tag "${build_image}" "${final_image}"
-	return
-    fi
-    docker save "${build_image}" | \
-	(eval "$(minikube docker-env --shell bash)" && \
-	     docker load && docker tag "${build_image}" "${final_image}")
+  local build_image=$1
+  local final_image=$2
+  if [ -z "$(docker images -q "${build_image}")" ]; then
+    docker pull "${build_image}"
+  fi
+  if [[ "${VM_DRIVER}" == "none" ]]; then
+    docker tag "${build_image}" "${final_image}"
+    return
+  fi
+  docker save "${build_image}" |
+    (eval "$(minikube docker-env --shell bash)" &&
+      docker load && docker tag "${build_image}" "${final_image}")
 }
 
 # install minikube
 function install_minikube() {
-    if type minikube >/dev/null 2>&1; then
-	local version
-	version=$(minikube version)
-	read -ra version <<<"${version}"
-	version=${version[2]}
-	if [[ "${version}" != "${MINIKUBE_VERSION}" ]]; then
-	    echo "installed minikube version ${version} is not matching requested version ${MINIKUBE_VERSION}"
-	    #exit 1
-	fi
-	echo "minikube already installed with ${version}"
-	return 0
+  if type minikube >/dev/null 2>&1; then
+    local version
+    version=$(minikube version)
+    read -ra version <<<"${version}"
+    version=${version[2]}
+    if [[ "${version}" != "${MINIKUBE_VERSION}" ]]; then
+      echo "installed minikube version ${version} is not matching requested version ${MINIKUBE_VERSION}"
+      #exit 1
     fi
+    echo "minikube already installed with ${version}"
+    return 0
+  fi
 
-    echo "Installing minikube. Version: ${MINIKUBE_VERSION}"
-    curl -Lo minikube https://storage.googleapis.com/minikube/releases/"${MINIKUBE_VERSION}"/minikube-linux-${ARCH} && chmod +x minikube && mv minikube /usr/local/bin/
+  echo "Installing minikube. Version: ${MINIKUBE_VERSION}"
+  curl -Lo minikube https://storage.googleapis.com/minikube/releases/"${MINIKUBE_VERSION}"/minikube-linux-${ARCH} && chmod +x minikube && mv minikube /usr/local/bin/
 }
 
 function install_kubectl() {
-    if type kubectl >/dev/null 2>&1; then
-	local version
-	version=$(kubectl version --client | grep "${KUBE_VERSION}")
-	if [[ "x${version}" != "x" ]]; then
-	    echo "kubectl already installed with ${KUBE_VERSION}"
-	    return 0
-	fi
-	echo "installed kubectl version ${version} is not matching requested version ${KUBE_VERSION}"
-	#exit 1
+  if type kubectl >/dev/null 2>&1; then
+    local version
+    version=$(kubectl version --client | grep "${KUBE_VERSION}")
+    if [[ "x${version}" != "x" ]]; then
+      echo "kubectl already installed with ${KUBE_VERSION}"
+      return 0
     fi
-    # Download kubectl, which is a requirement for using minikube.
-    echo "Installing kubectl. Version: ${KUBE_VERSION}"
-    curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/"${KUBE_VERSION}"/bin/linux/${ARCH}/kubectl && chmod +x kubectl && mv kubectl /usr/local/bin/
+    echo "installed kubectl version ${version} is not matching requested version ${KUBE_VERSION}"
+    # exit 1
+  fi
+  # Download kubectl, which is a requirement for using minikube.
+  echo "Installing kubectl. Version: ${KUBE_VERSION}"
+  curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/"${KUBE_VERSION}"/bin/linux/${ARCH}/kubectl && chmod +x kubectl && mv kubectl /usr/local/bin/
 }
 
-function run_io(){
+function run_io() {
 
   # Deploy io-app deployment with 2 replicas
   kubectl apply -f tests/test-io/io-app.yaml
 
   # Compressed image is ~25MB and so it shouldn't take much time to reach ready state
-  kubectl wait --for=condition=ready pod -l app=io-app --timeout=45s || fail=1
+  kubectl wait --for=condition=ready pod -l app=io-app --timeout=60s || fail=1
   if [ $fail == 1 ]; then
-      return 0
+    return 0
   fi
 
   # Store pod names
@@ -184,7 +217,143 @@ function run_io(){
   echo Validate checksum between first and second pod [Empty for checksum match]
   diff <(echo "$first_sum") <(echo "$second_sum") || fail=1
 
-  return 0
+  check_test_fail
+}
+
+function run_sanity() {
+
+  # Deploy and run CSI Sanity tests
+  kubectl apply -f tests/test-csi/sanity-app.yaml
+  kubectl wait --for=condition=ready pod -l app=sanity-app --timeout=15s
+
+  exp_pass=33
+
+  # Set expand vol size to 10MB
+  kubectl exec sanity-app -i -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination -csi.testvolumesize 10485760 -csi.testvolumeexpandsize 10485760' | tee /tmp/sanity-result.txt
+
+  # Make sure no more failures than above stats
+  act_pass=$(grep -Po '(\d+)(?= Passed)' /tmp/sanity-result.txt 2>/dev/null || echo 0)
+  [ $act_pass -ge $exp_pass ] || fail=1
+  echo Sanity [Pass %]: Expected: $exp_pass and Actual: $act_pass
+
+  check_test_fail
+}
+
+function verify_storage_options() {
+  echo "List of storage-class"
+  kubectl get sc -nkadalu
+  for p in $(kubectl -n kadalu get pods -o name); do
+    if [[ $p == *"nodeplugin"* ]]; then
+      kubectl exec -i -nkadalu $p -c 'kadalu-nodeplugin' -- bash -c 'grep -e "data-self-heal off" -e "nl-cache off" /kadalu/volfiles/* | cat'
+    fi
+  done
+}
+
+function display_metrics() {
+
+  echo "Displaying Kadalu metrics"
+  kubectl exec -i -nkadalu deploy/operator -- python -c 'import requests; import json; print(json.dumps(requests.get("http://localhost:8050/metrics.json").json(), indent=2))'
+
+  echo "Displaying Kadalu Prometheus metrics"
+  kubectl exec -i -nkadalu deploy/operator -- python -c 'import requests; print(requests.get("http://localhost:8050/metrics").text)'
+
+}
+
+function validate_helm() {
+
+  if [[ ! "$COMMIT_MSG" =~ 'helm skip' ]]; then
+
+    # As per https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
+    # `helm` is already part of github runner
+    for distro in kubernetes rke microk8s openshift; do
+      if [ "$distro" != "kubernetes" ]; then
+        export operator="kadalu-operator-$distro"
+        export nodeplugin="csi-nodeplugin-$distro"
+      else
+        export operator="kadalu-operator"
+        export nodeplugin="csi-nodeplugin"
+      fi
+      export verbose="yes" dist=$distro
+      echo Validating helm template for "'$distro'" against "'$operator'" [Empty for no diff]
+      echo
+
+      # Helm templates will not have 'kind: Namespace' so need to skip first 6 lines from operator manifest
+      if [ "$distro" == "openshift" ]; then
+        # Helm follows a specific order while installing/uninstalling (https://github.com/helm/helm/blob/release-3.0/pkg/releaseutil/kind_sorter.go#L27)
+        # resources and it doesn't contain OpenShift 'SecurityContextConstraints' kind, so need to sort lines before 'diff'
+        diff <(helm template --namespace kadalu helm/kadalu --set operator.enabled=true --set-string operator.kubernetesDistro=$distro,operator.verbose=$verbose | grep -v '#' | sort) \
+          <(grep -v '#' manifests/"$operator.yaml" | tail -n +6 | sed '/^kind: CustomResourceDefinition/,/^spec:/{/namespace/d}' | sort) --ignore-blank-lines
+      else
+        diff <(helm template --namespace kadalu helm/kadalu --set operator.enabled=true --set-string operator.kubernetesDistro=$distro,operator.verbose=$verbose | grep -v '#') \
+          <(grep -v '#' manifests/"$operator.yaml" | tail -n +6 | sed '/^kind: CustomResourceDefinition/,/^spec:/{/namespace/d}') --ignore-blank-lines
+      fi
+
+      echo Validating helm template for "'$distro'" against "'$nodeplugin'" [Empty for no diff]
+      echo
+      diff <(helm template --namespace kadalu helm/kadalu --set csi-nodeplugin.enabled=true --set-string csi-nodeplugin.kubernetesDistro=$distro,csi-nodeplugin.verbose=$verbose | grep -v '#') \
+        <(grep -v '#' manifests/"$nodeplugin.yaml") --ignore-blank-lines
+    done
+    unset operator nodeplugin verbose dist
+
+  fi
+}
+
+function deploy_kadalu_resources() {
+  echo "Deploying kadalu operator and csi driver"
+
+  # pick the operator file from repo
+  sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator.yaml
+  kubectl apply -f manifests/kadalu-operator.yaml
+  kubectl apply -f manifests/csi-nodeplugin.yaml
+
+  sleep 1
+  # Start storage
+  output=$(kubectl get nodes -o=name)
+  # output will be in format 'node/hostname'. We need 'hostname'
+  HOSTNAME=$(basename $output)
+  echo "Hostname is ${HOSTNAME}"
+  cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
+  sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
+  sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
+
+  # Prepare PVC also as a storage
+  sed -i -e "s/DISK/${DISK}/g" tests/get-minikube-pvc.yaml
+  kubectl apply -f tests/get-minikube-pvc.yaml
+  kubectl apply -f /tmp/kadalu-storage.yaml
+
+}
+
+function deploy_app_pods() {
+
+  # type: Replica3
+  get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 6 180
+  check_test_fail
+
+  # type: Replica1
+  get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 4 120
+  check_test_fail
+
+  # type: Disperse
+  get_pvc_and_check examples/sample-test-app4.yaml "Disperse" 4 120
+  check_test_fail
+
+  # type: Replica2
+  # get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 4 120
+
+  # type: External-non-native
+  # get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 60
+
+  # type: External-native
+  # get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 2 90
+
+}
+
+function modify_pool() {
+  cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
+  sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
+  sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
+  sed -i -e "s/dir3.2/dir3.2_modified/g" /tmp/kadalu-storage.yaml
+  kubectl apply -f /tmp/kadalu-storage.yaml
 }
 
 # configure minikube
@@ -193,27 +362,27 @@ KUBE_VERSION=${KUBE_VERSION:-"v1.20.0"}
 COMMIT_MSG=${COMMIT_MSG:-""}
 MEMORY=${MEMORY:-"3000"}
 VM_DRIVER=${VM_DRIVER:-"none"}
-#configure image repo
+# configure image repo
 KADALU_IMAGE_REPO=${KADALU_IMAGE_REPO:-"docker.io/kadalu"}
 K8S_IMAGE_REPO=${K8S_IMAGE_REPO:-"quay.io/k8scsi"}
 
-#feature-gates for kube
+# feature-gates for kube
 K8S_FEATURE_GATES=${K8S_FEATURE_GATES:-"BlockVolume=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true,CSIDriverRegistry=true"}
 
 DISK="sda1"
 if [[ "${VM_DRIVER}" == "kvm2" ]]; then
-    # use vda1 instead of sda1 when running with the libvirt driver
-    DISK="vda1"
+  # use vda1 instead of sda1 when running with the libvirt driver
+  DISK="vda1"
 fi
 
 case "${1:-}" in
-up)
+  up)
     echo "here"
     install_minikube || echo "failure"
-    #if driver  is 'none' install kubectl with KUBE_VERSION
+    # if driver  is 'none' install kubectl with KUBE_VERSION
     if [[ "${VM_DRIVER}" == "none" ]]; then
-	mkdir -p "$HOME"/.kube "$HOME"/.minikube
-	install_kubectl || echo "failure to install kubectl"
+      mkdir -p "$HOME"/.kube "$HOME"/.minikube
+      install_kubectl || echo "failure to install kubectl"
     fi
 
     echo "starting minikube with kubeadm bootstrapper"
@@ -221,197 +390,93 @@ up)
 
     # environment
     if [[ "${VM_DRIVER}" != "none" ]]; then
-	wait_for_ssh
-	# shellcheck disable=SC2086
-	minikube ssh "sudo mkdir -p /mnt/${DISK};sudo rm -rf /mnt/${DISK}/*; sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9}; sudo mkdir -p /mnt/${DISK}/{dir3.2,dir3.2_modified,pvc}"
+      wait_for_ssh
+      # shellcheck disable=SC2086
+      minikube ssh "sudo mkdir -p /mnt/${DISK};sudo rm -rf /mnt/${DISK}/*; sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9}; sudo mkdir -p /mnt/${DISK}/{dir3.2,dir3.2_modified,pvc}"
     else
-	sudo mkdir -p /mnt/${DISK}
-  sudo rm -rf /mnt/${DISK}/*
-	sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9}
-	sudo mkdir -p /mnt/${DISK}/dir3.2
-	sudo mkdir -p /mnt/${DISK}/dir3.2_modified
-	sudo mkdir -p /mnt/${DISK}/pvc
+      sudo mkdir -p /mnt/${DISK}
+      sudo rm -rf /mnt/${DISK}/*
+      sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9}
+      sudo mkdir -p /mnt/${DISK}/dir3.2
+      sudo mkdir -p /mnt/${DISK}/dir3.2_modified
+      sudo mkdir -p /mnt/${DISK}/pvc
     fi
 
     # Dump Cluster Info
     kubectl cluster-info
     ;;
-down)
+  down)
     minikube stop
     ;;
-copy-image)
+  copy-image)
     echo "copying the kadalu-operator image"
     copy_image_to_cluster kadalu/kadalu-operator:${KADALU_VERSION} "${KADALU_IMAGE_REPO}"/kadalu-operator:${KADALU_VERSION}
     ;;
-ssh)
+  ssh)
     echo "connecting to minikube"
     minikube ssh
     ;;
 
-kadalu_operator)
+  kadalu_operator)
+
+    # list docker images
     docker images
 
-    if [[ ! "$COMMIT_MSG" =~ 'helm skip' ]]; then
+    # validates helm templates against jinja generated manifests
+    validate_helm
 
-        # As per https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu2004-README.md
-        # `helm` is already part of github runner
-        for distro in kubernetes rke microk8s openshift
-        do
-            if [ "$distro" != "kubernetes" ]; then
-                export operator="kadalu-operator-$distro"
-                export nodeplugin="csi-nodeplugin-$distro"
-            else
-                export operator="kadalu-operator"
-                export nodeplugin="csi-nodeplugin"
-            fi
-            export verbose="yes" dist=$distro
-            echo Validating helm template for "'$distro'" against "'$operator'" [Empty for no diff]
-            echo
+    # deploys kadalu operator, csi driver and storage pools
+    deploy_kadalu_resources
 
-            # Helm templates will not have 'kind: Namespace' so need to skip first 6 lines from operator manifest
-            if [ "$distro" == "openshift" ]; then
-                # Helm follows a specific order while installing/uninstalling (https://github.com/helm/helm/blob/release-3.0/pkg/releaseutil/kind_sorter.go#L27)
-                # resources and it doesn't contain OpenShift 'SecurityContextConstraints' kind, so need to sort lines before 'diff'
-                diff <(helm template --namespace kadalu helm/kadalu --set operator.enabled=true --set-string operator.kubernetesDistro=$distro,operator.verbose=$verbose | grep -v '#' | sort) \
-                    <(grep -v '#' manifests/"$operator.yaml" | tail -n +6 | sed '/^kind: CustomResourceDefinition/,/^spec:/{/namespace/d}' | sort ) --ignore-blank-lines
-            else
-                diff <(helm template --namespace kadalu helm/kadalu --set operator.enabled=true --set-string operator.kubernetesDistro=$distro,operator.verbose=$verbose | grep -v '#') \
-                    <(grep -v '#' manifests/"$operator.yaml" | tail -n +6 | sed '/^kind: CustomResourceDefinition/,/^spec:/{/namespace/d}' ) --ignore-blank-lines
-            fi
+    # validates all kadalu resource pods are up or not
+    wait_for_kadalu_pods
 
-            echo Validating helm template for "'$distro'" against "'$nodeplugin'" [Empty for no diff]
-            echo
-            diff <(helm template --namespace kadalu helm/kadalu --set csi-nodeplugin.enabled=true --set-string csi-nodeplugin.kubernetesDistro=$distro,csi-nodeplugin.verbose=$verbose | grep -v '#') \
-                <(grep -v '#' manifests/"$nodeplugin.yaml") --ignore-blank-lines
-        done
-        unset operator nodeplugin verbose dist
-
-    fi
-
-    echo "Starting the kadalu Operator"
-
-    # pick the operator file from repo
-    sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator.yaml
-    kubectl apply -f manifests/kadalu-operator.yaml
-    kubectl apply -f manifests/csi-nodeplugin.yaml
-
-    sleep 1
-    # Start storage
-    output=$(kubectl get nodes -o=name)
-    # output will be in format 'node/hostname'. We need 'hostname'
-    HOSTNAME=$(basename $output)
-    echo "Hostname is ${HOSTNAME}"
-    cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
-    sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
-    sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
-
-    # Prepare PVC also as a storage
-    sed -i -e "s/DISK/${DISK}/g" tests/get-minikube-pvc.yaml
-    kubectl apply -f tests/get-minikube-pvc.yaml
-
-    # Generally it needs some time for operator to get started, give it time, so some logs are reduced in tests
-    sleep 15;
-    kubectl apply -f /tmp/kadalu-storage.yaml
-
-    wait_till_pods_start
     ;;
 
-test_kadalu)
-    date
+  test_kadalu)
 
-    get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 6 180
+    # deploy and validate app pods on storage pools created as part of 'kadalu_operator' case
+    deploy_app_pods
 
-    get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 4 120
+    # modifies existing storage pool to check for changes in kadalu resources
+    modify_pool
 
-    get_pvc_and_check examples/sample-test-app4.yaml "Disperse" 4 120
-
-    #get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 60
-
-    #get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 2 90
-
-    cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
-    sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
-    sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
-    sed -i -e "s/dir3.2/dir3.2_modified/g" /tmp/kadalu-storage.yaml
-    kubectl apply -f /tmp/kadalu-storage.yaml
-
-    sleep 5;
-    echo "After modification"
-    # Observing intermittent failures due to timeout after modification with a
-    # difference of ~2 min
-    wait_till_pods_start 400
-
-    #get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 4 120
+    # validates all kadalu resource pods are up or not after modifying pools
+    wait_for_kadalu_pods 400
 
     # Run minimal IO test
     run_io
 
-    # Deploy and run CSI Sanity tests
-    kubectl apply -f tests/test-csi/sanity-app.yaml
-    kubectl wait --for=condition=ready pod -l app=sanity-app --timeout=15s
-
-    exp_pass=33
-
-    # Set expand vol size to 10MB
-    kubectl exec sanity-app -i -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination -csi.testvolumesize 10485760 -csi.testvolumeexpandsize 10485760' | tee /tmp/sanity-result.txt
-
-    # Make sure no more failures than above stats
-    act_pass=$(grep -Po '(\d+)(?= Passed)' /tmp/sanity-result.txt 2>/dev/null || echo 0)
-    [ $act_pass -ge $exp_pass ] || fail=1
-    echo Sanity [Pass %]: Expected: $exp_pass and Actual: $act_pass
-
-    # Unless there is a failure or COMMIT_MSG contains 'full log' just log last 100 lines
-    lines=100
-    if [[ $fail -eq 1 || $COMMIT_MSG =~ 'full log' ]]; then
-        lines=1000
-    fi
-    for p in $(kubectl -n kadalu get pods -o name); do
-      echo "====================== Start $p ======================"
-      kubectl logs -nkadalu --all-containers=true --tail=$lines $p
-      echo "======================= End $p ======================="
-    done
+    # Run CSI Sanity tests
+    run_sanity
 
     # Test Storage-Options
-    echo "List of storage-class"
-    kubectl get sc -nkadalu
-    for p in $(kubectl -n kadalu get pods -o name); do
-        if [[ $p == *"nodeplugin"* ]]; then
-            kubectl exec -i -nkadalu $p -c 'kadalu-nodeplugin' -- bash -c 'grep -e "data-self-heal off" -e "nl-cache off" /kadalu/volfiles/* | cat'
-        fi
-    done
-
-    date
+    # verify_storage_options
 
     # Display metrics output
-    echo "Displaying Kadalu metrics"
-    kubectl exec -i -nkadalu deploy/operator -- python -c 'import requests; import json; print(json.dumps(requests.get("http://localhost:8050/metrics.json").json(), indent=2))'
+    display_metrics
 
-    echo "Displaying Kadalu Prometheus metrics"
-    kubectl exec -i -nkadalu deploy/operator -- python -c 'import requests; print(requests.get("http://localhost:8050/metrics").text)'
+    # check for test failure
+    check_test_fail
 
-    # Return failure if fail variable is set to 1
-    if [ $fail -eq 1 ]; then
-	echo "Marking the test as 'FAIL'"
-	exit 1
-    else
-	echo "Tests SUCCESSFUL"
-    fi
+    # log required containers logs to stdout
+    _log_msgs
 
     ;;
 
-cli_tests)
+  cli_tests)
     output=$(kubectl get nodes -o=name)
     # output will be in format 'node/hostname'. We need 'hostname'
     HOSTNAME=$(basename $output)
     echo "Hostname is ${HOSTNAME}"
     bash tests/kubectl_kadalu_tests.sh "$DISK" "${HOSTNAME}"
-    wait_till_pods_start
+    wait_for_kadalu_pods
     ;;
 
-clean)
+  clean)
     minikube delete
     ;;
-*)
+  *)
     echo " $0 [command]
 Available Commands:
   up               Starts a local kubernetes cluster and prepare disks for gluster
