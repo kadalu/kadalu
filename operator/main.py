@@ -35,7 +35,7 @@ STORAGE_CLASS_NAME_PREFIX = "kadalu."
 # TODO: Add ThinArbiter
 VALID_HOSTING_VOLUME_TYPES = ["Replica1", "Replica2", "Replica3",
                               "Disperse", "External"]
-VALID_PV_RECLAIM_POLICY_TYPES = ["delete", "archive"]
+VALID_PV_RECLAIM_POLICY_TYPES = ["delete", "archive", "retain"]
 VOLUME_TYPE_REPLICA_1 = "Replica1"
 VOLUME_TYPE_REPLICA_2 = "Replica2"
 VOLUME_TYPE_REPLICA_3 = "Replica3"

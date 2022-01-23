@@ -652,6 +652,15 @@ def delete_volume(volname):
 
     volpath = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath)
 
+    # Stop the delete operation if the reclaim policy is set to "retain"
+    if pv_reclaim_policy == "retain":
+        logging.info(logf(
+            "'retain' reclaim policy, volume not deleted",
+            volpath=volpath,
+            voltype=vol.voltype
+        ))
+        return True
+
     if pv_reclaim_policy == "archive":
 
         old_volname = vol.volname
