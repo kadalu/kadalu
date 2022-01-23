@@ -824,6 +824,10 @@ def volume_list(voltype=None):
 def mount_volume(pvpath, mountpoint, pvtype, fstype=None):
     """Mount a Volume"""
 
+    # Create subvol dir if PV is manually created
+    if not os.path.exists(pvpath):
+        makedirs(pvpath)
+
     # TODO: Will losetup survive container reboot?
     if pvtype == PV_TYPE_RAWBLOCK:
         # losetup of truncated file
@@ -922,17 +926,17 @@ def generate_client_volfile(volname):
             data["disperse_redundancy"] = data["disperse"]["redundancy"]
 
         data["subvol_bricks_count"] = count
-        for i in range(0, int(len(data["bricks"]) / count)):
+        for i in range(0, int(len(data.get("bricks", [])) / count)):
             brick_name = "%s-%s-%d" % (
                 data["volname"],
                 "disperse" if data["type"] == "Disperse" else "replica",
                 i
             )
             data["dht_subvol"].append(brick_name)
-            if data["bricks"][(i * count)].get("decommissioned", "") != "":
+            if data.get("bricks", [])[(i * count)].get("decommissioned", "") != "":
                 decommissioned.append(brick_name)
 
-    data['decommissioned'] = "" if decommissioned == [] else ",".join(decommissioned)
+    data["decommissioned"] = "" if decommissioned == [] else ",".join(decommissioned)
     template_file_path = os.path.join(
         TEMPLATES_DIR,
         "%s.client.vol.j2" % data["type"]
@@ -1124,6 +1128,54 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
     else:
         volname = volume["name"]
 
+    if volume['type'] == 'External':
+        # Try to mount the Host Volume, handle failure if
+        # already mounted
+        with mount_lock:
+            mount_glusterfs_with_host(volname,
+                                      mountpoint,
+                                      volume['g_host'],
+                                      volume['g_options'],
+                                      is_client)
+        use_gluster_quota = False
+        if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
+            and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
+            use_gluster_quota = True
+        secret_private_key = "/etc/secret-volume/ssh-privatekey"
+        secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
+
+        # SSH into only first reachable host in volume['g_host'] entry
+        g_host = reachable_host(volume['g_host'])
+
+        if g_host is None:
+            logging.error(logf("All hosts are not reachable"))
+            return
+
+        if use_gluster_quota is False:
+            logging.debug(logf("Do not set quota-deem-statfs"))
+        else:
+            logging.debug(logf("Set quota-deem-statfs for gluster directory Quota"))
+            quota_deem_cmd = [
+                "ssh",
+                "-oStrictHostKeyChecking=no",
+                "-i",
+                "%s" % secret_private_key,
+                "%s@%s" % (secret_username, g_host),
+                "sudo",
+                "gluster",
+                "volume",
+                "set",
+                "%s" % volume['g_volname'],
+                "quota-deem-statfs",
+                "on"
+            ]
+            try:
+                execute(*quota_deem_cmd)
+            except CommandException as err:
+                errmsg = "Unable to set quota-deem-statfs via ssh"
+                logging.error(logf(errmsg, error=err))
+                raise err
+        return mountpoint
 
     generate_client_volfile(volname)
     client_volfile_path = os.path.join(
@@ -1176,55 +1228,6 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
 
     if not os.path.exists(mountpoint):
         makedirs(mountpoint)
-
-    if volume['type'] == 'External':
-        # Try to mount the Host Volume, handle failure if
-        # already mounted
-        with mount_lock:
-            mount_glusterfs_with_host(volname,
-                                      mountpoint,
-                                      volume['g_host'],
-                                      volume['g_options'],
-                                      is_client)
-        use_gluster_quota = False
-        if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
-            and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
-            use_gluster_quota = True
-        secret_private_key = "/etc/secret-volume/ssh-privatekey"
-        secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
-
-        # SSH into only first reachable host in volume['g_host'] entry
-        g_host = reachable_host(volume['g_host'])
-
-        if g_host is None:
-            logging.error(logf("All hosts are not reachable"))
-            return
-
-        if use_gluster_quota is False:
-            logging.debug(logf("Do not set quota-deem-statfs"))
-        else:
-            logging.debug(logf("Set quota-deem-statfs for gluster directory Quota"))
-            quota_deem_cmd = [
-                "ssh",
-                "-oStrictHostKeyChecking=no",
-                "-i",
-                "%s" % secret_private_key,
-                "%s@%s" % (secret_username, g_host),
-                "sudo",
-                "gluster",
-                "volume",
-                "set",
-                "%s" % volume['g_volname'],
-                "quota-deem-statfs",
-                "on"
-            ]
-            try:
-                execute(*quota_deem_cmd)
-            except CommandException as err:
-                errmsg = "Unable to set quota-deem-statfs via ssh"
-                logging.error(logf(errmsg, error=err))
-                raise err
-        return
 
     with mount_lock:
         # Fix the log, so we can check it out later
@@ -1294,8 +1297,6 @@ def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None, is_clien
         for option in options.split(","):
             g_ops.append(f"--{option}")
 
-    cmd.append(mountpoint)
-
     logging.debug(logf(
         "glusterfs command",
         cmd=cmd,
@@ -1358,11 +1359,9 @@ def check_external_volume(pv_request, host_volumes):
         logging.warning("No host volume found to provide PV")
         return None
 
-    mount_glusterfs_with_host(hvol['g_volname'], mntdir, hvol['g_host'], hvol['g_options'])
+    mountpoint = mount_glusterfs(hvol, mntdir)
 
-    time.sleep(0.37)
-
-    if not is_gluster_mount_proc_running(hvol['g_volname'], mntdir):
+    if not mountpoint:
         logging.debug(logf(
             "Mount failed",
             hvol=hvol,

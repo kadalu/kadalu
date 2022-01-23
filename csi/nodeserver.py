@@ -7,8 +7,7 @@ import time
 import csi_pb2
 import csi_pb2_grpc
 import grpc
-from volumeutils import (mount_glusterfs, mount_glusterfs_with_host,
-                         mount_volume, unmount_volume)
+from volumeutils import (mount_glusterfs, mount_volume, unmount_volume)
 
 from kadalulib import logf
 
@@ -81,20 +80,6 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             storage_options=storage_options
         ))
 
-        if voltype == "External":
-            # If no separate PV Path, use the whole volume as PV
-            if pvpath == "":
-                mount_glusterfs_with_host(gvolname, request.target_path, gserver, options, True)
-
-                logging.debug(logf(
-                    "Mounted Volume for PV",
-                    volume=request.volume_id,
-                    mntdir=request.target_path,
-                    pvpath=gserver,
-                    options=options
-                ))
-                return csi_pb2.NodePublishVolumeResponse()
-
         volume = {
             'name': hostvol,
             'g_volname': gvolname,
@@ -104,6 +89,15 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         }
 
         mountpoint = mount_glusterfs(volume, mntdir, storage_options, True)
+
+        if voltype == "External":
+            logging.debug(logf(
+                "Mounted Volume for PV",
+                volume=volume,
+                mntdir=mntdir,
+                storage_options=storage_options
+            ))
+            # return csi_pb2.NodePublishVolumeResponse()
 
         # When 'storage_options' is configured mountpoint & volfile path change,
         # Update pvpath_full accordingly.
