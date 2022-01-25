@@ -6,6 +6,7 @@ import sys
 import json
 import shutil
 import utils
+import os
 
 # noqa # pylint: disable=too-many-instance-attributes
 # noqa # pylint: disable=useless-object-inheritance
@@ -42,6 +43,7 @@ def get_configmap_data(args):
     """
 
     cmd = utils.kubectl_cmd(args) + ["get", "configmap", "kadalu-info", "-nkadalu", "-ojson"]
+    print("hello1 ", cmd)
 
     try:
         resp = utils.execute(cmd)
@@ -66,7 +68,13 @@ def get_configmap_data(args):
 
 def get_archived_pvname(args):
 
-    cmd = "ls - R /mnt/%s | grep '^pvc_.*\.json'" % args.name
+
+    cmd = utils.kubectl_cmd(args) + [
+         "exec", "kadalu-csi-provisioner-0", "-c", "kadalu-provisioner", "-nkadalu", "--", "bash",
+         "-c", "ls -R /mnt/%s | grep '^pvc.*\.json'" %(args.name)
+    ]
+
+    print("hello", cmd)
 
     try:
         resp = utils.execute(cmd)
@@ -86,17 +94,25 @@ def get_archived_pvname(args):
         return None
 
 
-def get_full_pv_path(storage_name, archived_pvs):
+def get_full_pv_path(args, archived_pvs):
 
     archived_pv_full_path = {}
     for archived_pv in archived_pvs:
 
-        cmd = "ls - R /mnt/%s | grep '^\./subvol.*pvc'" % (storaga_pool_name, archived_pv)
+
+        cmd = utils.kubectl_cmd(args) + [
+            "exec", "kadalu-csi-provisioner-0", "-c", "kadalu-provisioner", "-nkadalu", "--", "bash",
+            "-c", "ls -R /mnt/%s | grep '^\/mnt.*%s'" % (args.name, archived_pv.rstrip(".json"))
+        ]
+        print(archived_pv)
+        print(cmd)
 
         try:
             resp = utils.execute(cmd)
             print(resp.stdout)
-            archived_pv_full_path[archived_pv] = resp.stdout.strip().split("\n")
+            archived_pv_full_path[archived_pv] = str(resp.stdout.strip().split("\n")[0]).rstrip(":")
+            print("123", archived_pv_full_path)
+            return archived_pv_full_path
 
         except utils.CommandError as err:
             print("Failed to get archived_pv full path of the "
@@ -104,8 +120,11 @@ def get_full_pv_path(storage_name, archived_pvs):
                     file=sys.stderr)
             print(err, file=sys.stderr)
             print()
+            return None
+
         except FileNotFoundError:
             utils.kubectl_cmd_help(args.kubectl_cmd)
+            return None
 
 
 def update_pvstats(args, archived_pvs):
@@ -114,21 +133,21 @@ def update_pvstats(args, archived_pvs):
 
     for archived_pv in archived_pvs:
 
-        archived_pv.rstrip(".json")
-
-        query = ("DELETE from pv_stats WHERE pvname = '%s'" % archived_pv)
+        query = ("DELETE from pv_stats WHERE pvname = '%s'" % archived_pv.rstrip(".json"))
 
         cmd = utils.kubectl_cmd(args) + [
             "exec", "-it",
             "kadalu-csi-provisioner-0",
-            "-c kadalu-provisioner",
+            "-c", "kadalu-provisioner",
             "-nkadalu", "--", "sqlite3",
             dbpath,
             query
         ]
+        print(cmd)
 
         try:
             resp = utils.execute(cmd)
+            print(resp.stdout)
 
         except utils.CommandError as err:
             print("Failed to update pv_stats of the "
@@ -142,35 +161,83 @@ def update_pvstats(args, archived_pvs):
 
 def delete_archived_pv(args, archived_pv_full_path):
 
-    for key, value in archived_pv_full_path:
 
-        parent_dir = os.path.dir(value.lstrip("./"))
-        # Remove info file dir
+    # archived_pv_full_path = {}
+    # archived_pv_full_path["pvc"] = "/mnt/storage-pool-1/subvol/8c/b7/pvc-be602914-06bb-4775-900e-856b6f986468"
+    # print(archived_pv_full_path.keys())
+    for full_pvc_path in archived_pv_full_path.values():
+
+        path_prefix = full_pvc_path.replace("/mnt/%s/" % args.name, "")
+
+        # Remove archived info file dir
+        cmd = utils.kubectl_cmd(args) + [
+            "exec", "-it",
+            "kadalu-csi-provisioner-0",
+            "-c", "kadalu-provisioner",
+            "-nkadalu", "--", "python",
+            "-c",
+            "import shutil; shutil.rmtree('/mnt/%s/info/%s')" %(args.name, os.path.dirname(path_prefix+".json"))
+        ]
+        print(cmd)
+
         try:
-            shutil.rmtree("/mnt/%s/info/%s" %(args.name, parent_dir))
+            resp = utils.execute(cmd)
+            print(resp.stdout)
         except OSError as err:
             print("Failed to delete archived info file of the "
                     "storage \"%s\"" % args.name,
                     file=sys.stderr)
             print(err, file=sys.stderr)
             print()
+        except utils.CommandError as err:
+            print(err, file=sys.stderr)
+            print()
+        except FileNotFoundError:
+            utils.kubectl_cmd_help(args.kubectl_cmd)
 
-        # Remove PVC
+        # Remove the archived PVC
+        cmd = utils.kubectl_cmd(args) + [
+            "exec", "-it",
+            "kadalu-csi-provisioner-0",
+            "-c", "kadalu-provisioner",
+            "-nkadalu", "--", "python",
+            "-c",
+            "import shutil; shutil.rmtree('%s')" %(os.path.dirname(full_pvc_path))
+        ]
+        print(cmd)
+
         try:
-            shutil.rmtree("/mnt/%s/%s" %(args.name, parent_dir))
+            resp = utils.execute(cmd)
+            print(resp.stdout)
         except OSError as err:
             print("Failed to delete archived PVC of the "
                     "storage \"%s\"" % args.name,
                     file=sys.stderr)
             print(err, file=sys.stderr)
             print()
+        except utils.CommandError as err:
+            print(err, file=sys.stderr)
+            print()
+        except FileNotFoundError:
+            utils.kubectl_cmd_help(args.kubectl_cmd)
 
 
 def run(args):
-    """Shows List of Storages"""
+    """Run Delete Archived PVCs"""
 
     try:
+        print("hello3", args)
         archived_pvs = get_archived_pvname(args)
+
+        if archived_pvs is None:
+            print("No archived PVCs found to delete")
+            return
+
+        archived_pv_full_path = get_full_pv_path(args, archived_pvs)
+
+        print(archived_pv_full_path)
+        update_pvstats(args, archived_pvs)
+        delete_archived_pv(args, archived_pv_full_path)
 
     except utils.CommandError as err:
         utils.command_error(cmd, err.stderr)
