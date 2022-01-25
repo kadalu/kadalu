@@ -18,6 +18,7 @@ SUPPORTED_ARGS = [
     "storage-add",
     "storage-list",
     "storage-remove",
+    "remove-archived-pv",
     "logs",
     "healinfo"
 ]
