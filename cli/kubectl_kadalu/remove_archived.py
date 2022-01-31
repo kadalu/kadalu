@@ -1,5 +1,5 @@
 """
-'remove-archived-pv' subcommand for kubectl-kadalu CLI tool
+'storage-list' subcommand for kubectl-kadalu CLI tool
 """
 from __future__ import print_function
 import sys
