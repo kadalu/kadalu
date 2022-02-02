@@ -274,6 +274,18 @@ class SizeAccounting:
         self.cursor.execute(query, (pvname, size, pv_hash, pvname))
         self.conn.commit()
 
+    def update_pv_name(self, pvname, old_pvname):
+        """ Update name of PV after it has been archived """
+
+        query = """
+        UPDATE pv_stats
+        SET pvname = ?, hash = ?
+        WHERE pvname = ?
+        """
+        pv_hash = get_volname_hash(pvname)
+        self.cursor.execute(query, (pvname, pv_hash, old_pvname))
+        self.conn.commit()
+
     def remove_pv_record(self, pvname):
         """Remove PV related entry when PV is deleted"""
 

@@ -219,6 +219,20 @@ def update_free_size(hostvol, pvname, sizechange):
                 acc.update_pv_record(pvname, -sizechange)
 
 
+def update_pv_name(hostvol, pvname, old_pvname):
+    """Update the pvname in respective host volume's stats.db file after archival"""
+
+    mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
+
+    # Check for mount availability before updating the free size
+    retry_errors(os.statvfs, [mntdir], [ENOTCONN])
+
+    with statfile_lock:
+        with SizeAccounting(hostvol, mntdir) as acc:
+            # Update pv_name
+            acc.update_pv_name(pvname, old_pvname)
+
+
 def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
     """Mount each hosting volume to find available space"""
     for volume in pv_hosting_volumes:
@@ -670,6 +684,8 @@ def delete_volume(volname):
 
         # Rename directory & files that are to be archived
         try:
+            # Stat.db file
+            update_pv_name(vol.hostvol, vol.volname, old_volname)
 
             # Brick/PVC
             os.rename(
