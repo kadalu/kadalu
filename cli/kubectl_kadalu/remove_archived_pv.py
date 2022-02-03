@@ -72,8 +72,9 @@ def get_configmap_data(args):
 def request_pv_delete(args):
 
     cmd = utils.kubectl_cmd(args) + [
-         "exec", "kadalu-csi-provisioner-0", "-c", "kadalu-provisioner", "-nkadalu", "--", "python3",
-         "-c", "'remove_archived_pv.py %s'" %(args.name)
+         "exec", "kadalu-csi-provisioner-0", "-c", "kadalu-provisioner", "-nkadalu",
+         "--", "python3",
+         "-c", "'/kadalu/remove_archived_pv.py %s'" %(args.name)
     ]
 
     print("hello", cmd)

@@ -10,7 +10,7 @@ def get_names():
     #PVC_NAME = ""
     try:
         if len(sys.argv) > 1:
-            storage_name = sys.argv[1]
+            storage_name = sys.argv[5]
         # if len(sys.argv) >= 3:
         #     PVC_NAME = sys.argv[2]
         print(storage_name)
@@ -55,7 +55,7 @@ def delete_archived_pv(storage_name, archived_pvs):
 
 def main():
     storage_name = get_names()
-    archived_pvs = check_archived_volumes(storage_name)
+    archived_pvs = get_archived_pvs(storage_name)
     if archived_pvs:
         delete_archived_pv(storage_name, archived_pvs)
 
