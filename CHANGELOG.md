@@ -6,6 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.10] - 2022-02-03
+
+- Krew repo auto update issue fixed.
+- Install helper script added. Run single command to install the kubectl kadalu extension.
+- Fixed External Volume mount issues.
+- Updated the troubleshooting guide.
+- Test infra improvements to reduce the test time.
+
 ## [0.8.9] - 2021-12-30
 
 - Kadalu Kubectl extension is submitted to Krew! https://krew.sigs.k8s.io/plugins/
@@ -298,7 +306,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.9...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.10...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
@@ -323,3 +331,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.8.7]: https://github.com/kadalu/kadalu/compare/0.8.6...0.8.7
 [0.8.8]: https://github.com/kadalu/kadalu/compare/0.8.7...0.8.8
 [0.8.9]: https://github.com/kadalu/kadalu/compare/0.8.8...0.8.9
+[0.8.10]: https://github.com/kadalu/kadalu/compare/0.8.9...0.8.10
