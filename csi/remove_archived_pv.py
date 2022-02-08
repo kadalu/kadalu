@@ -1,34 +1,30 @@
 import sys
 import os
 import shutil
+import argparse
 from errno import ENOTCONN
 from volumeutils import HOSTVOL_MOUNTDIR, update_free_size, yield_pvc_from_mntdir
 from kadalulib import retry_errors
 
-def get_names():
-    storage_name = ""
-    #PVC_NAME = ""
-    try:
-        if len(sys.argv) > 1:
-            storage_name = sys.argv[5]
-        # if len(sys.argv) >= 3:
-        #     PVC_NAME = sys.argv[2]
-        print(storage_name)
-        sys.stdout.write("pass \n")
-        return storage_name
-    except IndexError as err:
-        sys.stderr.write("error: Index out of range \n")
-        sys.exit(-1)
 
-
-def get_archived_pvs(storage_name):
+def get_archived_pvs(storage_name, pvc_name):
     archived_pvs = {}
     mntdir = os.path.join(HOSTVOL_MOUNTDIR, storage_name)
-    for pvc in yield_pvc_from_mntdir(mntdir):
-        print(pvc)
-        if pvc is not None and "pvc" in pvc["name"]:
-            archived_pvs[pvc["name"]] = pvc
-            return archived_pvs
+    try:
+        for pvc in yield_pvc_from_mntdir(mntdir):
+            print(pvc)
+
+            if None not in (pvc_name, pvc) and pvc_name == pvc["name"]:
+                archived_pvs[pvc["name"]] = pvc
+                return archived_pvs
+
+            if pvc is not None and "pvc" in pvc["name"]:
+                archived_pvs[pvc["name"]] = pvc
+                return archived_pvs
+    except FileNotFoundError as err:
+        sys.stderr.write("Storage pool %s is not found" % storage_name)
+        return -1
+
     return None
 
 
@@ -54,10 +50,25 @@ def delete_archived_pv(storage_name, archived_pvs):
 
 
 def main():
-    storage_name = get_names()
-    archived_pvs = get_archived_pvs(storage_name)
-    if archived_pvs:
-        delete_archived_pv(storage_name, archived_pvs)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("name", help="name of storage-pool")
+    parser.add_argument("--pvc", help="name of archived pvc belonging to specified storage-pool", default=None)
+
+    args = parser.parse_args()
+    sys.stdout.write(args.name)
+    print(args.name)
+    if args.pvc:
+        print(args.pvc)
+
+    archived_pvs = get_archived_pvs(args.name, args.pvc)
+    if archived_pvs is not (None, -1):
+        sys.stdout.write("Found archived PVCs at storage pool %s" % args.name)
+        delete_archived_pv(args.name, archived_pvs)
+    else:
+        sys.stderr.write("No archived PVCs found at storage-pool %s" % args.name)
+        # Cannot capture -1
+        # return -1
 
 
 if __name__ == "__main__":
