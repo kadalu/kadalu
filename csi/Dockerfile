@@ -46,7 +46,7 @@ COPY lib/startup.sh            /kadalu/
 COPY csi/quota-crawler.sh      /kadalu/
 COPY csi/watch-vol-changes.sh  /kadalu/
 COPY csi/heal-info.sh          /kadalu/
-COPY csi/remove_archived_pv.py /kadalu
+COPY csi/remove_archived_pv.py /kadalu/
 
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/
 COPY templates/Replica2.client.vol.j2 /kadalu/templates/

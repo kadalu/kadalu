@@ -4,9 +4,7 @@
 from __future__ import print_function
 import sys
 import json
-import os
 import utils
-
 
 # noqa # pylint: disable=too-many-instance-attributes
 # noqa # pylint: disable=useless-object-inheritance
@@ -19,6 +17,8 @@ def set_args(name, subparsers):
 
     arg("name", metavar="NAME",
         help="Specify Storage name to delete archived pvc(s)")
+    arg("--pvc", metavar="PVC", default=None,
+        help="name of archived pvc belonging to specified storage-pool")
     utils.add_global_flags(parser)
 
 
@@ -34,7 +34,7 @@ def validate(args):
     if storage_info_data is None:
         print("Aborting.....")
         print("Invalid name. No such storage '%s' in Kadalu configmap." % args.name)
-        sys.exit(1)
+        sys.exit()
 
 
 def get_configmap_data(args):
@@ -45,8 +45,6 @@ def get_configmap_data(args):
     cmd = utils.kubectl_cmd(args) + [
         "get", "configmap", "kadalu-info", "-nkadalu", "-ojson"
     ]
-
-    print("hello1 ", cmd)
 
     try:
         resp = utils.execute(cmd)
@@ -70,22 +68,21 @@ def get_configmap_data(args):
 
 
 def request_pv_delete(args):
+    """ Send PVC delete request to CSI"""
 
     cmd = utils.kubectl_cmd(args) + [
-         "exec", "kadalu-csi-provisioner-0", "-c", "kadalu-provisioner", "-nkadalu",
-         "--", "python3",
-         "-c", "'/kadalu/remove_archived_pv.py %s'" %(args.name)
+         "exec", "-it", "kadalu-csi-provisioner-0", "-c", "kadalu-provisioner", "-nkadalu",
+         "--", "bash",
+         "-c", "cd /kadalu; python3 remove_archived_pv.py %s" %(args.name)
     ]
 
-    print("hello", cmd)
+    if args.pvc:
+        cmd[-1] = cmd[-1] + " --pvc=%s" %(args.pvc)
 
     try:
         resp = utils.execute(cmd)
-        print(
-            "Sent request for deletion of archived PVCs"
-        )
-        print(resp.stderr, resp.stdout, resp.returncode)
-        return resp.returncode
+        print("Sent request for deletion of archived PVCs")
+        return resp
 
     except utils.CommandError as err:
         print("Failed to request deletion of archived pvc of the "
@@ -102,6 +99,8 @@ def request_pv_delete(args):
 def run(args):
     """Run Delete Archived PVCs"""
 
-    returncode = request_pv_delete(args)
-
-
+    resp = request_pv_delete(args)
+    if resp is not None:
+        if resp.stderr:
+            print(resp.stderr)
+        print(resp.stdout)
