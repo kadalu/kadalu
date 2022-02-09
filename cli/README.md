@@ -103,6 +103,24 @@ Remove storage by specifying the storage name to be deleted,
 $ kubectl kadalu storage-remove storage-pool-1
 ```
 
+### Remove archived PVCs
+
+Remove all archived pvc's provisioned from the storage-pool/volume.
+
+```
+$ kubectl kadalu remove-archived-pv storage-pool-1
+```
+
+Remove particular archived pvc provisioned from a particular storage-pool/volume.
+
+> Note:
+> Only pass the pvc which are archived and denoted by a prefix "archived-".
+
+```
+$ kubectl kadalu remove-archived-pv storage-pool-1 --pvc=archived-pvc-e91ab8c8-4a48-48ad-ab5e-b207399565bc
+```
+
+
 ## Contributing
 
 1. Fork it (<https://github.com/kadalu/kadalu/fork>)
