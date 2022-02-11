@@ -12,7 +12,7 @@ RUN python3 -m pip install -r /tmp/csi-requirements.txt --no-cache-dir && \
 FROM python:3.9.6-slim-bullseye as prod
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends xfsprogs attr libtirpc3 bash inotify-tools ssh liburcu6 && \
+    apt-get install -y --no-install-recommends sqlite3 xfsprogs attr libtirpc3 bash inotify-tools ssh liburcu6 && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -46,6 +46,7 @@ COPY lib/startup.sh            /kadalu/
 COPY csi/quota-crawler.sh      /kadalu/
 COPY csi/watch-vol-changes.sh  /kadalu/
 COPY csi/heal-info.sh          /kadalu/
+COPY csi/remove_archived_pv.py /kadalu/
 
 COPY templates/Replica1.client.vol.j2 /kadalu/templates/
 COPY templates/Replica2.client.vol.j2 /kadalu/templates/
