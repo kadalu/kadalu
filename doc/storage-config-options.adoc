@@ -221,6 +221,33 @@ $ kubectl kadalu storage-add storage-pool1 \
     --device kube1:/dev/vdc --pv-reclaim-policy=archive
 ----
 
+When PVCs are archived, the data is intact. Due to which 'storage-list' might still be showing consumption.
+One can free these archived data manually or through Kadalu CLI.
+
+Note: While using option --pvc only pass the pvc which are archived.
+
+* Removing archived pvc(s) through Kadalu CLI:
++
+[source,console]
+----
+$ kubectl kadalu remove-archived-pv storage-pool-1
+----
++
+[source,console]
+----
+$ kubectl kadalu remove-archived-pv storage-pool-1 --pvc=pvc-e91ab8c8-4a48-48ad-ab5e-b207399565bc
+----
+
+* Removing archived pvc(s) through Kadalu CSI provisioner:
+
+Exec into Kadalu Provisioner pod. Run the script 'remove_archived_pv.py' with similar arguments as Kadalu CLI.
++
+[source,console]
+----
+$ cd /kadalu
+$ python remove_archived_pv.py storage-pool-1 --pvc=archived-pvc-123-456-789
+----
+
 
 == Recreation of storage-pool with existing Volume ID
 
