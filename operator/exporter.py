@@ -272,23 +272,23 @@ def collect_all_metrics():
             response = requests.get(
                 'http://'+ pod_details["ip_address"] +':8050/_api/metrics',
                 timeout=1)
+            if response.status_code == 200:
+                if "nodeplugin" in pod_name:
+                    set_nodeplugin_data(response, metrics, pod_name, pod_details)
+
+                if "provisioner" in pod_name:
+                    set_provisioner_data(response, metrics, pod_name, pod_details)
+
+                if "server" in pod_name:
+                    set_server_data(response, metrics, pod_name, pod_details)
+
         except requests.exceptions.RequestException as err:
             logging.error(logf(
                 "Unable to reach the pod, displaying only default values",
                 pod_name=pod_name,
                 error=err
             ))
-
-        if response.status_code == 200:
-            if "nodeplugin" in pod_name:
-                set_nodeplugin_data(response, metrics, pod_name, pod_details)
-
-            if "provisioner" in pod_name:
-                set_provisioner_data(response, metrics, pod_name, pod_details)
-
-            if "server" in pod_name:
-                set_server_data(response, metrics, pod_name, pod_details)
-
+        
     return metrics
 
 
