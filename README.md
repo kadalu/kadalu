@@ -34,6 +34,14 @@ If you made some errors in setup, and want to start fresh, check this [cleanup s
 ```
 curl -s https://raw.githubusercontent.com/kadalu/kadalu/devel/extras/scripts/cleanup | bash
 ```
+### OpenShift
+If you are are running kadalu on OpenShift (OCP) Kadalu the following commands must be run to give priviledged roles to the user. 
+```
+oc adm policy add-scc-to-user privileged -z kadalu-operator  -n kadalu
+oc adm policy add-scc-to-user privileged -z kadalu-csi-nodeplugin -n kadalu
+oc adm policy add-scc-to-user privileged -z kadalu-server-sa -n kadalu
+oc adm policy add-scc-to-user privileged -z kadalu-csi-provisioner -n kadalu
+```
 
 
 ## Reach out
