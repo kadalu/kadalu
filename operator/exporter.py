@@ -288,7 +288,6 @@ def collect_all_metrics():
                 pod_name=pod_name,
                 error=err
             ))
-        
     return metrics
 
 
