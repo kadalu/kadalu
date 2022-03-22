@@ -3,7 +3,7 @@ kind: Plugin
 metadata:
   name: kadalu
 spec:
-  version: {{v{{ .TagName }}}}
+  version: "v{{ .TagName }}"
   homepage: https://github.com/kadalu/kadalu
   shortDescription: "Deploy and manage Kadalu Operator, CSI and Storage pods"
   description: |
