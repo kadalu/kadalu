@@ -75,8 +75,8 @@ gen-manifest:
 pylint:
 	@cp lib/kadalulib.py csi/
 	@cp lib/kadalulib.py server/
-	@cp lib/kadalulib.py operator/
-	@cp cli/kubectl_kadalu/utils.py operator/
+	@cp lib/kadalulib.py kadalu_operator/
+	@cp cli/kubectl_kadalu/utils.py kadalu_operator/
 	@cp server/kadalu_quotad/quotad.py server/kadalu_quotad/glusterutils.py server/
 	@pylint --disable=W0511 -s n lib/kadalulib.py
 	@pylint --disable=W0511,W1514 -s n server/glusterfsd.py
@@ -89,15 +89,15 @@ pylint:
 	@pylint --disable=W0511,R1732 -s n csi/main.py
 	@pylint --disable=W0511 -s n csi/nodeserver.py
 	@pylint --disable=W0511,C0302,W1514,R1710 -s n csi/volumeutils.py
-	@pylint --disable=W0511,C0302,W1514 -s n operator/main.py
+	@pylint --disable=W0511,C0302,W1514 -s n kadalu_operator/main.py
 	@pylint --disable=W0511,W1514 -s n extras/scripts/gen_manifest.py
-	@pylint --disable=W0511,R0903,R0914,C0201,E0401 -s n operator/exporter.py
+	@pylint --disable=W0511,R0903,R0914,C0201,E0401 -s n kadalu_operator/exporter.py
 	@pylint --disable=W0511,R0914,E0401,C0114 -s n csi/exporter.py
 	@pylint --disable=W0511,E0401,C0114 -s n server/exporter.py
 	@rm csi/kadalulib.py
 	@rm server/kadalulib.py
-	@rm operator/kadalulib.py
-	@rm operator/utils.py
+	@rm kadalu_operator/kadalulib.py
+	@rm kadalu_operator/utils.py
 	@rm server/quotad.py
 	@rm server/glusterutils.py
 	@cd cli && make gen-version pylint pytest --keep-going
