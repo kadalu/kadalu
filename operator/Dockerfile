@@ -9,7 +9,7 @@ COPY operator-requirements.txt /tmp/
 RUN python3 -m pip install -r /tmp/operator-requirements.txt --no-cache-dir && \
     grep -Po '^[\w\.-]*(?=)' /tmp/operator-requirements.txt | xargs -I pkg python3 -m pip show pkg | grep -P '^(Name|Version|Location)'
 
-FROM python:3.9.6-slim-bullseye as prod
+FROM python:3.10-slim-bullseye as prod
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
