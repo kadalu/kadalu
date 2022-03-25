@@ -68,7 +68,7 @@ spec:
 +
 To create a PVC from this storage, you need to provide `storageClassName` option as `kadalu.replica2`.
 
-* **Replica3** In this mode, Gluster will started with high availability, ie, replicate module. It will require 3 storage options to be provided, and each storage will be one gluster server process pod running as pod.
+* **Replica3** In this mode, Gluster will be started with high availability, ie, replicate module. It will require 3 storage options to be provided, and each storage will be one gluster server process pod running as pod.
 +
 [source,yaml]
 ----

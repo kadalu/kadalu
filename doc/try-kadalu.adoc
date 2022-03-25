@@ -91,11 +91,13 @@ spec:
 
 With this, there will be 3 bricks, and kadalu CSI driver will mount the corresponding volume and provide data.
 
-**NOTE**: There can be both replica1 and replica3 type volume co-existing in the system. Note that while claiming the PV, you just need to provide `storageClassName: kadalu.replica1` or `storageClassName: kadalu.replica3` to use the relevant option.
+**NOTE**: There can be both replica1 and replica3 type volume co-existing in
+the system. Note that while claiming the PV, you just need to provide relavant
+storageClassName as `storageClassName: kadalu.<name_of_storage_pool>`
 
 === On data recovery
 
-As we use glusterfs as storage backend, without any sharding/striping/disperse mode, the data remains as is, on your backend storage. Just that each PV would be a subdirectory on your storage. So, no need to panic.
+As we use glusterfs as storage backend, without any sharding/striping mode, the data remains as is, on your backend storage. Just that each PV would be a subdirectory on your storage. So, no need to panic.
 
 === On upgrade
 

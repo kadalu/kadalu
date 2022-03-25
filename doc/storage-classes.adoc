@@ -14,32 +14,10 @@ limited to only these classes. This document helps to understand the
 default available storage classes and how to create new ones for your
 requirements.
 
-== kadalu
-
-On using this Storage class, Kadalu can provision PVs from any of the
-available volumes without applying any filters.
-
-Example PVC,
-
-[source,yaml]
-----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: pv1
-spec:
-  storageClassName: kadalu
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 1Gi
-----
-
 == kadalu.storage-pool-name
 
-Kadalu creates and deploys Storage Class when storage is created.
-The name of this Storage class is same as the Storage name. Kadalu wil 
+Kadalu creates and deploys Storage Class when storage pool is created.
+The name of this Storage class is same as the Storage name. Kadalu will
 provision PVs only from this Storage pool across the Cluster.
 
 Example:

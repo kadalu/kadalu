@@ -12,7 +12,7 @@ In both the ways please note `metadata.name` (let's say `e-vol`) in
 == Cleanup for re-using external gluster volume
 
 When you delete a previously used volume (pool) in external gluster from Kadalu, some
-folders and files will be left behind, since we do not run any commands on external
+folders and files will be left behind as we do not run any commands on external
 gluster except quota commands.
 
 Please delete below files/dirs from root of gluster bricks after deleting the pool in Kadalu
@@ -101,9 +101,9 @@ kadalu native way does not support distributed volumes on the external gluster. 
 
 Please make sure you have enabled quota for external gluster volume before deploying kadalu
 
----
+----
 gluster volume quota <volname> enable
----
+----
 
 Create namespace in advance for using Secret
 

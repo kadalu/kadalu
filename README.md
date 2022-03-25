@@ -14,14 +14,18 @@
 Getting started is made easy to copy paste the below commands.
 
 ```console
-curl -LO https://github.com/kadalu/kadalu/releases/latest/download/kubectl-kadalu
-chmod +x ./kubectl-kadalu
-sudo mv ./kubectl-kadalu /usr/local/bin/kubectl-kadalu
+curl -fsSL https://github.com/kadalu/kadalu/releases/latest/download/install.sh | sudo bash -x
 kubectl-kadalu version
-kubectl kadalu install
+kubectl kadalu install --type=$K8S_DIST
 ```
 
-The above will deploy the kadalu operator and CSI pods. Once done, you can provide storage to kadalu operator to manage.
+Where `K8S_DIST` can be one of below values and `kubernetes` being the default:
+- kubernetes
+- openshift
+- rke
+- microk8s
+
+The above will deploy the latest version of kadalu operator and CSI pods. Once done, you can provide storage to kadalu operator to manage.
 
 ```
 $ kubectl kadalu storage-add storage-pool-1 --device kube1:/dev/sdc
@@ -78,7 +82,7 @@ NOTE: We are still evolving with Helm chart based development, and happy to get 
 
 ## Platform supports
 
-We support x86_64 (amd64) by default (all releases, `devel` and `latest` tags), and in release 0.8.3 tag arm64 and arm/v7 is supported.
+We support x86_64 (amd64) by default (all releases, `devel` and `latest` tags), and from release 0.8.3 tag arm64 and arm/v7 is supported.
 
 For any other platforms, we need users to confirm it works by building images locally. Once it works, we can include it in our automated scripts. You can confirm the build by command `make release` after checkout of the repository in the respective platform.
 
