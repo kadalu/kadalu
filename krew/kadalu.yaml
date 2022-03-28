@@ -5,14 +5,13 @@ metadata:
 spec:
   version: "v{{ .TagName }}"
   homepage: https://github.com/kadalu/kadalu
-  shortDescription: "Deploy and manage Kadalu Operator, CSI and Storage pods"
+  shortDescription: Manage Kadalu Operator, CSI and Storage pods
   description: |
     Kadalu project offers a lightweight Persistent storage solution
     for applications running in Kubernetes.
 
     kubectl-kadalu helps to install Kadalu Operator and provides
-    sub-commands to manage/monitor Kadalu Storage pods.
-
+    sub-commands to manage/monitor Kadalu CSI and Storage pods.
   platforms:
   - selector:
       matchExpressions:
