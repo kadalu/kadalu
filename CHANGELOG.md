@@ -6,6 +6,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.13] - 2022-03-29
+
+- Container base images are upgraded as suggested by `docker scan` command.
+- Krew repo index auto update issue fixed.
+- Wrong binary path issue is fixed in the install helper script.
+- Fixed the crash of Metrics API while accessing node_plugin metrics.
+
+## [0.8.12] - 2022-03-21
+
+- Krew repo index auto update issue fixed.
+
 ## [0.8.11] - 2022-03-21
 
 - Krew repo index auto update issue fixed.
