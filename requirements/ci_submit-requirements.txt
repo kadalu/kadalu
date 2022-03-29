@@ -23,7 +23,7 @@ lazy-object-proxy==1.6.0
     # via astroid
 mccabe==0.6.1
     # via pylint
-paramiko==2.7.2
+paramiko==2.10.1
     # via glustercli
 pycparser==2.20
     # via cffi
