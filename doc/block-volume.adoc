@@ -1,0 +1,61 @@
+= Block Volumes
+
+Only `ReadWriteOnce` access mode is allowed block volumes
+
+== Mounted Block Volumes
+
+For some workloads, using File Volume may not be performant. Kadalu provides an option to use block volume(PV) but as mounted Volume.
+
+Create a new Storage Class with `pv_type: Block` so that Provisioner creates Block PV.
+
+[source,yaml]
+----
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: kadalu.db
+provisioner: kadalu
+parameters:
+  storage_name: "storage-pool-1"
+  pv_type: Block
+----
+
+Above Storage Class adds filter for Storage pool name `storage-pool-1`. All the Persistent Volume claims using this Storage class will be processed as Block Volumes. Refer link:./storage-classes.adoc[Storage Classes] documentation for using more options.
+
+Virtual Block PVs will be formatted using `mkfs.xfs` command.
+
+== CSI Block VolumeMode
+
+While using storage from any pool you can provide `volumeMode: Block` in PVC
+manifest for getting access to block volumes.
+
+Please refer below example for more info:
+
+[source,yaml]
+----
+---
+# storage class
+apiVersion: kadalu-operator.storage/v1alpha1
+kind: KadaluStorage
+metadata:
+  name: storage-pool-1
+spec:
+  type: Replica1
+  storage:
+    - node: node1
+      device: /dev/vda
+---
+# PVC
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: block-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Block
+  storageClassName: kadalu.storage-pool-1
+  resources:
+    requests:
+      storage: 500Mi
+----

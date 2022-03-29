@@ -88,6 +88,7 @@ spec:
           type: object
           properties:
             spec:
+              x-kubernetes-preserve-unknown-fields: true
               type: object
               properties:
                 disperse:
@@ -107,6 +108,23 @@ spec:
                 kadalu_format:
                   type: string
                   default: native
+                # Refer https://github.com/kubernetes-client/python/blob/da6076/kubernetes/docs/V1Toleration.md
+                tolerations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      effect:
+                        type: string
+                      key:
+                        type: string
+                      operator:
+                        type: string
+                      tolerationSeconds:
+                        format: int64
+                        type: integer
+                      value:
+                        type: string
                 storage:
                   type: array
                   items:
