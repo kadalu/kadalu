@@ -142,7 +142,7 @@ def set_default_values(metrics):
     """
 
     metrics.operator.update({"pod_phase": "unknown"})
-    metrics.provisioner.update({"pod_phase": "unknown"})
+    metrics.provisioner.update({"pod_name": "kadalu-csi-provisioner-0", "pod_phase": "unknown"})
 
     pod_data = get_pod_data()
     for pod_name in pod_data.keys():
@@ -272,6 +272,7 @@ def collect_all_metrics():
             response = requests.get(
                 'http://'+ pod_details["ip_address"] +':8050/_api/metrics',
                 timeout=1)
+
             if response.status_code == 200:
                 if "nodeplugin" in pod_name:
                     set_nodeplugin_data(response, metrics, pod_name, pod_details)
@@ -282,12 +283,14 @@ def collect_all_metrics():
                 if "server" in pod_name:
                     set_server_data(response, metrics, pod_name, pod_details)
 
+
         except requests.exceptions.RequestException as err:
             logging.error(logf(
                 "Unable to reach the pod, displaying only default values",
                 pod_name=pod_name,
                 error=err
             ))
+
     return metrics
 
 
