@@ -93,4 +93,4 @@ echo "Building kadalu-csi with version tag as ${VERSION}";
 build_container "kadalu-csi" "csi/Dockerfile" ${KADALU_VERSION}
 
 echo "Building kadalu-operator with version tag as ${VERSION}";
-build_container "kadalu-operator" "operator/Dockerfile" ${KADALU_VERSION}
+build_container "kadalu-operator" "kadalu_operator/Dockerfile" ${KADALU_VERSION}
