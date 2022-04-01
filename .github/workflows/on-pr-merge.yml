@@ -95,7 +95,7 @@ jobs:
         timeout-minutes: 20
         with:
           context: .
-          file: operator/Dockerfile
+          file: kadalu_operator/Dockerfile
           platforms: linux/amd64
           target: prod
           push: true
