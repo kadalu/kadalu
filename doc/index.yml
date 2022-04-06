@@ -1,8 +1,10 @@
 - section: User Guide
   chapters:
     - title: Quick Start
+    - title: Quick Start YAML
     - title: Introduction
     - title: Setup
+    - title: Using with Private Container Registry
     - title: Setup Storage
     - title: CSI to claim Persistent Volumes
     - title: Try Kadalu

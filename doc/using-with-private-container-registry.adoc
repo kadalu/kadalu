@@ -1,0 +1,81 @@
+= Install Kadalu Operator and CSI Pods using local Yaml and Container images.
+
+== Build and upload Container images
+
+Build container images by running the following command.
+
+----
+make build-containers
+----
+
+Push the following container images to your private container registry.
+
+----
+kadalu/kadalu-csi:devel
+kadalu/kadalu-operator:devel
+kadalu/kadalu-server:devel
+----
+
+Addition to the above images, download and push the following containers to your private container registry.
+
+----
+docker.io/raspbernetes/csi-node-driver-registrar:2.0.1
+docker.io/library/busybox
+docker.io/raspbernetes/csi-external-provisioner:2.0.2
+docker.io/raspbernetes/csi-external-attacher:3.0.0
+docker.io/raspbernetes/csi-external-resizer:1.0.0
+----
+
+== Generate Manifest files
+
+Now generate the manifest files by running the following command.
+
+----
+IMAGES_HUB=docker.io make gen-manifest
+----
+
+Change the `IMAGES_HUB` to custom domain as required.
+
+== Restricting node plugins to run in a few selected nodes
+
+If running CSI node plugin in all the hundreds of nodes is not desirable then edit the csi-nodeplugin yaml file and add the `nodeSelector` as shown in the example below.
+
+[source,yaml]
+----
+...
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: kadalu-csi-nodeplugin
+  namespace: kadalu
+  labels:
+    app.kubernetes.io/part-of: kadalu
+    app.kubernetes.io/component: csi-driver
+    app.kubernetes.io/name: kadalu-csi-nodeplugin
+spec:
+  nodeSelector:
+    kadalu_node_plugin: "true"
+...
+----
+
+And set the label to all the required nodes
+
+----
+kubectl label nodes <your-node-name> kadalu_node_plugin=true
+----
+
+== Build and install Kubectl extension
+
+Build Kubectl extension
+
+----
+cd cli
+make release
+sudo install build/kubectl-kadalu /usr/bin/
+----
+
+== Install Kadalu Operator and CSI
+
+----
+kubectl kadalu install --local-yaml=./manifests/kadalu-operator.yaml --local-csi-yaml=./manifests/csi-nodeplugin.yaml
+----

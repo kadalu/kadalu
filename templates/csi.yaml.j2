@@ -204,7 +204,7 @@ spec:
       serviceAccountName: kadalu-csi-provisioner
       containers:
         - name: csi-provisioner
-          image: docker.io/raspbernetes/csi-external-provisioner:2.0.2
+          image: {{ images_hub }}/raspbernetes/csi-external-provisioner:2.0.2
           args:
             - "--csi-address=$(ADDRESS)"
             - "--timeout=3m"
@@ -221,7 +221,7 @@ spec:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
         - name: csi-attacher
-          image: docker.io/raspbernetes/csi-external-attacher:3.0.0
+          image: {{ images_hub }}/raspbernetes/csi-external-attacher:3.0.0
           args:
             - "--v=5"
             - "--csi-address=$(ADDRESS)"
@@ -241,7 +241,7 @@ spec:
             capabilities:
               add: ["CAP_SYS_ADMIN", "SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: docker.io/{{ docker_user }}/kadalu-csi:{{ kadalu_version }}
+          image: {{ images_hub }}/{{ docker_user }}/kadalu-csi:{{ kadalu_version }}
           env:
             - name: NODE_ID
               valueFrom:
@@ -276,14 +276,14 @@ spec:
               readOnly: true
               mountPath: "/etc/secret-volume"
         - name: kadalu-logging
-          image: docker.io/library/busybox
+          image: {{ images_hub }}/library/busybox
           command: ["/bin/sh"]
           args: ["-c", "while true; do logcnt=$(/bin/ls /var/log/gluster/ | wc -l); if [ ${logcnt} -gt 0 ]; then break; fi; sleep 5; done; tail -f /var/log/gluster/*.log"]
           volumeMounts:
             - name: varlog
               mountPath: "/var/log/gluster"
         - name: csi-resizer
-          image: docker.io/raspbernetes/csi-external-resizer:1.0.0
+          image: {{ images_hub }}/raspbernetes/csi-external-resizer:1.0.0
           args:
             - "--csi-address=$(ADDRESS)"
             - "--timeout=3m"

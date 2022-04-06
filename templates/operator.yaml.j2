@@ -342,7 +342,7 @@ spec:
           securityContext:
             capabilities: {}
             privileged: true
-          image: docker.io/{{ docker_user }}/kadalu-operator:{{ kadalu_version }}
+          image: {{ images_hub }}/{{ docker_user }}/kadalu-operator:{{ kadalu_version }}
           imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
@@ -355,6 +355,8 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "kadalu-operator"
+            - name: IMAGES_HUB
+              value: "{{ images_hub }}"
             - name: DOCKER_USER
               value: "{{ docker_user }}"
             - name: KADALU_VERSION

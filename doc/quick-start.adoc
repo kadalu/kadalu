@@ -29,6 +29,13 @@ $ oc kadalu install --type=openshift
 
 **Note**: Security Context Constraints can be applied only by admins, Run `oc login -u system:admin` to login as admin
 
+Use `--local-yaml` and `--local-csi-yaml` options to use local yaml files instead of downloading the Operator and CSI yaml files from the internet.
+
+[source,console]
+----
+kubectl kadalu install --local-yaml=./kadalu-operator.yaml --local-csi-yaml=./csi-nodeplugin.yaml
+----
+
 Identify the devices available from nodes and run the following command to add storage to Kadalu.
 
 **Note**: if your host is running RHEL/CentOS 7.x series or Ubuntu/Debian older than 18.04, you may need to do below tasks before adding storage to kadalu.
