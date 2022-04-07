@@ -33,6 +33,14 @@ A clear and concise description of what you expected to happen.
 A clear and concise description of what actually happened.
 
 **Environment:**
+<!--
+Output from one of commands
+1. If kubectl-kadalu plugin is installed
+$ kubectl kadalu version
+
+2. If plugin isn't installed
+$ kubectl exec -it deploy/operator -n kadalu -- bash -c 'kubectl-kadalu version'
+-->
  - Kadalu Version: [e.g., 0.8.6]
  - K8S_DIST: [e.g., kubernetes, openshift]
 
