@@ -25,6 +25,7 @@ from utils import execute as utils_execute
 NAMESPACE = os.environ.get("KADALU_NAMESPACE", "kadalu")
 VERSION = os.environ.get("KADALU_VERSION", "latest")
 K8S_DIST = os.environ.get("K8S_DIST", "kubernetes")
+IMAGES_HUB = os.environ.get("IMAGES_HUB", "docker.io")
 KUBELET_DIR = os.environ.get("KUBELET_DIR")
 VERBOSE = os.environ.get("VERBOSE", "no")
 MANIFESTS_DIR = "/kadalu/templates"
@@ -421,6 +422,7 @@ def deploy_server_pods(obj):
     template_args = {
         "namespace": NAMESPACE,
         "kadalu_version": VERSION,
+        "images_hub": IMAGES_HUB,
         "docker_user": docker_user,
         "volname": volname,
         "voltype": voltype,
@@ -778,6 +780,7 @@ def delete_server_pods(storage_info_data, obj):
         "namespace": NAMESPACE,
         "kadalu_version": VERSION,
         "docker_user": docker_user,
+        "images_hub": IMAGES_HUB,
         "volname": volname,
         "voltype": voltype,
         "volume_id": volumeid,
@@ -963,6 +966,7 @@ def deploy_csi_pods(core_v1_client):
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
     template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
              docker_user=docker_user, k8s_dist=K8S_DIST,
+             images_hub=IMAGES_HUB,
              kubelet_dir=KUBELET_DIR, verbose=VERBOSE,)
 
     lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)

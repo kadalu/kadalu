@@ -50,7 +50,7 @@ spec:
       serviceAccountName: kadalu-csi-nodeplugin
       containers:
         - name: csi-node-driver-registrar
-          image: docker.io/raspbernetes/csi-node-driver-registrar:2.0.1
+          image: {{ images_hub }}/raspbernetes/csi-node-driver-registrar:2.0.1
           args:
             - "--v=5"
             - "--csi-address=$(ADDRESS)"
@@ -79,7 +79,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: docker.io/{{ docker_user }}/kadalu-csi:{{ kadalu_version }}
+          image: {{ images_hub }}/{{ docker_user }}/kadalu-csi:{{ kadalu_version }}
           env:
             - name: NODE_ID
               valueFrom:
@@ -111,7 +111,7 @@ spec:
               mountPath: {{ kubelet_dir }}/plugins/kubernetes.io/csi
               mountPropagation: "Bidirectional"
         - name: kadalu-logging
-          image: docker.io/library/busybox
+          image: {{ images_hub }}/library/busybox
           command: ["/bin/sh"]
           args: ["-c", "while true; do logcnt=$(/bin/ls /var/log/gluster/ | wc -l); if [ ${logcnt} -gt 0 ]; then break; fi; sleep 5; done; tail -f /var/log/gluster/*.log"]
           volumeMounts:

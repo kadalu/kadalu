@@ -30,6 +30,7 @@ if __name__ == "__main__":
     DOCKER_USER = os.environ.get("DOCKER_USER", "kadalu")
     KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
     K8S_DIST = os.environ.get("K8S_DIST", "kubernetes")
+    IMAGES_HUB = os.environ.get("IMAGES_HUB", "docker.io")
     VERBOSE = os.environ.get("VERBOSE", "no")
     KUBELET_DIR = "/var/lib/kubelet"
     if K8S_DIST == "microk8s":
@@ -44,6 +45,7 @@ if __name__ == "__main__":
         "k8s_dist": K8S_DIST,
         "kubelet_dir": KUBELET_DIR,
         "verbose": VERBOSE,
+        "images_hub": IMAGES_HUB
     }
 
     template(sys.argv[1], template_file="operator.yaml.j2", template_args=TEMPLATE_ARGS)

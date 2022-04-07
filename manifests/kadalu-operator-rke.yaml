@@ -325,6 +325,8 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "kadalu-operator"
+            - name: IMAGES_HUB
+              value: "docker.io"
             - name: DOCKER_USER
               value: "kadalu"
             - name: KADALU_VERSION

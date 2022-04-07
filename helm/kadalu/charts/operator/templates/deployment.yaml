@@ -39,6 +39,8 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "kadalu-operator"
+            - name: IMAGES_HUB
+              value: "{{ .Values.imagesHub }}"
             - name: DOCKER_USER
               value: "kadalu"
             - name: KADALU_VERSION

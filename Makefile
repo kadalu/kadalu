@@ -1,5 +1,6 @@
 .PHONY: help build-grpc build-containers gen-manifest pylint prepare-release release
 
+IMAGES_HUB?=docker.io
 DOCKER_USER?=kadalu
 KADALU_VERSION?=devel
 KADALU_LATEST?=latest
@@ -33,11 +34,11 @@ gen-manifest:
 	@echo "Install Kadalu Operator followed by CSI Nodeplugin"
 	@echo
 	@mkdir -p manifests
-	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
+	@IMAGES_HUB=${IMAGES_HUB} DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator.yaml
 	@echo "kubectl apply -f manifests/kadalu-operator.yaml"
 	@echo "kubectl apply -f manifests/csi-nodeplugin.yaml"
-	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
+	@IMAGES_HUB=${IMAGES_HUB} DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		K8S_DIST=openshift                                   \
 		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-openshift.yaml
 	@echo
@@ -50,7 +51,7 @@ gen-manifest:
 	@echo "oc create -f manifests/kadalu-operator-openshift.yaml"
 	@echo "oc create -f manifests/csi-nodeplugin-openshift.yaml"
 
-	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
+	@IMAGES_HUB=${IMAGES_HUB} DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		K8S_DIST=microk8s                                    \
 		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-microk8s.yaml
 	@echo
@@ -60,7 +61,7 @@ gen-manifest:
 	@echo "kubectl apply -f manifests/kadalu-operator-microk8s.yaml"
 	@echo "kubectl apply -f manifests/csi-nodeplugin-microk8s.yaml"
 
-	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
+	@IMAGES_HUB=${IMAGES_HUB} DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		K8S_DIST=rke                                    \
 		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-rke.yaml
 	@echo
@@ -107,7 +108,7 @@ prepare-release-manifests:
 	@echo "KADALU_VERSION can't be latest for release"
 else
 prepare-release-manifests:
-	@DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
+	@IMAGES_HUB=${IMAGES_HUB} DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
 		$(MAKE) gen-manifest
 	@echo "Generated manifest file. Version: ${KADALU_VERSION}"
 endif
