@@ -271,7 +271,7 @@ def collect_all_metrics():
         try:
             response = requests.get(
                 'http://'+ pod_details["ip_address"] +':8050/_api/metrics',
-                timeout=1)
+                timeout=10)
 
             if response.status_code == 200:
                 if "nodeplugin" in pod_name:
