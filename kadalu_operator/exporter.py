@@ -142,12 +142,26 @@ def set_default_values(metrics):
     """
 
     metrics.operator.update({"pod_phase": "unknown"})
-    metrics.provisioner.update({"pod_name": "kadalu-csi-provisioner-0", "pod_phase": "unknown"})
+    metrics.provisioner.update({
+         "pod_name": "kadalu-csi-provisioner-0",
+         "pod_phase": "unknown",
+         "memory_usage_in_bytes": -1,
+         "cpu_usage_in_nanoseconds": -1,
+         "total_number_of_containers": -1,
+         "number_of_ready_containers": -1,
+    })
 
     pod_data = get_pod_data()
     for pod_name in pod_data.keys():
         if "nodeplugin" in pod_name:
-            metrics.nodeplugins.append({"pod_name": pod_name, "pod_phase": "unknown"})
+            metrics.nodeplugins.append({
+                "pod_name": pod_name,
+                "pod_phase": "unknown",
+                "memory_usage_in_bytes": -1,
+                "cpu_usage_in_nanoseconds": -1,
+                "total_number_of_containers": -1,
+                "number_of_ready_containers": -1,
+            })
 
     storage_config_data = get_storage_config_data()
     list_of_storages = storage_config_data["list_of_storages"]
@@ -159,18 +173,24 @@ def set_default_values(metrics):
         storage_pool = {
             "name": storage,
             "type": storage_type_data[storage],
-            "total_capacity_bytes": 0,
-            "free_capacity_bytes": 0,
-            "used_capacity_bytes": 0,
-            "total_inodes": 0,
-            "free_inodes": 0,
-            "used_inodes": 0,
+            "total_capacity_bytes": -1,
+            "free_capacity_bytes": -1,
+            "used_capacity_bytes": -1,
+            "total_inodes": -1,
+            "free_inodes": -1,
+            "used_inodes": -1,
             "pvc": []
         }
 
         storage_pool.update({"bricks": brick_data[storage]})
         for brick in storage_pool.get("bricks"):
-            brick.update({"pod_phase": "unknown"})
+            brick.update({
+                "pod_phase": "unknown",
+                "memory_usage_in_bytes": -1,
+                "cpu_usage_in_nanoseconds": -1,
+                "total_number_of_containers": -1,
+                "number_of_ready_containers": -1,
+            })
 
         metrics.storages.append(storage_pool)
 
