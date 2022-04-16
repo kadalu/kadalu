@@ -1,29 +1,54 @@
 = Install Kadalu Operator and CSI Pods using local Yaml and Container images.
 
-== Build and upload Container images
+**Note**: Private registry support is available only with Kadalu `>=0.8.14`
 
-Build container images by running the following command.
-
-----
-make build-containers
-----
-
-Push the following container images to your private container registry.
+== Start the Private Container registry
 
 ----
-kadalu/kadalu-csi:devel
-kadalu/kadalu-operator:devel
-kadalu/kadalu-server:devel
+docker run -d -p 5000:5000 --name registry registry:2.7
 ----
 
-Addition to the above images, download and push the following containers to your private container registry.
+== Download the container images to local registry
+
+Download the following container images and push to the custom registry.
 
 ----
-docker.io/raspbernetes/csi-node-driver-registrar:2.0.1
-docker.io/library/busybox
-docker.io/raspbernetes/csi-external-provisioner:2.0.2
-docker.io/raspbernetes/csi-external-attacher:3.0.0
-docker.io/raspbernetes/csi-external-resizer:1.0.0
+sudo docker pull docker.io/kadalu/kadalu-csi:devel
+sudo docker pull docker.io/kadalu/kadalu-operator:devel
+sudo docker pull docker.io/kadalu/kadalu-server:devel
+sudo docker pull docker.io/raspbernetes/csi-node-driver-registrar:2.0.1
+sudo docker pull docker.io/library/busybox
+sudo docker pull docker.io/raspbernetes/csi-external-provisioner:2.0.2
+sudo docker pull docker.io/raspbernetes/csi-external-attacher:3.0.0
+sudo docker pull docker.io/raspbernetes/csi-external-resizer:1.0.0
+----
+
+**Note:** Change the version of Kadalu Container images as required.
+
+Tag to private registry URL(Example: `my_company_images:5000`)
+
+----
+sudo docker tag docker.io/kadalu/kadalu-csi:devel my_company_images:5000/kadalu/kadalu-csi:devel
+sudo docker tag docker.io/kadalu/kadalu-operator:devel my_company_images:5000/kadalu/kadalu-operator:devel
+sudo docker tag docker.io/kadalu/kadalu-server:devel my_company_images:5000/kadalu/kadalu-server:devel
+sudo docker tag docker.io/raspbernetes/csi-node-driver-registrar:2.0.1 my_company_images:5000/raspbernetes/csi-node-driver-registrar:2.0.1
+sudo docker tag docker.io/library/busybox my_company_images:5000/library/busybox
+sudo docker tag docker.io/raspbernetes/csi-external-provisioner:2.0.2 my_company_images:5000/raspbernetes/csi-external-provisioner:2.0.2
+sudo docker tag docker.io/raspbernetes/csi-external-attacher:3.0.0 my_company_images:5000/raspbernetes/csi-external-attacher:3.0.0
+sudo docker tag docker.io/raspbernetes/csi-external-resizer:1.0.0 my_company_images:5000/raspbernetes/csi-external-resizer:1.0.0
+----
+
+Upload the images to private repository.
+
+----
+sudo docker push my_company_images:5000/kadalu/kadalu-csi:devel
+sudo docker push my_company_images:5000/kadalu/kadalu-operator:devel
+sudo docker push my_company_images:5000/kadalu/kadalu-server:devel
+sudo docker push my_company_images:5000/raspbernetes/csi-node-driver-registrar:2.0.1
+sudo docker push my_company_images:5000/library/busybox
+sudo docker push my_company_images:5000/raspbernetes/csi-external-provisioner:2.0.2
+sudo docker push my_company_images:5000/raspbernetes/csi-external-attacher:3.0.0
+sudo docker push my_company_images:5000/raspbernetes/csi-external-resizer:1.0.0
 ----
 
 == Generate Manifest files
@@ -31,7 +56,7 @@ docker.io/raspbernetes/csi-external-resizer:1.0.0
 Now generate the manifest files by running the following command.
 
 ----
-IMAGES_HUB=docker.io make gen-manifest
+IMAGES_HUB=my_company_images:5000 make gen-manifest
 ----
 
 Change the `IMAGES_HUB` to custom domain as required.
@@ -64,14 +89,10 @@ And set the label to all the required nodes
 kubectl label nodes <your-node-name> kadalu_node_plugin=true
 ----
 
-== Build and install Kubectl extension
-
-Build Kubectl extension
+== Install Kubectl extension
 
 ----
-cd cli
-make release
-sudo install build/kubectl-kadalu /usr/bin/
+curl -fsSL https://github.com/kadalu/kadalu/releases/latest/download/install.sh | sudo bash -x
 ----
 
 == Install Kadalu Operator and CSI
