@@ -28,6 +28,8 @@ RUN apt-get update -yq && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
+RUN curl -fsSL https://github.com/kadalu/moana/releases/latest/download/install.sh | sudo bash
+
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
 RUN mkdir -p /var/run/gluster /var/log/glusterfs
 
