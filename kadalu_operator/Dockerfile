@@ -18,6 +18,8 @@ RUN apt-get update -yq && \
 
 ENV PATH="/kadalu/bin:$PATH"
 
+RUN curl -fsSL https://github.com/kadalu/moana/releases/latest/download/install.sh | sudo bash
+
 # kubectl binary
 COPY --from=builder /usr/bin/kubectl /usr/bin/kubectl
 
