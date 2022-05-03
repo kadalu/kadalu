@@ -1021,7 +1021,7 @@ def csi_driver_object_api_version():
         resp = utils_execute(cmd)
         csi_driver_data = json.loads(resp.stdout)
         version = csi_driver_data["apiVersion"]
-        return version
+        return version[version.rfind("/")+1:]
 
     except CommandError as err:
         logging.error(logf(
