@@ -285,7 +285,7 @@ function validate_helm() {
           <(grep -v '#' manifests/"$operator.yaml" | tail -n +8 | sed '/^kind: CustomResourceDefinition/,/^spec:/{/namespace/d}' | sort) --ignore-blank-lines
       else
         diff <(helm template --namespace kadalu helm/kadalu --set operator.enabled=true --set-string operator.kubernetesDistro=$distro,operator.verbose=$verbose | grep -v '#') \
-          <(grep -v '#' manifests/"$operator.yaml" | tail -n +6 | sed '/^kind: CustomResourceDefinition/,/^spec:/{/namespace/d}') --ignore-blank-lines
+          <(grep -v '#' manifests/"$operator.yaml" | tail -n +8 | sed '/^kind: CustomResourceDefinition/,/^spec:/{/namespace/d}') --ignore-blank-lines
       fi
 
       echo Validating helm template for "'$distro'" against "'$nodeplugin'" [Empty for no diff]
