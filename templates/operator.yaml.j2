@@ -16,6 +16,11 @@ apiVersion: v1
 metadata:
   name: kadalu-csi-nodeplugin
   namespace: {{ namespace }}
+  {% if k8s_dist == "openshift" %}
+  labels:
+    openshift.io/cluster-monitoring: "true"
+  {% endif %}
+ 
 ---
 kind: ServiceAccount
 apiVersion: v1
