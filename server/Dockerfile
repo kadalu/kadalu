@@ -24,9 +24,11 @@ COPY --from=builder /kadalu /kadalu
 RUN ln -sfn /usr/local/bin/python3 /kadalu/bin/python3
 
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends attr xfsprogs libtirpc3 sqlite3 liburcu6 && \
+    apt-get install -y --no-install-recommends attr xfsprogs libtirpc3 sqlite3 liburcu6 curl && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://github.com/kadalu/moana/releases/latest/download/install.sh | bash -x
 
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
 RUN mkdir -p /var/run/gluster /var/log/glusterfs

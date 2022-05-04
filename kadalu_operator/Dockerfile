@@ -13,10 +13,13 @@ FROM python:3.10-slim-bullseye as prod
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
+    apt-get install -y curl && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/kadalu/bin:$PATH"
+
+RUN curl -fsSL https://github.com/kadalu/moana/releases/latest/download/install.sh | bash -x
 
 # kubectl binary
 COPY --from=builder /usr/bin/kubectl /usr/bin/kubectl
