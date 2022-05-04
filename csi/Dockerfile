@@ -18,7 +18,7 @@ RUN apt-get update -yq && \
 
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
 
-RUN curl -fsSL https://github.com/kadalu/moana/releases/latest/download/install.sh | bash -x
+RUN curl -fsSL https://github.com/kadalu/moana/releases/latest/download/install.sh | sudo bash
 
 # copy glusterfs installed in /opt
 COPY --from=builder /opt /opt
