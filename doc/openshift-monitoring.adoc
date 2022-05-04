@@ -1,7 +1,7 @@
 
 = Setup Monitoring of Kadalu in Openshift & OKD 4.X clusters
 
-This guide will assist you in collecting mentrics & performance data into Openshift/OKD Prometheus.
+This guide will assist you in collecting metrics & performance data into Openshift/OKD Prometheus.
 
 == Enable user workload monitoring
 
@@ -105,12 +105,12 @@ spec:
 
 == Set necessary permissions.
 
-1. Assign a relevant role for the service account (I'm using 'kadalu-operator' as we do not have a viewer role, yet):
+- Assign a relevant role for the service account (I'm using 'kadalu-operator' as we do not have a viewer role, yet):
 ```
 oc policy add-role-to-user kadalu-operator system:serviceaccount:openshift-monitoring:prometheus-k8s -n kadalu
 ```
 
-2. Verify the rolebinding
+- Verify the rolebinding
 ```
 $ oc -n kadalu get rolebinding kadalu-operator -o yaml
 
@@ -137,21 +137,21 @@ subjects:
 
 == Verify that the target is being scraped:
 
-1. Obtain the endpoints of the service
+- Obtain the endpoints of the service
 ```
 $ oc -n kadalu  describe  services operator | awk '/Endpoints/ {print "http://"$2}'
 ```
 
-2. Go to the UI -> Administrator -> Observe -> Targets
+- Go to the UI -> Administrator -> Observe -> Targets
 
-3. Go to the UI -> Administrator -> Observe -> Metrics -> Type "kadalu_" -> There should be multiple metrics
+- Go to the UI -> Administrator -> Observe -> Metrics -> Type "kadalu_" -> There should be multiple metrics
 
 
-4. In case you got troubles with the Metrics, consider restarting the pods in the openshift-user-workload-monitoring namespace (and in rare cases openshift-monitoring)
+- In case you got troubles with the Metrics, consider restarting the pods in the openshift-user-workload-monitoring namespace (and in rare cases openshift-monitoring)
 
 == Alarm configuration
 
-1. Once the Metrics are visible in the UI, you can setup some alerts.
+- Once the Metrics are visible in the UI, you can setup some alerts.
 
 
 ```
