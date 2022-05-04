@@ -277,6 +277,7 @@ function validate_helm() {
       echo Validating helm template for "'$distro'" against "'$operator'" [Empty for no diff]
       echo
 
+set -x
       # Helm templates will not have 'kind: Namespace' so need to skip first 6 lines from operator manifest
       if [ "$distro" == "openshift" ]; then
         # Helm follows a specific order while installing/uninstalling (https://github.com/helm/helm/blob/release-3.0/pkg/releaseutil/kind_sorter.go#L27)
@@ -294,7 +295,7 @@ function validate_helm() {
         <(grep -v '#' manifests/"$nodeplugin.yaml") --ignore-blank-lines
     done
     unset operator nodeplugin verbose dist
-
+set +x
   fi
 }
 
