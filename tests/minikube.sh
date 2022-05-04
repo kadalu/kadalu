@@ -277,13 +277,13 @@ function validate_helm() {
       echo Validating helm template for "'$distro'" against "'$operator'" [Empty for no diff]
       echo
 
-set -x
+
       # Helm templates will not have 'kind: Namespace' so need to skip first 6 lines from operator manifest
       if [ "$distro" == "openshift" ]; then
         # Helm follows a specific order while installing/uninstalling (https://github.com/helm/helm/blob/release-3.0/pkg/releaseutil/kind_sorter.go#L27)
         # resources and it doesn't contain OpenShift 'SecurityContextConstraints' kind, so need to sort lines before 'diff'
         diff <(helm template --namespace kadalu helm/kadalu --set operator.enabled=true --set-string operator.kubernetesDistro=$distro,operator.verbose=$verbose | grep -v '#' | sort) \
-          <(grep -v '#' manifests/"$operator.yaml" | tail -n +8 | sed '/^kind: CustomResourceDefinition/,/^spec:/{/namespace/d}' | sort) --ignore-blank-lines
+          <(grep -v '#' manifests/"$operator.yaml" | tail -n +6 | sed '/^kind: CustomResourceDefinition/,/^spec:/{/namespace/d}' | sort) --ignore-blank-lines
       else
         diff <(helm template --namespace kadalu helm/kadalu --set operator.enabled=true --set-string operator.kubernetesDistro=$distro,operator.verbose=$verbose | grep -v '#') \
           <(grep -v '#' manifests/"$operator.yaml" | tail -n +8 | sed '/^kind: CustomResourceDefinition/,/^spec:/{/namespace/d}') --ignore-blank-lines
@@ -295,7 +295,7 @@ set -x
         <(grep -v '#' manifests/"$nodeplugin.yaml") --ignore-blank-lines
     done
     unset operator nodeplugin verbose dist
-set +x
+
   fi
 }
 
