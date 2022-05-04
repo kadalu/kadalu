@@ -89,6 +89,8 @@ spec:
             - name: gluster-cgroup
               mountPath: "/sys/fs/cgroup"
               readOnly: true
+            - name: moana-workdir
+              mountPath: "/var/lib/kadalu"
 {%- if pvc_name == "" %}
             - name: gluster-kmods
               mountPath: "/usr/lib/modules"
@@ -109,6 +111,9 @@ spec:
         - name: gluster-cgroup
           hostPath:
             path: "/sys/fs/cgroup"
+        - name: moana-workdir
+          hostPath:
+            path: "/var/lib/kadalu/{{ brick_node_id }}"
 {%- if pvc_name == "" %}
         - name: gluster-kmods
           hostPath:
