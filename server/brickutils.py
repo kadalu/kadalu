@@ -4,18 +4,11 @@ Starts Gluster Brick(fsd) process
 import logging
 import os
 import sys
-import uuid
 
 import xattr
-from jinja2 import Template
-from kadalulib import (CommandException, Proc, execute, logf,
-                       send_analytics_tracker)
+from kadalulib import CommandException, execute, logf
 
 # noqa # pylint: disable=I1101
-VOLUME_ID_XATTR_NAME = "trusted.glusterfs.volume-id"
-VOLFILES_DIR = "/kadalu/volfiles"
-TEMPLATES_DIR = "/kadalu/templates"
-VOLINFO_DIR = "/var/lib/gluster"
 MKFS_XFS_CMD = "/sbin/mkfs.xfs"
 
 
@@ -43,42 +36,6 @@ def verify_brickdir_xattr_support(brick_path):
                            "supported",
                            error=err))
         sys.exit(1)
-
-
-def set_volume_id_xattr(brick_path, volume_id):
-    """Set Volume ID xattr"""
-
-    volume_id_bytes = uuid.UUID(volume_id).bytes
-    try:
-        xattr.set(brick_path, VOLUME_ID_XATTR_NAME,
-                  volume_id_bytes, xattr.XATTR_CREATE)
-    except FileExistsError:
-        pass
-    except OSError as err:
-        logging.error(logf("Unable to set volume-id on "
-                           "brick root",
-                           error=err))
-        sys.exit(1)
-
-
-def generate_brick_volfile(volfile_path, volname, volume_id, brick_path):
-    """
-    Generate Volfile based on Volinfo stored in Config map
-    For now, Generated Volfile is used in configmap
-    """
-    content = ""
-    template_file = os.path.join(TEMPLATES_DIR, "brick.vol.j2")
-    with open(template_file) as tmpl_file:
-        content = tmpl_file.read()
-
-    data = {}
-    # Brick volfile needs only these 3 parameters
-    data["volname"] = volname
-    data["volume_id"] = volume_id
-    data["brick_path"] = brick_path
-
-    tmpl = Template(content)
-    tmpl.stream(**data).dump(volfile_path)
 
 
 def create_and_mount_brick(brick_device, brick_path, brickfs):
@@ -171,59 +128,3 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
 
         else:
             pass
-
-
-def start_args():
-    """
-    Prepare the things required for Brick Start and Returns the Proc
-    object required to start Brick Process.
-    """
-
-    brick_device = os.environ.get("BRICK_DEVICE", None)
-    brick_path = os.environ["BRICK_PATH"]
-    if brick_device is not None and brick_device != "":
-        brickfs = os.environ.get("BRICK_FS", "xfs")
-        create_and_mount_brick(brick_device, brick_path, brickfs)
-
-    volume_id = os.environ["VOLUME_ID"]
-    brick_path_name = brick_path.strip("/").replace("/", "-")
-    volname = os.environ["VOLUME"]
-    nodename = os.environ["HOSTNAME"]
-
-    create_brickdir(brick_path)
-    verify_brickdir_xattr_support(brick_path)
-    set_volume_id_xattr(brick_path, volume_id)
-
-    volfile_id = f"{volname}.{nodename}.{brick_path_name}"
-    volfile_path = os.path.join(VOLFILES_DIR, f"{volfile_id}.vol")
-    generate_brick_volfile(volfile_path, volname, volume_id, brick_path)
-
-    # UID is stored at the time of installation in configmap.
-    uid = None
-    with open(os.path.join(VOLINFO_DIR, "uid")) as uid_file:
-        uid = uid_file.read()
-
-    # Send Analytics Tracker
-    # The information from this analytics is available for
-    # developers to understand and build project in a better way
-    send_analytics_tracker("server", uid)
-
-    return Proc(
-        "glusterfsd",
-        "/opt/sbin/glusterfsd",
-        [
-            "-N",
-            "--volfile-id", volfile_id,
-            "-p", f"/var/run/gluster/glusterfsd-{brick_path_name}.pid",
-            "-S", "/var/run/gluster/brick.socket",
-            "--brick-name", brick_path,
-            "-l", "-",  # Log to stderr
-            "--xlator-option",
-            f"*-posix.glusterd-uuid={os.environ['NODEID']}",
-            "--process-name", "brick",
-            "--brick-port", "24007",
-            "--xlator-option",
-            f"{volname}-server.listen-port=24007",
-            "-f", volfile_path
-        ]
-    )

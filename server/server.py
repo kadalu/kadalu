@@ -1,37 +1,37 @@
 #!/usr/bin/python3
 
 """
-Prepares, Validates and then starts the Server process(glusterfsd, shd)
+Prepares, Validates and then starts the Moana Agent Process
 """
 
 import os
 
-import glusterfsd
-import shd
 from kadalulib import Monitor, Proc, logging_setup
+from brickutils import (
+    create_and_mount_brick,
+    create_brickdir,
+    verify_brickdir_xattr_support
+)
 
 
 def start_server_process():
     """
-    Start glusterfsd or glustershd process
+    Start Moana Agent Process and Exporter Service
     """
+    brick_device = os.environ.get("BRICK_DEVICE", None)
+    brick_path = os.environ["BRICK_PATH"]
+    if brick_device is not None and brick_device != "":
+        brickfs = os.environ.get("BRICK_FS", "xfs")
+        create_and_mount_brick(brick_device, brick_path, brickfs)
+
+    create_brickdir(brick_path)
+    verify_brickdir_xattr_support(brick_path)
+
     mon = Monitor()
 
     curr_dir = os.path.dirname(__file__)
     mon.add_process(Proc("metrics", "python3", [curr_dir + "/exporter.py"]))
-    glusterfsd_proc = glusterfsd.start_args()
-
-    mon.add_process(glusterfsd_proc)
-
-    # Start Self heal daemon only if Replica/Disperse Volume
-    shd_required = os.environ.get("SHD_REQUIRED", "0")
-    if shd_required == "1":
-        shd_proc = shd.start_args()
-        mon.add_process(shd_proc)
-
-    # # No need for quota process in bricks anymore
-    # mon.add_process(Proc("quotad", "python3", [curr_dir + "/quotad.py"]))
-
+    mon.add_process(Proc("Storage Manager", "kadalu", ["mgr"]))
 
     mon.start_all()
     mon.monitor()
