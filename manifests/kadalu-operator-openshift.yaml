@@ -5,6 +5,8 @@ kind: Namespace
 apiVersion: v1
 metadata:
   name: kadalu
+  labels:
+    openshift.io/cluster-monitoring: "true"
 ---
 apiVersion: v1
 kind: ServiceAccount

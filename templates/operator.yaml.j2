@@ -4,6 +4,10 @@ kind: Namespace
 apiVersion: v1
 metadata:
   name: {{ namespace }}
+{%- if k8s_dist == "openshift" %}
+  labels:
+    openshift.io/cluster-monitoring: "true"
+{%- endif %}
 ---
 apiVersion: v1
 kind: ServiceAccount
