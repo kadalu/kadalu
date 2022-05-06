@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import re
+import sys
 import time
 import uuid
 
@@ -506,6 +507,79 @@ def handle_external_storage_addition(core_v1_client, obj):
     add_tolerations("daemonset", NODE_PLUGIN, tolerations)
 
 
+def get_server_pod_status():
+
+    cmd = ["kubectl", "get", "pods", "-nkadalu", "-ojson"]
+
+    try:
+        resp = utils_execute(cmd)
+    except CommandError as err:
+        logging.error(logf(
+            "Failed to execute the command",
+            command=cmd,
+            error=err
+        ))
+
+    data = json.loads(resp.stdout)
+    pod_status = {}
+
+    for item in data["items"]:
+
+        if "server" in item["metadata"]["name"]:
+            pod_name = item["metadata"]["name"]
+            pod_phase = item["status"]["phase"]
+
+            pod_status[pod_name] = pod_phase
+
+    return pod_status
+
+
+def wait_till_pod_start():
+
+    timeout = 60
+    start_time = time.time()
+    logging.info(logf(
+        "start time",
+        start=start_time
+    ))
+    server_pods_ready = 0
+    while True:
+        pod_status = get_server_pod_status()
+        for k,v in pod_status.items():
+            curr_time = time.time()
+            logging.info(logf(
+                "curr time",
+                curr=curr_time
+            ))
+
+            if curr_time >= start_time + timeout:
+                logging.info(logf(
+                    "Timeout waiting for server pods to start"
+                ))
+                return -1
+            if len(pod_status.keys()) == server_pods_ready:
+                return 0
+
+            # This is a single pass check so the pod can go un-noticed into Error phase.
+            # So used while True:
+            logging.info(logf(
+                "k,v",
+                k=k,
+                v=v
+            ))
+            if v in ["ImagePullBackOff", "CrashLoopBackOff"]:
+                logging.info(logf(
+                    "Server pod has crashed"
+                ))
+                return -1
+            elif "Running" in v:
+                server_pods_ready+=1
+                continue
+            else:
+                time.sleep(5)
+    return 0
+
+
 def handle_added(core_v1_client, obj):
     """
     New Volume is requested. Update the configMap and deploy
@@ -567,10 +641,45 @@ def handle_added(core_v1_client, obj):
     update_config_map(core_v1_client, obj)
     deploy_server_pods(obj)
 
+    if wait_till_pod_start() == -1:
+        logging.info(logf("Server pods were not properly deployed"))
+        return
+
     filename = os.path.join(MANIFESTS_DIR, "services.yaml")
     template(filename, namespace=NAMESPACE, volname=volname)
     lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
     logging.info(logf("Deployed Service", volname=volname, manifest=filename))
+
+    # Time required for service to start
+    time.sleep(20)
+
+    switch = {
+        "Replica1": "replica 1",
+        "Replica3": "replica 3"
+    }
+
+    # TODO: Handle "External" type
+    if obj["spec"]["type"] != "External":
+        vol_type = switch.get(obj["spec"]["type"])
+
+    vol_create_cmd = "kadalu volume create --auto-create-pool --auto-add-nodes kadalu-storage/%s %s " %(volname, vol_type)
+
+    # Add nodes:brick
+    for idx, storage in enumerate(obj["spec"]["storage"]):
+        node = get_brick_hostname(volname, idx, suffix=True)
+        vol_create_cmd += "%s:%s " %(node, storage.get("path", ""))
+
+
+   # Create a new VOLUME in Moana
+    cmd = ["kubectl", "exec", "-i", "-nkadalu", "deploy/operator", "--", "bash",
+                "-c", vol_create_cmd]
+    try:
+        resp = utils_execute(cmd)
+    except CommandError as err:
+        logging.error(logf(
+            "Failed to create kadalu volume",
+            error=err
+        ))
 
 
 def handle_modified(core_v1_client, obj):
@@ -1061,6 +1170,18 @@ def main():
 
     core_v1_client = client.CoreV1Api()
     k8s_client = client.ApiClient()
+
+    cmd = ["kubectl", "exec", "-i", "-nkadalu", "deploy/operator", "--", "bash",
+            "-c", "kadalu user create admin --password=kadalu; kadalu user login admin --password=kadalu;"]
+
+    try:
+        resp = utils_execute(cmd)
+    except CommandError as err:
+        logging.error(logf(
+            "Failed to start create user",
+            error=err
+        ))
+        sys.exit(-1)
 
     # ConfigMap
     uid, upgrade = deploy_config_map(core_v1_client)
