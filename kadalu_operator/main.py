@@ -651,12 +651,16 @@ def handle_added(core_v1_client, obj):
     logging.info(logf("Deployed Service", volname=volname, manifest=filename))
 
     # Time required for service to start
-    time.sleep(20)
+    time.sleep(10)
 
     switch = {
         "Replica1": "replica 1",
-        "Replica3": "replica 3"
+        "Replica3": "replica 3",
+        "Disperse": "data"
     }
+
+    disperse_config = obj["spec"].get("disperse", None)
+    data_bricks = disperse_config.get("data", 0)
 
     # TODO: Handle "External" type
     if obj["spec"]["type"] != "External":
@@ -667,12 +671,13 @@ def handle_added(core_v1_client, obj):
     # Add nodes:brick
     for idx, storage in enumerate(obj["spec"]["storage"]):
         node = get_brick_hostname(volname, idx, suffix=True)
+        if data_bricks > 0 and idx == data_bricks:
+            vol_create_cmd += "redundancy "
         vol_create_cmd += "%s:%s " %(node, storage.get("path", ""))
 
 
-   # Create a new VOLUME in Moana
-    cmd = ["kubectl", "exec", "-i", "-nkadalu", "deploy/operator", "--", "bash",
-                "-c", vol_create_cmd]
+   # Create a new VOLUME in Moana(Kadalu Storage Manager)
+    cmd = vol_create_cmd.strip().split(" ")
     try:
         resp = utils_execute(cmd)
     except CommandError as err:
@@ -1171,14 +1176,22 @@ def main():
     core_v1_client = client.CoreV1Api()
     k8s_client = client.ApiClient()
 
-    cmd = ["kubectl", "exec", "-i", "-nkadalu", "deploy/operator", "--", "bash",
-            "-c", "kadalu user create admin --password=kadalu; kadalu user login admin --password=kadalu;"]
-
+    user_create_cmd = ["kadalu","user", "create", "admin", "--password=kadalu"]
     try:
-        resp = utils_execute(cmd)
+        resp = utils_execute(user_create_cmd)
     except CommandError as err:
         logging.error(logf(
-            "Failed to start create user",
+            "Failed to create user",
+            error=err
+        ))
+        sys.exit(-1)
+
+    user_login_cmd = ["kadalu", "user", "login", "admin", "--password=kadalu"]
+    try:
+        resp = utils_execute(user_login_cmd)
+    except CommandError as err:
+        logging.error(logf(
+            "Failed to login user",
             error=err
         ))
         sys.exit(-1)
