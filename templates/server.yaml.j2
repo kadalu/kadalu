@@ -41,12 +41,12 @@ spec:
           image: {{ images_hub }}/{{ docker_user }}/kadalu-server:{{ kadalu_version }}
           readinessProbe:
             tcpSocket:
-              port: 24007
+              port: 3000
             initialDelaySeconds: 7
             periodSeconds: 10
           livenessProbe:
             tcpSocket:
-              port: 24007
+              port: 3000
             initialDelaySeconds: 120
             periodSeconds: 20
           env:
