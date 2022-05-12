@@ -408,3 +408,15 @@ spec:
               value: "kubernetes"
             - name: VERBOSE
               value: "no"
+          volumeMounts:
+            - name: user-management
+              mountPath: "/root/.kadalu/"
+            - name: moana-workdir
+              mountPath: "/var/lib/kadalu"
+      volumes:
+        - name: user-management
+          hostPath:
+            path: "/root/.kadalu/"
+        - name: moana-workdir
+          hostPath:
+            path: "/var/lib/kadalu"
