@@ -538,35 +538,21 @@ def wait_till_pod_start():
 
     timeout = 60
     start_time = time.time()
-    logging.info(logf(
-        "start time",
-        start=start_time
-    ))
     server_pods_ready = 0
     while True:
         pod_status = get_server_pod_status()
         for k,v in pod_status.items():
             curr_time = time.time()
-            logging.info(logf(
-                "curr time",
-                curr=curr_time
-            ))
 
             if curr_time >= start_time + timeout:
                 logging.info(logf(
                     "Timeout waiting for server pods to start"
                 ))
                 return -1
+
             if len(pod_status.keys()) == server_pods_ready:
                 return 0
 
-            # This is a single pass check so the pod can go un-noticed into Error phase.
-            # So used while True:
-            logging.info(logf(
-                "k,v",
-                k=k,
-                v=v
-            ))
             if v in ["ImagePullBackOff", "CrashLoopBackOff"]:
                 logging.info(logf(
                     "Server pod has crashed"
@@ -641,6 +627,7 @@ def handle_added(core_v1_client, obj):
     update_config_map(core_v1_client, obj)
     deploy_server_pods(obj)
 
+    # TODO: Add intelligence to reach unreachable pods again
     if wait_till_pod_start() == -1:
         logging.info(logf("Server pods were not properly deployed"))
         return
@@ -651,7 +638,7 @@ def handle_added(core_v1_client, obj):
     logging.info(logf("Deployed Service", volname=volname, manifest=filename))
 
     # Time required for service to start
-    time.sleep(10)
+    time.sleep(40)
 
     switch = {
         "Replica1": "replica 1",
@@ -660,7 +647,9 @@ def handle_added(core_v1_client, obj):
     }
 
     disperse_config = obj["spec"].get("disperse", None)
-    data_bricks = disperse_config.get("data", 0)
+    data_bricks = 0
+    if disperse_config:
+        data_bricks = disperse_config.get("data", 0)
 
     # TODO: Handle "External" type
     if obj["spec"]["type"] != "External":
@@ -1176,15 +1165,18 @@ def main():
     core_v1_client = client.CoreV1Api()
     k8s_client = client.ApiClient()
 
-    user_create_cmd = ["kadalu","user", "create", "admin", "--password=kadalu"]
-    try:
-        resp = utils_execute(user_create_cmd)
-    except CommandError as err:
-        logging.error(logf(
-            "Failed to create user",
-            error=err
-        ))
-        sys.exit(-1)
+    # TODO: Get password from k8's secret
+    if not os.path.exists("/root/.kadalu/session"):
+        user_create_cmd = ["kadalu","user", "create", "admin", "--password=kadalu"]
+        logging.debug(logf("User does not exists. Continuing to create user"))
+        try:
+            resp = utils_execute(user_create_cmd)
+        except CommandError as err:
+            logging.error(logf(
+                "Failed to create user",
+                error=err
+            ))
+            sys.exit(-1)
 
     user_login_cmd = ["kadalu", "user", "login", "admin", "--password=kadalu"]
     try:
