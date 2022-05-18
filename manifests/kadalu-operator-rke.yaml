@@ -339,3 +339,40 @@ spec:
               value: "rke"
             - name: VERBOSE
               value: "no"
+<<<<<<< HEAD
+=======
+          volumeMounts:
+            - name: user-management
+              mountPath: "/root/.kadalu/"
+            - name: moana-workdir
+              mountPath: "/var/lib/kadalu"
+      volumes:
+        - name: user-management
+          hostPath:
+            path: "/root/.kadalu/"
+        - name: moana-workdir
+          hostPath:
+            path: "/var/lib/kadalu"
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: kadalu-operator
+  namespace: kadalu
+  labels:
+    app.kubernetes.io/part-of: kadalu
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/name: operator
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/part-of: kadalu
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/name: operator
+  ports:
+    - name: moanaport
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
+>>>>>>> c3067cb... Set hostname to operator while starting Moana mgr process
