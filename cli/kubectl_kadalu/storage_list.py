@@ -187,15 +187,16 @@ def fetch_status(storages, args):
         if args.name is not None and args.name != storage.storage_name:
             continue
 
-        dbpath = "/bricks/" + storage.storage_name + "/data/brick/stat.db"
+        dbpath = "/mnt/" + storage.storage_name + "/stat.db"
         query = ("select size from summary;"
                  "select count(pvname), sum(size), min(size), "
                  "avg(size), max(size) from pv_stats")
 
         cmd = utils.kubectl_cmd(args) + [
-            "exec", "-it",
-            storage.storage_units[0].podname,
-            "-nkadalu", "--", "sqlite3",
+            "exec", "-it", "-nkadalu",
+            "kadalu-csi-provisioner-0",
+            "-c", "kadalu-provisioner",
+            "--", "sqlite3",
             dbpath,
             query
         ]

@@ -12,11 +12,13 @@ RUN python3 -m pip install -r /tmp/csi-requirements.txt --no-cache-dir && \
 FROM python:3.10-slim-bullseye as prod
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends sqlite3 xfsprogs attr libtirpc3 bash inotify-tools ssh liburcu6 && \
+    apt-get install -y --no-install-recommends sqlite3 xfsprogs attr libtirpc3 bash inotify-tools ssh liburcu6 curl && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
 ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
+
+RUN curl -fsSL https://github.com/kadalu/moana/releases/latest/download/install.sh | sudo bash
 
 # copy glusterfs installed in /opt
 COPY --from=builder /opt /opt

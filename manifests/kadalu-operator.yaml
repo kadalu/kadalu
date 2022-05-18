@@ -339,8 +339,6 @@ spec:
               value: "kubernetes"
             - name: VERBOSE
               value: "no"
-<<<<<<< HEAD
-=======
           volumeMounts:
             - name: user-management
               mountPath: "/root/.kadalu/"
@@ -375,4 +373,3 @@ spec:
       protocol: TCP
       port: 3000
       targetPort: 3000
->>>>>>> c3067cb... Set hostname to operator while starting Moana mgr process

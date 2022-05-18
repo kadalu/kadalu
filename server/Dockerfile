@@ -24,33 +24,22 @@ COPY --from=builder /kadalu /kadalu
 RUN ln -sfn /usr/local/bin/python3 /kadalu/bin/python3
 
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends attr xfsprogs libtirpc3 sqlite3 liburcu6 && \
+    apt-get install -y --no-install-recommends attr xfsprogs libtirpc3 sqlite3 liburcu6 curl && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://github.com/kadalu/moana/releases/latest/download/install.sh | sudo bash
 
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
 RUN mkdir -p /var/run/gluster /var/log/glusterfs
 
 COPY lib/kadalulib.py        /kadalu/kadalulib.py
 COPY server/server.py        /kadalu/server.py
-COPY server/glusterfsd.py    /kadalu/glusterfsd.py
-COPY server/shd.py           /kadalu/shd.py
-COPY server/mount-glustervol /usr/bin/mount-glustervol
+COPY server/brickutils.py    /kadalu/brickutils.py
 COPY lib/startup.sh          /kadalu/startup.sh
 COPY server/stop-server.sh   /kadalu/stop-server.sh
 COPY server/exporter.py      /kadalu/exporter.py
 
-# Copy Volfile templates
-COPY templates/Replica1.client.vol.j2 /kadalu/templates/
-COPY templates/Replica2.client.vol.j2 /kadalu/templates/
-COPY templates/Replica3.client.vol.j2 /kadalu/templates/
-COPY templates/Disperse.client.vol.j2 /kadalu/templates/
-COPY templates/Replica2.shd.vol.j2    /kadalu/templates/
-COPY templates/Replica3.shd.vol.j2    /kadalu/templates/
-COPY templates/Disperse.shd.vol.j2    /kadalu/templates/
-COPY templates/brick.vol.j2           /kadalu/templates/
-
-RUN chmod +x /usr/bin/mount-glustervol
 RUN chmod +x /kadalu/startup.sh
 RUN chmod +x /kadalu/stop-server.sh
 
@@ -59,7 +48,7 @@ ARG version="(unknown)"
 ARG builddate="(unknown)"
 
 LABEL build-date="${builddate}"
-LABEL io.k8s.description="KaDalu container(glusterfsd or glustershd)"
+LABEL io.k8s.description="KaDalu container (Storage Unit)"
 LABEL name="kadalu-server"
 LABEL Summary="KaDalu Server"
 LABEL vcs-type="git"
