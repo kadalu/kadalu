@@ -354,6 +354,28 @@ roleRef:
   name: kadalu-operator
   apiGroup: rbac.authorization.k8s.io
 ---
+# Source: kadalu/charts/operator/templates/service.yaml
+kind: Service
+apiVersion: v1
+metadata:
+  name: kadalu-operator
+  namespace: kadalu
+  labels:
+    app.kubernetes.io/part-of: kadalu
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/name: operator
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/part-of: kadalu
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/name: operator
+  ports:
+    - name: moanaport
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
 # Source: kadalu/charts/operator/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
