@@ -381,3 +381,25 @@ spec:
         - name: moana-workdir
           hostPath:
             path: "/var/lib/kadalu"
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: kadalu-operator
+  namespace: {{ namespace }}
+  labels:
+    app.kubernetes.io/part-of: kadalu
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/name: operator
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/part-of: kadalu
+    app.kubernetes.io/component: operator
+    app.kubernetes.io/name: operator
+  ports:
+    - name: moanaport
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
