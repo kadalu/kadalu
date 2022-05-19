@@ -317,6 +317,8 @@ def collect_all_metrics():
 def collect_and_set_prometheus_metrics():
     """ Add all metrics data to prometheus labels """
 
+    storage_metrics.clear_all_metrics()
+
     metrics = collect_all_metrics()
 
     # Operator Metrics
