@@ -21,3 +21,25 @@ free_pvc_capacity_bytes = Gauge('kadalu_pvc_free_capacity_bytes', 'Kadalu Total 
 total_pvc_inodes = Gauge('kadalu_pvc_total_inodes', 'Kadalu Total Total PVC Inodes', ['name'])
 used_pvc_inodes = Gauge('kadalu_pvc_used_inodes', 'Kadalu Total Used PVC Inodes', ['name'])
 free_pvc_inodes = Gauge('kadalu_pvc_free_inodes', 'Kadalu Total Free PVC Inodes', ['name'])
+
+
+def clear_all_metrics():
+    """
+    Clear all the exposed metrics before each export
+    """
+    memory_usage.clear()
+    cpu_usage.clear()
+    total_number_of_containers.clear()
+    number_of_ready_containers.clear()
+    total_capacity_bytes.clear()
+    used_capacity_bytes.clear()
+    free_capacity_bytes.clear()
+    total_inodes.clear()
+    used_inodes.clear()
+    free_inodes.clear()
+    total_pvc_capacity_bytes.clear()
+    used_pvc_capacity_bytes.clear()
+    free_pvc_capacity_bytes.clear()
+    total_pvc_inodes.clear()
+    used_pvc_inodes.clear()
+    free_pvc_inodes.clear()
