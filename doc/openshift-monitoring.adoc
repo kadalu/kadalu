@@ -1,0 +1,195 @@
+
+= Setup Monitoring of Kadalu in Openshift & OKD 4.X clusters
+
+This guide will assist you in collecting metrics & performance data into Openshift/OKD Prometheus.
+
+== Enable user workload monitoring
+
+Follow the official documentation for enabling user workload monitoring.
+This is a sample from OKD4.10 and it should be used as a guidance only.
+
+```
+# In this example we also use Kadalu as persistent storage of Prometheus.
+# If you use another storage class for that -> set only "enableUserWorkload"
+ 
+$ oc -n openshift-monitoring edit configmap cluster-monitoring-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    enableUserWorkload: true
+    prometheusK8s: 
+      volumeClaimTemplate:
+       metadata:
+         name: prometheusdb
+       spec:
+         storageClassName: kadalu.gluster
+         accessModes:
+           - ReadWriteMany
+         resources:
+           requests:
+             storage: 50Gi
+    alertmanagerMain:
+      volumeClaimTemplate:
+       metadata:
+         name: alertmanager
+       spec:
+         storageClassName: kadalu.gluster
+         accessModes:
+           - ReadWriteMany
+         resources:
+           requests:
+             storage: 50Gi
+
+$ oc  -n openshift-user-workload-monitoring  edit configmap user-workload-monitoring-config
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-workload-monitoring-config
+  namespace: openshift-user-workload-monitoring
+data:
+  config.yaml: |
+```
+
+== Apply the following manifest:
+```
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: kadalu
+  labels:
+    openshift.io/cluster-monitoring: "true"
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: operator
+  namespace: kadalu
+  labels:
+    name: kadalu
+spec:
+  selector:
+    name: kadalu
+  ports:
+    - name: kadalu-metrics
+      protocol: TCP
+      port: 8050
+      targetPort: 8050
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kadalu-metrics
+  namespace: kadalu
+  labels:
+    name: kadalu
+spec:
+  endpoints:
+    - path: /metrics
+      port: kadalu-metrics
+      scheme: http
+      bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      tlsConfig:
+        insecureSkipVerify: true
+  selector:
+    matchLabels:
+      name: kadalu
+```
+
+== Set necessary permissions.
+
+- Assign a relevant role for the service account (I'm using 'kadalu-operator' as we do not have a viewer role, yet):
+```
+oc policy add-role-to-user kadalu-operator system:serviceaccount:openshift-monitoring:prometheus-k8s -n kadalu
+```
+
+- Verify the rolebinding
+```
+$ oc -n kadalu get rolebinding kadalu-operator -o yaml
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"annotations":{},"creationTimestamp":"2022-04-13T14:39:10Z","name":"kadalu-operator","namespace":"kadalu","resourceVersion":"42934554","uid":"f8ce8d9f-b5cd-46c1-98bc-bde6dff0ecca"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"kadalu-operator"},"subjects":[{"kind":"ServiceAccount","name":"prometheus-k8s","namespace":"openshift-monitoring"}]}
+  creationTimestamp: "2022-04-13T14:39:10Z"
+  name: kadalu-operator
+  namespace: kadalu
+  resourceVersion: "49108675"
+  uid: f8ce8d9f-b5cd-46c1-98bc-bde6dff0ecca
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kadalu-operator
+subjects:
+- kind: ServiceAccount
+  name: prometheus-k8s
+  namespace: openshift-monitoring
+```
+
+== Verify that the target is being scraped:
+
+- Obtain the endpoints of the service
+```
+$ oc -n kadalu  describe  services operator | awk '/Endpoints/ {print "http://"$2}'
+```
+
+- Go to the UI -> Administrator -> Observe -> Targets
+
+- Go to the UI -> Administrator -> Observe -> Metrics -> Type "kadalu_" -> There should be multiple metrics
+
+
+- In case you got troubles with the Metrics, consider restarting the pods in the openshift-user-workload-monitoring namespace (and in rare cases openshift-monitoring)
+
+== Alarm configuration
+
+- Once the Metrics are visible in the UI, you can setup some alerts.
+
+
+```
+# Create and apply this manifest:
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kadalu-alert
+  namespace: kadalu
+        
+spec:
+  groups:
+  - name: PVC-Space-alerts
+    rules:
+    - alert: PvcFreeSpaceLow
+      annotations:
+        description: PVC space is low!
+      expr: kadalu_pvc_free_capacity_bytes < 1.073741824e+10
+      labels:
+        severity: warning
+    - alert: PvcFreeSpaceCritical
+      annotations:
+        description: PVC space is critical!
+      expr: kadalu_pvc_free_capacity_bytes < 0.536870912e+10
+      labels:
+        severity: critical
+  - name: PVC-inode-alerts
+    rules:
+    - alert: PVCFreeInodesLow
+      annotations:
+        description: PVC Free inodes is low!
+      expr: kadalu_pvc_free_inodes < 500000
+      labels:
+        severity: warning
+    - alert: PVCFreeInodesCritical
+      annotations:
+        description: PVC Free inodes is critical!
+      expr: kadalu_pvc_free_inodes < 200000
+      labels:
+        severity: critical
+```
