@@ -1140,12 +1140,20 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
     if volume['type'] == 'External':
         # Try to mount the Host Volume, handle failure if
         # already mounted
-        with mount_lock:
-            mount_glusterfs_with_host(volname,
-                                      mountpoint,
-                                      volume['g_host'],
-                                      volume['g_options'],
-                                      is_client)
+        if not is_gluster_mount_proc_running(volname, mountpoint):
+            with mount_lock:
+                mount_glusterfs_with_host(volname,
+                                        mountpoint,
+                                        volume['g_host'],
+                                        volume['g_options'],
+                                        is_client)
+        else:
+            logging.debug(logf(
+                "Already mounted",
+                mount=mountpoint
+            ))
+            return mountpoint
+
         use_gluster_quota = False
         if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
             and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
@@ -1274,14 +1282,6 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
 # noqa # pylint: disable=unused-argument
 def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None, is_client=False):
     """Mount Glusterfs Volume"""
-
-    # Ignore if already mounted
-    if is_gluster_mount_proc_running(volname, mountpoint):
-        logging.debug(logf(
-            "Already mounted",
-            mount=mountpoint
-        ))
-        return
 
     if not os.path.exists(mountpoint):
         makedirs(mountpoint)
