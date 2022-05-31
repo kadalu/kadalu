@@ -12,7 +12,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 300Mi
+      storage: 200Mi
 # -*- mode: yaml -*-
 ---
 kind: PersistentVolumeClaim
@@ -27,7 +27,7 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 500Mi
+      storage: 200Mi
 # -*- mode: yaml -*-
 ---
 apiVersion: v1
@@ -77,6 +77,7 @@ apiVersion: storage.k8s.io/v1
 metadata:
   name: kadalu.storage-pool-1-virtblock
 provisioner: kadalu
+allowVolumeExpansion: true
 parameters:
   storage_name: "storage-pool-1"
   pv_type: Block
@@ -93,7 +94,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 500Mi
+      storage: 200Mi
 ---
 apiVersion: v1
 kind: Pod
@@ -129,7 +130,7 @@ spec:
   storageClassName: kadalu.storage-pool-1
   resources:
     requests:
-      storage: 500Mi
+      storage: 200Mi
 ---
 apiVersion: v1
 kind: Pod
