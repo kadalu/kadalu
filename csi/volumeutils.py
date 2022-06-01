@@ -540,11 +540,11 @@ def update_subdir_volume(hostvol_mnt, hostvoltype, volname, expansion_requested_
     )
 
 
-def update_virtblock_volume(hostvol_mnt, volname, expansion_requested_pvsize):
-    """Update virtual block volume"""
+def update_block_volume(pvtype, hostvol_mnt, volname, expansion_requested_pvsize):
+    """Update block volume"""
 
     volhash = get_volname_hash(volname)
-    volpath = get_volume_path(PV_TYPE_VIRTBLOCK, volhash, volname)
+    volpath = get_volume_path(pvtype, volhash, volname)
     volpath_full = os.path.join(hostvol_mnt, volpath)
     logging.debug(logf(
         "Volume hash",
@@ -563,26 +563,18 @@ def update_virtblock_volume(hostvol_mnt, volname, expansion_requested_pvsize):
 
     volpath_fd = os.open(volpath_full, os.O_CREAT | os.O_RDWR)
     os.close(volpath_fd)
+    os.truncate(volpath_full, expansion_requested_pvsize)
 
-    execute("truncate", "-s", expansion_requested_pvsize, volpath_full)
     logging.debug(logf(
         "Truncated file to required size",
         path=volpath,
         size=expansion_requested_pvsize
     ))
 
-    # TODO: Multiple FS support based on volume_capability mount option
-    execute(MKFS_XFS_CMD, volpath_full)
-    logging.debug(logf(
-        "Created Filesystem",
-        path=volpath,
-        command=MKFS_XFS_CMD
-    ))
-
     update_pv_metadata(hostvol_mnt, volpath, expansion_requested_pvsize)
     return Volume(
         volname=volname,
-        voltype=PV_TYPE_VIRTBLOCK,
+        voltype=pvtype,
         volhash=volhash,
         hostvol=os.path.basename(hostvol_mnt),
         size=expansion_requested_pvsize,
@@ -621,8 +613,9 @@ def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize):
     ))
 
 
+# pylint: disable=too-many-locals,too-many-statements
 def delete_volume(volname):
-    """Delete virtual block, sub directory volume, or External"""
+    """Delete virtual/raw block, sub directory volume, or External"""
 
     vol = search_volume(volname)
     if vol is None:
@@ -630,7 +623,7 @@ def delete_volume(volname):
             "Volume not found for delete",
             volname=volname
         ))
-        return False
+        return
 
     logging.debug(logf(
         "Volume found for delete",
@@ -659,7 +652,7 @@ def delete_volume(volname):
             volpath=volpath,
             voltype=vol.voltype
         ))
-        return True
+        return
 
     if pv_reclaim_policy == "archive":
 
@@ -703,20 +696,36 @@ def delete_volume(volname):
                 error=err,
             ))
 
-        return True
+        return
+
+    # make sure last arg to join is an emtpy string so we get '/' appended to path
+    hash_start = len(os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.voltype, ''))
+    end = len(volpath)
 
     try:
         if vol.voltype == PV_TYPE_SUBVOL:
             shutil.rmtree(volpath)
         else:
             os.remove(volpath)
-    except OSError as err:
-        logging.info(logf(
-            "Error while deleting volume",
-            volpath=volpath,
-            voltype=vol.voltype,
-            error=err,
-        ))
+
+        parent = os.path.dirname(volpath)
+        # base case, delete upto but not including voltype dir
+        while end > hash_start:
+            os.rmdir(parent)
+            parent = os.path.dirname(parent)
+            end = len(parent)
+
+    except (OSError, FileNotFoundError) as err:
+        # neither rmtree nor remove raises OSError with reason 'empty dir'
+        # however rmdir if dir isn't empty raises 'empty dir' and in current
+        # scenario it's be raised only once in 16^4 cases ;)
+        if err.args[1].find("not empty") != -1:
+            logging.info(logf(
+                "Error while deleting volume",
+                volpath=volpath,
+                voltype=vol.voltype,
+                error=err,
+            ))
 
     logging.info(logf(
         "Volume deleted",
@@ -726,7 +735,10 @@ def delete_volume(volname):
 
     # Delete Metadata file
     info_file_path = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol,
-                                  "info", vol.volpath+".json")
+                                  "info", f"{vol.volpath}.json")
+
+    hash_start = len(os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info", vol.voltype, ''))
+    end = len(info_file_path)
 
     try:
         with open(info_file_path) as info_file:
@@ -738,20 +750,30 @@ def delete_volume(volname):
             update_free_size(vol.hostvol, volname, data["size"])
 
         os.remove(info_file_path)
-        logging.debug(logf(
-            "Removed volume metadata file",
-            path="info/" + vol.volpath + ".json",
-            hostvol=vol.hostvol
-        ))
-    except OSError as err:
-        logging.info(logf(
-            "Error while removing the file",
-            path="info/" + vol.volpath + ".json",
-            hostvol=vol.hostvol,
-            error=err,
-        ))
+        parent = os.path.dirname(info_file_path)
 
-    return True
+        # base case, delete upto but not including voltype dir
+        while end > hash_start:
+            os.rmdir(parent)
+            parent = os.path.dirname(parent)
+            end = len(parent)
+
+    except OSError as err:
+        if err.args[1].find("not empty") != -1:
+            logging.info(logf(
+                "Error while removing the file",
+                path=f"info/{vol.volpath}.json",
+                hostvol=vol.hostvol,
+                error=err,
+            ))
+
+    logging.debug(logf(
+        "Removed volume metadata file",
+        path=f"info/{vol.volpath}.json",
+        hostvol=vol.hostvol
+    ))
+
+    return
 
 
 def search_volume(volname):
@@ -759,6 +781,7 @@ def search_volume(volname):
     volhash = get_volname_hash(volname)
     subdir_path = get_volume_path(PV_TYPE_SUBVOL, volhash, volname)
     virtblock_path = get_volume_path(PV_TYPE_VIRTBLOCK, volhash, volname)
+    rawblock_path = get_volume_path(PV_TYPE_RAWBLOCK, volhash, volname)
 
     host_volumes = get_pv_hosting_volumes({})
     for volume in host_volumes:
@@ -768,15 +791,19 @@ def search_volume(volname):
         # Check for mount availability before checking the info file
         retry_errors(os.statvfs, [mntdir], [ENOTCONN])
 
-        for info_path in [subdir_path, virtblock_path]:
+        for info_path in [subdir_path, virtblock_path, rawblock_path]:
             info_path_full = os.path.join(mntdir, "info", info_path + ".json")
-            voltype = PV_TYPE_SUBVOL if "/%s/" % PV_TYPE_SUBVOL \
-                in info_path_full else PV_TYPE_VIRTBLOCK
 
             if os.path.exists(info_path_full):
                 data = {}
                 with open(info_path_full) as info_file:
                     data = json.load(info_file)
+
+                voltype = PV_TYPE_SUBVOL
+                if info_path_full.find(PV_TYPE_VIRTBLOCK) != -1:
+                    voltype = PV_TYPE_VIRTBLOCK
+                elif info_path_full.find(PV_TYPE_RAWBLOCK) != -1:
+                    voltype = PV_TYPE_RAWBLOCK
 
                 return Volume(
                     volname=volname,
@@ -891,7 +918,7 @@ def unmount_volume(mountpoint):
         execute(UNMOUNT_CMD, "-l", mountpoint)
 
 
-def expand_volume(mountpoint):
+def expand_mounted_volume(mountpoint):
     """Expand a Volume"""
     if os.path.ismount(mountpoint):
         execute("xfs_growfs", "-d", mountpoint)

@@ -12,11 +12,11 @@ import csi_pb2_grpc
 import grpc
 from volumeutils import (HOSTVOL_MOUNTDIR, check_external_volume,
                          create_block_volume, create_subdir_volume,
-                         delete_volume, expand_volume, get_pv_hosting_volumes,
+                         delete_volume, expand_mounted_volume, get_pv_hosting_volumes,
                          is_hosting_volume_free,
                          mount_and_select_hosting_volume, search_volume,
                          unmount_glusterfs, update_free_size,
-                         update_subdir_volume, update_virtblock_volume,
+                         update_subdir_volume, update_block_volume,
                          yield_list_of_pvcs)
 
 from kadalulib import (PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
@@ -84,6 +84,7 @@ def is_block_request(request):
 def pvc_access_mode(request):
     """Fetch Access modes from Volume capabilities"""
     for vol_capability in request.volume_capabilities:
+        # TODO: A PVC can be asked with multiple access modes
         return vol_capability.access_mode.mode
 
 
@@ -576,6 +577,10 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         """
 
         start_time = time.time()
+        logging.debug(logf(
+            "Expand Volume request",
+            request=request
+        ))
 
         if not request.volume_id:
             errmsg = "Volume ID is empty and must be provided"
@@ -628,12 +633,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             expansion_requested_pvsize=expansion_requested_pvsize
         ))
 
-        pvtype = PV_TYPE_SUBVOL
-        single_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
-                                     "SINGLE_NODE_WRITER")
-
-        if request.volume_capability.AccessMode == single_node_writer:
-            pvtype = PV_TYPE_VIRTBLOCK
+        # reuse the data that was set while creating a volume
+        pvtype = existing_volume.voltype
 
         logging.debug(logf(
             "Found PV type",
@@ -659,18 +660,20 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
         hostvoltype = existing_volume.extra['hostvoltype']
 
-        if pvtype == PV_TYPE_VIRTBLOCK:
-            update_virtblock_volume(
-                mntdir, pvname, expansion_requested_pvsize)
-            expand_volume(mntdir)
-        else:
+        if pvtype == PV_TYPE_SUBVOL:
             update_subdir_volume(
                 mntdir, hostvoltype, pvname, expansion_requested_pvsize)
-            if hostvoltype == 'External':
-                # Use Gluster quota if set
-                if (os.path.isfile("/etc/secret-volume/ssh-privatekey") \
-                    and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
-                    use_gluster_quota = True
+        else:
+            volume = update_block_volume(
+                pvtype, mntdir, pvname, expansion_requested_pvsize)
+            if pvtype == PV_TYPE_VIRTBLOCK:
+                expand_mounted_volume(os.path.join(mntdir, volume.volpath))
+
+        if hostvoltype == 'External':
+            # Use Gluster quota if set
+            if (os.path.isfile("/etc/secret-volume/ssh-privatekey") \
+                and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
+                use_gluster_quota = True
 
         # Can be true only if its 'External'
         if use_gluster_quota:

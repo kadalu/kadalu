@@ -39,12 +39,11 @@ function wait_for_kadalu_pods() {
   local end_time=$(($(date +%s) + $local_timeout))
 
   # wait for kadalu pods creation
-  while [[ \
-    $($k get pod --ignore-not-found -o name -l name=kadalu | wc -l) -eq 0 || \
-    $($k get pod --ignore-not-found -o name -l app.kubernetes.io/name=kadalu-csi-provisioner | wc -l) -eq 0 || \
-    $($k get pod --ignore-not-found -o name -l app.kubernetes.io/name=kadalu-csi-nodeplugin | wc -l) -eq 0 || \
-    $($k get pod --ignore-not-found -o name -l app.kubernetes.io/name=server | wc -l) -eq 0 ]] \
-      ; do
+  while [[ 
+    $($k get pod --ignore-not-found -o name -l name=kadalu | wc -l) -eq 0 ||
+    $($k get pod --ignore-not-found -o name -l app.kubernetes.io/name=kadalu-csi-provisioner | wc -l) -eq 0 ||
+    $($k get pod --ignore-not-found -o name -l app.kubernetes.io/name=kadalu-csi-nodeplugin | wc -l) -eq 0 ||
+    $($k get pod --ignore-not-found -o name -l app.kubernetes.io/name=server | wc -l) -eq 0 ]]; do
     [[ $end_time -lt $(date +%s) ]] && echo Kadalu pods are not created && fail=1 && return
     sleep 2
   done
@@ -80,8 +79,9 @@ function get_pvc_and_check() {
 
   local yaml_file=$1
   local log_text=$2
-  local pod_count=$3
-  local time_limit=$4
+  local pool_name=$3
+  local pod_count=$4
+  local time_limit=$5
   local end_time=$(($(date +%s) + $time_limit))
 
   local k="kubectl "
@@ -102,25 +102,64 @@ function get_pvc_and_check() {
   # for kubectl >= v1.23 -> k wait --for=jsonpath='{.status.phase}'=Succeeded pod -l type=${label}
   # status should be Succeeded for all app pods
   end_time=$(($(date +%s) + $time_limit))
-  while [[ $($k get pod -l type=${label} -ojsonpath={'.items[].status.phase'} | grep -cv Succeeded) -eq 0 ]]; do
+  while [[ $($k get pod -l type=${label} -ojsonpath={'.items[].status.phase'} | grep -cv Succeeded) -ne 0 ]]; do
     [[ $end_time -lt $(date +%s) ]] && echo Sample pods for pool type "${log_text}" are not in complete state within ${time_limit}s && fail=1 && return
     sleep 2
   done
 
   echo Sample pods of type $log_text are in Complete state
 
+  # expand PVCs
+  local original='200Mi'
+  local final='300Mi'
+
+  echo Expanding PVCs from $log_text pool type
+  sed "s/$original/$final/g" ${yaml_file} | kubectl apply -f -
+
+  end_time=$(($(date +%s) + $time_limit))
+  while [[ $($k get pod -l type=${label} -ojsonpath={'.items[].status.phase'} | grep -cv Succeeded) -ne 0 ]]; do
+    [[ $end_time -lt $(date +%s) ]] && echo Sample pods for pool type "${log_text}" are not in complete state within ${time_limit}s after PVC expand && fail=1 && return
+    sleep 2
+  done
+
+  end_time=$(($(date +%s) + $time_limit))
+  while [[ $(kubectl get pvc -ojsonpath={'.items[].status.capacity.storage'} | grep -c $original) -ne 0 ]]; do
+    [[ $end_time -lt $(date +%s) ]] && echo Not all PVCs are expanded from $original to $final && fail=1 && return
+    sleep 2
+  done
+
   # delete app pods after above validation
   for p in $(kubectl get pods -o name -l type=${label}); do
     [[ $fail -eq 1 ]] && kubectl describe $p
     [[ $fail -eq 0 ]] && kubectl logs $p
-    kubectl delete $p
+    kubectl delete $p --force
   done
 
   # delete PVCs
   for p in $(kubectl get pvc -o name -l type=${label}); do
+    name=$(kubectl get $p -ojsonpath={'.spec.volumeName'})
+    # check for presence of PVC as previous PVC deletion shouldn't delete current PVC
+    local json_file=$(kubectl exec -i sts/kadalu-csi-provisioner -c kadalu-provisioner -nkadalu -- /usr/bin/find /mnt/$pool_name/info/ -mindepth 4 -maxdepth 4 -name "*$name.json" -printf '.' | wc -c)
+    local pvc_dir=$(kubectl exec -i sts/kadalu-csi-provisioner -c kadalu-provisioner -nkadalu -- /usr/bin/find /mnt/$pool_name/ -mindepth 4 -maxdepth 4 -name "*$name" -not -path "/mnt/$pool_name/.glusterfs/*" -not -path "/mnt/$pool_name/info/*" -printf '.' | wc -c
+    )
+    if [[ $json_file -ne 1 || $pvc_dir -ne 1 ]]; then
+      fail=1 && echo Not able to verify existence of PVC $name
+    fi
+
     [[ $fail -eq 1 ]] && kubectl describe $p
     kubectl delete $p
   done
+
+  # there should be no leaf dir left after PVC delete since we aren't testing `pvReclaimPolicy` yet
+  local json_files=$(kubectl exec -i sts/kadalu-csi-provisioner -c kadalu-provisioner -nkadalu -- /usr/bin/find /mnt/$pool_name/info/ -mindepth 2 -maxdepth 4 -printf '.' | wc -c)
+  local pvc_dirs=$(kubectl exec -i sts/kadalu-csi-provisioner -c kadalu-provisioner -nkadalu -- /usr/bin/find /mnt/$pool_name/ -mindepth 2 -maxdepth 4 -not -path "/mnt/$pool_name/.glusterfs/*" -not -path "/mnt/$pool_name/info/*" -printf '.' | wc -c)
+
+  if [[ $json_files -ne 0 || $pvc_dirs -ne 0 ]]; then
+    echo Not all PVCs are cleaned up properly
+    fail=1
+    kubectl exec -i sts/kadalu-csi-provisioner -c kadalu-provisioner -nkadalu -- /usr/bin/find /mnt/$pool_name/info/ -mindepth 2 -maxdepth 4
+    kubectl exec -i sts/kadalu-csi-provisioner -c kadalu-provisioner -nkadalu -- /usr/bin/find /mnt/$pool_name/ -mindepth 2 -maxdepth 4 -not -path "/mnt/$pool_name/.glusterfs/*" -not -path "/mnt/$pool_name/info/*"
+  fi
 
 }
 
@@ -326,26 +365,25 @@ function deploy_kadalu_resources() {
 function deploy_app_pods() {
 
   # type: Replica3
-  get_pvc_and_check examples/sample-test-app3.yaml "Replica3" 6 180
+  get_pvc_and_check examples/sample-test-app3.yaml "Replica3" "storage-pool-3" 6 180
   check_test_fail
 
   # type: Replica1
-  get_pvc_and_check examples/sample-test-app1.yaml "Replica1" 4 120
+  get_pvc_and_check examples/sample-test-app1.yaml "Replica1" "storage-pool-1" 4 120
   check_test_fail
 
   # type: Disperse
-  get_pvc_and_check examples/sample-test-app4.yaml "Disperse" 4 120
+  get_pvc_and_check examples/sample-test-app4.yaml "Disperse" "storage-pool-4" 4 120
   check_test_fail
 
   # type: Replica2
-  # get_pvc_and_check examples/sample-test-app2.yaml "Replica2" 4 120
+  # get_pvc_and_check examples/sample-test-app2.yaml "Replica2" "storage-pool-2" 4 120
 
   # type: External-non-native
   # get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 60
 
   # type: External-native
   # get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 2 90
-
 }
 
 function modify_pool() {
@@ -435,7 +473,7 @@ case "${1:-}" in
 
   test_kadalu)
 
-    # deploy and validate app pods on storage pools created as part of 'kadalu_operator' case
+    # deploy and validate app pods on storage pools and expand PVCs created as part of 'kadalu_operator' case
     deploy_app_pods
 
     # modifies existing storage pool to check for changes in kadalu resources
