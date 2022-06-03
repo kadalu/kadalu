@@ -28,7 +28,11 @@ RUN apt-get update -yq && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL https://github.com/kadalu/moana/releases/latest/download/install.sh | sudo bash
+RUN curl -fsSL https://github.com/kadalu/moana/releases/latest/download/kadalu-`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'` -o /tmp/kadalu
+RUN curl -fsSL https://github.com/kadalu/moana/releases/latest/download/mount.kadalu -o /tmp/mount.kadalu
+
+RUN install /tmp/kadalu /usr/sbin/kadalu
+RUN install /tmp/mount.kadalu /sbin/mount.kadalu
 
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
 RUN mkdir -p /var/run/gluster /var/log/glusterfs
