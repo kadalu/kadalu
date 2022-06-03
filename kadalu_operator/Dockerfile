@@ -19,7 +19,11 @@ RUN apt-get update -yq && \
 
 ENV PATH="/kadalu/bin:$PATH"
 
-RUN curl -fsSL https://github.com/kadalu/moana/releases/latest/download/install.sh | sudo bash
+RUN curl -fsSL https://github.com/kadalu/moana/releases/latest/download/kadalu-`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|'` -o /tmp/kadalu
+RUN curl -fsSL https://github.com/kadalu/moana/releases/latest/download/mount.kadalu -o /tmp/mount.kadalu
+
+RUN install /tmp/kadalu /usr/sbin/kadalu
+RUN install /tmp/mount.kadalu /sbin/mount.kadalu
 
 # kubectl binary
 COPY --from=builder /usr/bin/kubectl /usr/bin/kubectl
