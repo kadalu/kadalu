@@ -99,3 +99,25 @@ spec:
                       type: string
                     gluster_options:
                       type: string
+                gluster_volume:
+                  type: object
+                  properties:
+                    hosts:
+                      type: array
+                      items:
+                        type: string
+                    volume_name:
+                      type: string
+                    volume_options:
+                      type: string
+                kadalu_volume:
+                  type: object
+                  properties:
+                    mgr_url:
+                      type: string
+                    pool_name:
+                      type: string
+                    volume_name:
+                      type: string
+                    volume_options:
+                      type: string
