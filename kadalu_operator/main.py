@@ -1148,6 +1148,24 @@ def add_tolerations(resource, name, tolerations):
     return
 
 
+def create_and_login_kadalu_storage_user(username, password):
+    cmd = ["kadalu","user", "create", username, f"--password={password}"]
+    try:
+        utils_execute(cmd)
+    except CommandError as err:
+        # Do not exit on this error. If User creation failed with
+        # already exists error then the next command will succeed.
+        # Any other error here will also cause error for the next command.
+        logging.warning(logf("Failed to create user", error=err))
+
+    cmd = ["kadalu", "user", "login", "admin", "--password=kadalu"]
+    try:
+        utils_execute(cmd)
+    except CommandError as err:
+        logging.error(logf("Failed to login user", error=err))
+        sys.exit(-1)
+
+
 def main():
     """Main"""
     config.load_incluster_config()
@@ -1161,27 +1179,7 @@ def main():
     k8s_client = client.ApiClient()
 
     # TODO: Get password from k8's secret
-    if not os.path.exists("/root/.kadalu/session"):
-        user_create_cmd = ["kadalu","user", "create", "admin", "--password=kadalu"]
-        logging.debug(logf("User does not exists. Continuing to create user"))
-        try:
-            resp = utils_execute(user_create_cmd)
-        except CommandError as err:
-            logging.error(logf(
-                "Failed to create user",
-                error=err
-            ))
-            sys.exit(-1)
-
-    user_login_cmd = ["kadalu", "user", "login", "admin", "--password=kadalu"]
-    try:
-        resp = utils_execute(user_login_cmd)
-    except CommandError as err:
-        logging.error(logf(
-            "Failed to login user",
-            error=err
-        ))
-        sys.exit(-1)
+    create_and_login_kadalu_storage_user("admin", "kadalu")
 
     # ConfigMap
     uid, upgrade = deploy_config_map(core_v1_client)
