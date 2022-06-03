@@ -6,7 +6,7 @@ echo "Starting the quota crawler script"
 count=0
 while true; do
 
-  dirs=$(find $MOUNT_DIR/*/subvol -type d -mindepth 1 -maxdepth 1 -printf '.' 2>/dev/null| wc -l);
+  dirs=$(find $MOUNT_DIR/*/subvol -mindepth 1 -maxdepth 1 -type d -printf '.' 2>/dev/null| wc -c);
   if [ $dirs -lt 1 ] ; then
     if [ $((count % 100)) -eq 0 ]; then
       echo "No PVC yet, continuing to watch..."
