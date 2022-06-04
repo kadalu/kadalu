@@ -34,15 +34,19 @@ KADALU_CONFIG_MAP = "kadalu-info"
 CSI_POD_PREFIX = "csi-"
 STORAGE_CLASS_NAME_PREFIX = "kadalu."
 # TODO: Add ThinArbiter
-VALID_HOSTING_VOLUME_TYPES = ["Replica1", "Replica2", "Replica3",
-                              "Disperse", "External"]
 VALID_PV_RECLAIM_POLICY_TYPES = ["delete", "archive", "retain"]
 VOLUME_TYPE_REPLICA_1 = "Replica1"
 VOLUME_TYPE_REPLICA_2 = "Replica2"
 VOLUME_TYPE_REPLICA_3 = "Replica3"
 VOLUME_TYPE_EXTERNAL = "External"
+VOLUME_TYPE_EXTERNAL_GLUSTER = "ExternalGluster"
+VOLUME_TYPE_EXTERNAL_KADALU = "ExternalKadalu"
 VOLUME_TYPE_DISPERSE = "Disperse"
-
+VALID_HOSTING_VOLUME_TYPES = [
+    VOLUME_TYPE_REPLICA_1, VOLUME_TYPE_REPLICA_2, VOLUME_TYPE_REPLICA_3,
+    VOLUME_TYPE_DISPERSE, VOLUME_TYPE_EXTERNAL,
+    VOLUME_TYPE_EXTERNAL_KADALU, VOLUME_TYPE_EXTERNAL_GLUSTER
+]
 CREATE_CMD = "create"
 APPLY_CMD = "apply"
 DELETE_CMD = "delete"
@@ -262,6 +266,72 @@ def get_brick_hostname(volname, idx, suffix=True):
         return "%s-0.%s" % (hostname, volname)
 
     return hostname
+
+
+def poolinfo_from_crd_spec(obj):
+    pool_type = obj["spec"]["type"]
+    data = {
+        "name": obj["metadata"]["name"],
+        "id": obj["spec"].get("pool_id", str(uuid.uuid1())),
+        "type": pool_type,
+        "pvReclaimPolicy": obj["spec"].get("pvReclaimPolicy", "delete"),
+        # CRD would set 'native' but just being cautious
+        "kadalu_format": obj["spec"].get("kadalu_format", "native")
+    }
+
+    if pool_type == VOLUME_TYPE_EXTERNAL_KADALU:
+        details = obj["spec"]["kadalu_volume"]
+        data["mgr_url"] = details["mgr_url"]
+        data["external_volume_name"] = details["volume_name"]
+        data["external_volume_options"] = details.get("volume_options", "")
+    elif pool_type == VOLUME_TYPE_EXTERNAL_GLUSTER:
+        details = obj["spec"]["gluster_volume"]
+        data["hosts"] = details["hosts"]
+        data["external_volume_name"] = details["volume_name"]
+        data["external_volume_options"] = details.get("volume_options", "")
+    else:
+        # Parse Poolinfo of internally managed
+        # Kadalu Storage Volumes.
+        pool_type = obj["spec"]["type"]
+        disperse_config = obj["spec"].get("disperse", {})
+        data["options"] = obj["spec"].get("options", "")
+        data["disperse"] = {
+            "data": disperse_config.get("data", 0),
+            "redundancy": disperse_config.get("redundancy", 0)
+        }
+        data["storage_units"] = []
+        storage_units = obj["spec"]["storage"]
+        for idx, storage in enumerate(storage_units):
+            data["storage_units"].append({
+                "path": f"/storages/{data['name']}/storage",
+                "kube_hostname": storage.get("node", ""),
+                "node": get_brick_hostname(data["name"], idx),
+                "node_id": storage.get("node_id", f"node-{idx}" % idx),
+                "host_path": storage.get("path", ""),
+                "device": storage.get("device", ""),
+                "pvc_name": storage.get("pvc", ""),
+                "device_dir": get_brick_device_dir(storage),
+                "decommissioned": storage.get("decommissioned", ""),
+                "index": idx
+            })
+
+        if pool_type == VOLUME_TYPE_REPLICA_2:
+            tiebreaker = obj["spec"].get("tiebreaker", None)
+            if not tiebreaker:
+                logging.warning(logf("No 'tiebreaker' provided for replica2 "
+                                     "config. Using default tie-breaker.kadalu.io:/mnt",
+                                     pool_name=data["name"]))
+                # Add default tiebreaker if no tie-breaker option provided
+                tiebreaker = {
+                    "node": "tie-breaker.kadalu.io",
+                    "path": "/mnt",
+                }
+                if not tiebreaker.get("port", None):
+                    tiebreaker["port"] = 24007
+
+            data["tiebreaker"] = tiebreaker
+
+    return data
 
 
 def upgrade_storage_pods(core_v1_client):
@@ -639,35 +709,20 @@ def handle_added(core_v1_client, obj):
     # Time required for service to start
     time.sleep(40)
 
-    switch = {
-        "Replica1": "replica 1",
-        "Replica3": "replica 3",
-        "Disperse": "data"
-    }
+    poolinfo = poolinfo_from_crd_spec(obj)
+    cmd = [
+        "kadalu", "volume", "create",
+        "--auto-create-pool", "--auto-add-nodes",
+        f"kadalu-storage/{poolinfo['name']}"
+    ]
 
-    disperse_config = obj["spec"].get("disperse", None)
-    data_bricks = 0
-    if disperse_config:
-        data_bricks = disperse_config.get("data", 0)
+    cmd += [
+        f"{storage_unit['node']}:{storage_unit['path']}:24007"
+        for storage_unit in poolinfo["storage_units"]
+    ]
 
-    # TODO: Handle "External" type
-    if obj["spec"]["type"] != "External":
-        vol_type = switch.get(obj["spec"]["type"])
-
-    vol_create_cmd = "kadalu volume create --auto-create-pool --auto-add-nodes kadalu-storage/%s %s " %(volname, vol_type)
-
-    # Add nodes:brick
-    for idx, storage in enumerate(obj["spec"]["storage"]):
-        node = get_brick_hostname(volname, idx, suffix=True)
-        if data_bricks > 0 and idx == data_bricks:
-            vol_create_cmd += "redundancy "
-        vol_create_cmd += "%s:%s " %(node, storage.get("path", ""))
-
-
-   # Create a new VOLUME in Moana(Kadalu Storage Manager)
-    cmd = vol_create_cmd.strip().split(" ")
     try:
-        resp = utils_execute(cmd)
+        utils_execute(cmd)
     except CommandError as err:
         logging.error(logf(
             "Failed to create kadalu volume",
