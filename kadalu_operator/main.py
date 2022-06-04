@@ -35,17 +35,17 @@ CSI_POD_PREFIX = "csi-"
 STORAGE_CLASS_NAME_PREFIX = "kadalu."
 # TODO: Add ThinArbiter
 VALID_PV_RECLAIM_POLICY_TYPES = ["delete", "archive", "retain"]
-VOLUME_TYPE_REPLICA_1 = "Replica1"
-VOLUME_TYPE_REPLICA_2 = "Replica2"
-VOLUME_TYPE_REPLICA_3 = "Replica3"
-VOLUME_TYPE_EXTERNAL = "External"
-VOLUME_TYPE_EXTERNAL_GLUSTER = "ExternalGluster"
-VOLUME_TYPE_EXTERNAL_KADALU = "ExternalKadalu"
-VOLUME_TYPE_DISPERSE = "Disperse"
-VALID_HOSTING_VOLUME_TYPES = [
-    VOLUME_TYPE_REPLICA_1, VOLUME_TYPE_REPLICA_2, VOLUME_TYPE_REPLICA_3,
-    VOLUME_TYPE_DISPERSE, VOLUME_TYPE_EXTERNAL,
-    VOLUME_TYPE_EXTERNAL_KADALU, VOLUME_TYPE_EXTERNAL_GLUSTER
+POOL_TYPE_REPLICA_1 = "Replica1"
+POOL_TYPE_REPLICA_2 = "Replica2"
+POOL_TYPE_REPLICA_3 = "Replica3"
+POOL_TYPE_EXTERNAL = "External"
+POOL_TYPE_EXTERNAL_GLUSTER = "ExternalGluster"
+POOL_TYPE_EXTERNAL_KADALU = "ExternalKadalu"
+POOL_TYPE_DISPERSE = "Disperse"
+VALID_POOL_TYPES = [
+    POOL_TYPE_REPLICA_1, POOL_TYPE_REPLICA_2, POOL_TYPE_REPLICA_3,
+    POOL_TYPE_DISPERSE, POOL_TYPE_EXTERNAL,
+    POOL_TYPE_EXTERNAL_KADALU, POOL_TYPE_EXTERNAL_GLUSTER
 ]
 CREATE_CMD = "create"
 APPLY_CMD = "apply"
@@ -88,40 +88,36 @@ def bricks_validation(bricks):
 
     return ret
 
+def spec_keys_valid(details, keys):
+    valid = True
+    for key in keys:
+        if details.get(key, None) is None:
+            valid = False
+            break
+
+    return valid
+
 
 def validate_ext_details(obj):
-    """Validate external Volume details"""
-    cluster = obj["spec"].get("details", None)
-    if not cluster:
-        logging.error(logf("External Cluster details not given."))
+    """Validate external Pool details"""
+    valid = True
+    if obj["spec"]["type"] == POOL_TYPE_EXTERNAL_GLUSTER:
+        details = obj["spec"].get("gluster_volume", None)
+        if not details:
+            logging.error(logf("External Gluster Volume details not given."))
+            return False
+        valid = spec_keys_valid(details, ["hosts", "volume_name"])
+    else:
+        details = obj["spec"].get("kadalu_volume", None)
+        if not details:
+            logging.error(logf("External Kadalu Volume details not given."))
+            return False
+        valid = spec_keys_valid(
+            details, ["mgr_url", "pool_name", "volume_name"])
+
+    if not valid:
+        logging.error(logf("Incomplete Pool details provided."))
         return False
-
-    valid = 0
-    ghosts = []
-    gport = 24007
-    if cluster.get('gluster_hosts', None):
-        valid += 1
-        hosts = cluster.get('gluster_hosts')
-        ghosts.extend(hosts)
-    if cluster.get('gluster_host', None):
-        valid += 1
-        ghosts.append(cluster.get('gluster_host'))
-    if cluster.get('gluster_volname', None):
-        valid += 1
-    if cluster.get('gluster_port', None):
-        gport = cluster.get('gluster_port', 24007)
-
-    if valid < 2:
-        logging.error(logf("No 'host' and 'volname' details provided."))
-        return False
-
-    if not is_host_reachable(ghosts, gport):
-        logging.error(logf("gluster server not reachable: on %s:%d" %
-                           (ghosts, gport)))
-        #  Noticed that there may be glitches in n/w during this time.
-        #  Not good to fail the validation, instead, just log here, so
-        #  we are aware this is a possible reason.
-        #return False
 
     logging.debug(logf("External Storage %s successfully validated" % \
                        obj["metadata"].get("name", "<unknown>")))
@@ -130,8 +126,8 @@ def validate_ext_details(obj):
 
 # pylint: disable=too-many-return-statements
 # pylint: disable=too-many-branches
-def validate_volume_request(obj):
-    """Validate the Volume request for Replica options, number of bricks etc"""
+def validate_pool_request(obj):
+    """Validate the Pool request for Replica options, number of bricks etc"""
     if not obj.get("spec", None):
         logging.error("Storage 'spec' not specified")
         return False
@@ -141,18 +137,18 @@ def validate_volume_request(obj):
         logging.error("PV Reclaim Policy not valid")
         return False
 
-    voltype = obj["spec"].get("type", None)
-    if voltype is None:
+    pool_type = obj["spec"].get("type", None)
+    if pool_type is None:
         logging.error("Storage type not specified")
         return False
 
-    if voltype not in VALID_HOSTING_VOLUME_TYPES:
+    if pool_type not in VALID_POOL_TYPES:
         logging.error(logf("Invalid Storage type",
-                           valid_types=",".join(VALID_HOSTING_VOLUME_TYPES),
-                           provided_type=voltype))
+                           valid_types=",".join(VALID_POOL_TYPES),
+                           provided_type=pool_type))
         return False
 
-    if voltype == VOLUME_TYPE_EXTERNAL:
+    if pool_type == POOL_TYPE_EXTERNAL:
         return validate_ext_details(obj)
 
     bricks = obj["spec"].get("storage", [])
@@ -161,36 +157,36 @@ def validate_volume_request(obj):
 
     decommissioned = ""
     subvol_bricks_count = 1
-    if voltype == VOLUME_TYPE_REPLICA_2:
+    if pool_type == POOL_TYPE_REPLICA_2:
         subvol_bricks_count = 2
-    elif voltype == VOLUME_TYPE_REPLICA_3:
+    elif pool_type == POOL_TYPE_REPLICA_3:
         subvol_bricks_count = 3
 
-    if voltype == VOLUME_TYPE_DISPERSE:
+    if pool_type == POOL_TYPE_DISPERSE:
         disperse_config = obj["spec"].get("disperse", None)
         if disperse_config is None:
-            logging.error("Disperse Volume data and redundancy "
+            logging.error("Disperse Pool data and redundancy "
                           "count is not specified")
             return False
 
         data_bricks = disperse_config.get("data", 0)
         redundancy_bricks = disperse_config.get("redundancy", 0)
         if data_bricks == 0 or redundancy_bricks == 0:
-            logging.error("Disperse Volume data or redundancy "
+            logging.error("Disperse Pool data or redundancy "
                           "count is not specified")
             return False
 
         subvol_bricks_count = data_bricks + redundancy_bricks
         # redundancy must be greater than 0, and the total number
         # of bricks must be greater than 2 * redundancy. This
-        # means that a dispersed volume must have a minimum of 3 bricks.
+        # means that a dispersed pool must have a minimum of 3 bricks.
         if subvol_bricks_count <= (2 * redundancy_bricks):
-            logging.error("Invalid redundancy for the Disperse Volume")
+            logging.error("Invalid redundancy for the Disperse Pool")
             return False
 
         # stripe_size = (bricks_count - redundancy) * 512
         # Using combinations of #Bricks/redundancy that give a power
-        # of two for the stripe size will make the disperse volume
+        # of two for the stripe size will make the disperse pool
         # perform better in most workloads because it's more typical
         # to write information in blocks that are multiple of two
         # https://docs.gluster.org/en/latest/Administrator-Guide
@@ -222,7 +218,7 @@ def validate_volume_request(obj):
 
     # If we are here, decommissioned option is properly given.
 
-    if voltype == VOLUME_TYPE_REPLICA_2:
+    if pool_type == POOL_TYPE_REPLICA_2:
         tiebreaker = obj["spec"].get("tiebreaker", None)
         if tiebreaker and (not tiebreaker.get("node", None) or
                            not tiebreaker.get("path", None)):
@@ -249,21 +245,21 @@ def get_brick_device_dir(brick):
     return brick_device_dir
 
 
-def get_brick_hostname(volname, idx, suffix=True):
+def get_brick_hostname(pool_name, idx, suffix=True):
     """Brick hostname is <statefulset-name>-<ordinal>.<service-name>
     statefulset name is the one which is visible when the
     `get pods` command is run, so the format used for that name
-    is "server-<volname>-<idx>". Escape dots from the
+    is "server-<pool_name>-<idx>". Escape dots from the
     hostname from the input otherwise will become invalid name.
-    Service is created with name as Volume name. For example,
+    Service is created with name as Pool name. For example,
     brick_hostname will be "server-spool1-0-0.spool1" and
     server pod name will be "server-spool1-0"
     """
-    tmp_vol = volname.replace("-", "_")
-    dns_friendly_volname = re.sub(r'\W+', '', tmp_vol).replace("_", "-")
-    hostname = "server-%s-%d" % (dns_friendly_volname, idx)
+    tmp_pool_name = pool_name.replace("-", "_")
+    dns_friendly_pool_name = re.sub(r'\W+', '', tmp_pool_name).replace("_", "-")
+    hostname = f"server-{dns_friendly_pool_name}-{idx}"
     if suffix:
-        return "%s-0.%s" % (hostname, volname)
+        return "{hostname}-0.{pool_name}"
 
     return hostname
 
@@ -279,12 +275,12 @@ def poolinfo_from_crd_spec(obj):
         "kadalu_format": obj["spec"].get("kadalu_format", "native")
     }
 
-    if pool_type == VOLUME_TYPE_EXTERNAL_KADALU:
+    if pool_type == POOL_TYPE_EXTERNAL_KADALU:
         details = obj["spec"]["kadalu_volume"]
         data["mgr_url"] = details["mgr_url"]
         data["external_volume_name"] = details["volume_name"]
         data["external_volume_options"] = details.get("volume_options", "")
-    elif pool_type == VOLUME_TYPE_EXTERNAL_GLUSTER:
+    elif pool_type == POOL_TYPE_EXTERNAL_GLUSTER:
         details = obj["spec"]["gluster_volume"]
         data["hosts"] = details["hosts"]
         data["external_volume_name"] = details["volume_name"]
@@ -315,7 +311,7 @@ def poolinfo_from_crd_spec(obj):
                 "index": idx
             })
 
-        if pool_type == VOLUME_TYPE_REPLICA_2:
+        if pool_type == POOL_TYPE_REPLICA_2:
             tiebreaker = obj["spec"].get("tiebreaker", None)
             if not tiebreaker:
                 logging.warning(logf("No 'tiebreaker' provided for replica2 "
@@ -346,23 +342,23 @@ def upgrade_storage_pods(core_v1_client):
         if ".info" not in key:
             continue
 
-        volname = key.replace('.info', '')
+        pool_name = key.replace('.info', '')
         data = json.loads(configmap_data.data[key])
 
-        logging.info(logf("config map", volname=volname, data=data))
-        if data['type'] == VOLUME_TYPE_EXTERNAL:
+        logging.info(logf("config map", pool_name=pool_name, data=data))
+        if data['type'] == POOL_TYPE_EXTERNAL:
             # nothing to be done for upgrade, say we are good.
             logging.debug(logf(
-                "volume type external, nothing to upgrade",
-                volname=volname,
+                "pool type external, nothing to upgrade",
+                pool_name=pool_name,
                 data=data))
             continue
 
-        if data['type'] == VOLUME_TYPE_REPLICA_1:
+        if data['type'] == POOL_TYPE_REPLICA_1:
             # No promise of high availability, upgrade
             logging.debug(logf(
-                "volume type Replica1, calling upgrade",
-                volname=volname,
+                "pool type Replica1, calling upgrade",
+                pool_name=pool_name,
                 data=data))
             # TODO: call upgrade
 
@@ -373,10 +369,10 @@ def upgrade_storage_pods(core_v1_client):
         obj = {}
         obj["metadata"] = {}
         obj["spec"] = {}
-        obj["metadata"]["name"] = volname
+        obj["metadata"]["name"] = pool_name
         obj["spec"]["type"] = data['type']
         obj["spec"]["pvReclaimPolicy"] = data.get("pvReclaimPolicy", "delete")
-        obj["spec"]["volume_id"] = data["volume_id"]
+        obj["spec"]["pool_id"] = data["pool_id"]
         obj["spec"]["storage"] = []
 
         # Need this loop so below array can be constructed in the proper order
@@ -393,7 +389,7 @@ def upgrade_storage_pods(core_v1_client):
             obj["spec"]["storage"][idx]["device"] = val["brick_device"]
             obj["spec"]["storage"][idx]["pvc"] = val["pvc_name"]
 
-        if data['type'] == VOLUME_TYPE_REPLICA_2:
+        if data['type'] == POOL_TYPE_REPLICA_2:
             if "tie-breaker.kadalu.io" not in data['tiebreaker']['node']:
                 obj["spec"]["tiebreaker"] = data['tiebreaker']
 
@@ -403,22 +399,22 @@ def upgrade_storage_pods(core_v1_client):
 
 def update_config_map(core_v1_client, obj):
     """
-    Volinfo of new hosting Volume is generated and updated to ConfigMap
+    Poolinfo of new Pool is generated and updated to ConfigMap
     """
-    volname = obj["metadata"]["name"]
-    voltype = obj["spec"]["type"]
+    pool_name = obj["metadata"]["name"]
+    pool_type = obj["spec"]["type"]
     pv_reclaim_policy = obj["spec"].get("pvReclaimPolicy", "delete")
-    volume_id = obj["spec"]["volume_id"]
+    pool_id = obj["spec"]["pool_id"]
     disperse_config = obj["spec"].get("disperse", {})
 
     data = {
         "namespace": NAMESPACE,
         "kadalu_version": VERSION,
-        "volname": volname,
-        "volume_id": volume_id,
+        "name": pool_name,
+        "id": pool_id,
         "kadalu_format": obj["spec"].get("kadalu_format", "native"),
-        "type": voltype,
-        "pvReclaimPolicy" : pv_reclaim_policy,
+        "type": pool_type,
+        "pv_reclaim_policy" : pv_reclaim_policy,
         "bricks": [],
         "disperse": {
             "data": disperse_config.get("data", 0),
@@ -435,9 +431,9 @@ def update_config_map(core_v1_client, obj):
     bricks = obj["spec"]["storage"]
     for idx, storage in enumerate(bricks):
         data["bricks"].append({
-            "brick_path": "/bricks/%s/data/brick" % volname,
+            "brick_path": "/bricks/%s/data/brick" % pool_name,
             "kube_hostname": storage.get("node", ""),
-            "node": get_brick_hostname(volname, idx),
+            "node": get_brick_hostname(pool_name, idx),
             "node_id": storage["node_id"],
             "host_brick_path": storage.get("path", ""),
             "brick_device": storage.get("device", ""),
@@ -447,12 +443,12 @@ def update_config_map(core_v1_client, obj):
             "brick_index": idx
         })
 
-    if voltype == VOLUME_TYPE_REPLICA_2:
+    if pool_type == POOL_TYPE_REPLICA_2:
         tiebreaker = obj["spec"].get("tiebreaker", None)
         if not tiebreaker:
             logging.warning(logf("No 'tiebreaker' provided for replica2 "
                                  "config. Using default tie-breaker.kadalu.io:/mnt",
-                                 volname=volname))
+                                 pool_name=pool_name))
             # Add default tiebreaker if no tie-breaker option provided
             tiebreaker = {
                 "node": "tie-breaker.kadalu.io",
@@ -463,42 +459,36 @@ def update_config_map(core_v1_client, obj):
 
         data["tiebreaker"] = tiebreaker
 
-    volinfo_file = "%s.info" % volname
-    configmap_data.data[volinfo_file] = json.dumps(data)
+    poolinfo_file = "%s.info" % pool_name
+    configmap_data.data[poolinfo_file] = json.dumps(data)
 
     core_v1_client.patch_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE, configmap_data)
     logging.info(logf("Updated configmap", name=KADALU_CONFIG_MAP,
-                      volname=volname))
+                      pool_name=pool_name))
 
 
 def deploy_server_pods(obj):
     """
-    Deploy server pods depending on type of Hosting
-    Volume and other options specified
+    Deploy server pods depending on type of
+    Pool and other options specified
     """
     # Deploy server pod
-    volname = obj["metadata"]["name"]
-    voltype = obj["spec"]["type"]
+    pool_name = obj["metadata"]["name"]
+    pool_type = obj["spec"]["type"]
     pv_reclaim_policy = obj["spec"].get("pvReclaimPolicy", "delete")
     tolerations = obj["spec"].get("tolerations")
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
-
-    shd_required = False
-    if voltype in (VOLUME_TYPE_REPLICA_3, VOLUME_TYPE_REPLICA_2,
-                   VOLUME_TYPE_DISPERSE):
-        shd_required = True
 
     template_args = {
         "namespace": NAMESPACE,
         "kadalu_version": VERSION,
         "images_hub": IMAGES_HUB,
         "docker_user": docker_user,
-        "volname": volname,
-        "voltype": voltype,
-        "pvReclaimPolicy": pv_reclaim_policy,
-        "volume_id": obj["spec"]["volume_id"],
-        "shd_required": shd_required
+        "pool_name": pool_name,
+        "pool_type": pool_type,
+        "pv_reclaim_policy": pv_reclaim_policy,
+        "pool_id": obj["spec"]["pool_id"]
     }
 
     # One StatefulSet per Brick
@@ -507,12 +497,12 @@ def deploy_server_pods(obj):
         template_args["kube_hostname"] = storage.get("node", "")
         # TODO: Understand the need, and usage of suffix
         serverpod_name = get_brick_hostname(
-            volname,
+            pool_name,
             idx,
             suffix=False
         )
         template_args["serverpod_name"] = serverpod_name
-        template_args["brick_path"] = "/bricks/%s/data/brick" % volname
+        template_args["brick_path"] = "/bricks/%s/data/brick" % pool_name
         template_args["brick_index"] = idx
         template_args["brick_device"] = storage.get("device", "")
         template_args["pvc_name"] = storage.get("pvc", "")
@@ -525,7 +515,7 @@ def deploy_server_pods(obj):
         template(filename, **template_args)
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed Server pod",
-                          volname=volname,
+                          pool_name=pool_name,
                           manifest=filename,
                           node=storage.get("node", "")))
         add_tolerations("statefulsets", serverpod_name, tolerations)
@@ -533,8 +523,8 @@ def deploy_server_pods(obj):
 
 
 def handle_external_storage_addition(core_v1_client, obj):
-    """Deploy service(One service per Volume)"""
-    volname = obj["metadata"]["name"]
+    """Deploy service(One service per Pool)"""
+    pool_name = obj["metadata"]["name"]
     details = obj["spec"]["details"]
     pv_reclaim_policy = obj["spec"].get("pvReclaimPolicy", "delete")
     tolerations = obj["spec"].get("tolerations")
@@ -548,13 +538,13 @@ def handle_external_storage_addition(core_v1_client, obj):
         hosts.extend(ghosts)
 
     data = {
-        "volname": volname,
-        "volume_id": obj["spec"]["volume_id"],
-        "type": VOLUME_TYPE_EXTERNAL,
-        "pvReclaimPolicy": pv_reclaim_policy,
+        "pool_name": pool_name,
+        "pool_id": obj["spec"]["volume_id"],
+        "type": POOL_TYPE_EXTERNAL,
+        "pv_reclaim_policy": pv_reclaim_policy,
         # CRD would set 'native' but just being cautious
         "kadalu_format": obj["spec"].get("kadalu_format", "native"),
-        "gluster_hosts": ",".join(hosts),
+        "gluster_hosts": details["hosts"],
         "gluster_volname": details["gluster_volname"],
         "gluster_options": details.get("gluster_options", ""),
     }
@@ -562,17 +552,17 @@ def handle_external_storage_addition(core_v1_client, obj):
     # Add new entry in the existing config map
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
-    volinfo_file = "%s.info" % volname
-    configmap_data.data[volinfo_file] = json.dumps(data)
+    poolinfo_file = f"{pool_name}.info"
+    configmap_data.data[poolinfo_file] = json.dumps(data)
 
     core_v1_client.patch_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE, configmap_data)
     logging.info(logf("Updated configmap", name=KADALU_CONFIG_MAP,
-                      volname=volname))
+                      pool_name=pool_name))
     filename = os.path.join(MANIFESTS_DIR, "external-storageclass.yaml")
     template(filename, **data)
     lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
-    logging.info(logf("Deployed External StorageClass", volname=volname, manifest=filename))
+    logging.info(logf("Deployed External StorageClass", pool_name=pool_name, manifest=filename))
     add_tolerations("daemonset", NODE_PLUGIN, tolerations)
 
 
@@ -637,25 +627,25 @@ def wait_till_pod_start():
 
 def handle_added(core_v1_client, obj):
     """
-    New Volume is requested. Update the configMap and deploy
+    New Pool is requested. Update the configMap and deploy
     """
 
-    if not validate_volume_request(obj):
+    if not validate_pool_request(obj):
         # TODO: Delete Custom resource
         logging.debug(logf(
-            "validation of volume request failed",
+            "validation of pool request failed",
             yaml=obj
         ))
         return
 
     # Ignore if already deployed
-    volname = obj["metadata"]["name"]
+    pool_name = obj["metadata"]["name"]
     pods = core_v1_client.list_namespaced_pod(NAMESPACE)
     for pod in pods.items:
-        if pod.metadata.name.startswith("server-" + volname + "-"):
+        if pod.metadata.name.startswith("server-" + pool_name + "-"):
             logging.debug(logf(
                 "Ignoring already deployed server statefulsets",
-                storagename=volname
+                pool_name=pool_name
             ))
             return
 
@@ -663,26 +653,26 @@ def handle_added(core_v1_client, obj):
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
 
-    if configmap_data.data.get("%s.info" % volname, None):
-        # Volume already exists
+    if configmap_data.data.get("%s.info" % pool_name, None):
+        # Pool already exists
         logging.debug(logf(
-            "Ignoring already updated volume config",
-            storagename=volname
+            "Ignoring already updated pool config",
+            pool_name=pool_name
         ))
         return
 
-    # Generate new Volume ID
-    if obj["spec"].get("volume_id", None) is None:
-        obj["spec"]["volume_id"] = str(uuid.uuid1())
-    # Apply existing Volume ID to recreate storage pool from existing device/path
+    # Generate new Pool ID
+    if obj["spec"].get("pool_id", None) is None:
+        obj["spec"]["pool_id"] = str(uuid.uuid1())
+    # Apply existing Pool ID to recreate storage pool from existing device/path
     else:
         logging.info(logf(
-            "Applying existing volume id",
-            volume_id=obj["spec"]["volume_id"]
+            "Applying existing pool id",
+            pool_id=obj["spec"]["pool_id"]
         ))
 
-    voltype = obj["spec"]["type"]
-    if voltype == VOLUME_TYPE_EXTERNAL:
+    pool_type = obj["spec"]["type"]
+    if pool_type == POOL_TYPE_EXTERNAL:
         handle_external_storage_addition(core_v1_client, obj)
         return
 
@@ -702,9 +692,9 @@ def handle_added(core_v1_client, obj):
         return
 
     filename = os.path.join(MANIFESTS_DIR, "services.yaml")
-    template(filename, namespace=NAMESPACE, volname=volname)
+    template(filename, namespace=NAMESPACE, pool_name=pool_name)
     lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
-    logging.info(logf("Deployed Service", volname=volname, manifest=filename))
+    logging.info(logf("Deployed Service", pool_name=pool_name, manifest=filename))
 
     # Time required for service to start
     time.sleep(40)
@@ -732,25 +722,25 @@ def handle_added(core_v1_client, obj):
 
 def handle_modified(core_v1_client, obj):
     """
-    Handle when Volume option is updated or Volume
+    Handle when Pool option is updated or Pool
     state is changed to maintenance
     """
     # TODO: Handle Volume maintenance mode
 
-    volname = obj["metadata"]["name"]
+    pool_name = obj["metadata"]["name"]
 
-    voltype = obj["spec"]["type"]
-    if voltype == VOLUME_TYPE_EXTERNAL:
+    pool_type = obj["spec"]["type"]
+    if pool_type == POOL_TYPE_EXTERNAL:
         # Modification of 'External' volume type is not supported
         logging.info(logf(
             "Modification of 'External' volume type is not supported",
-            storagename=volname
+            pool_name=pool_name
         ))
         return
 
-    if not validate_volume_request(obj):
+    if not validate_pool_request(obj):
         logging.debug(logf(
-            "validation of volume request failed",
+            "validation of pool request failed",
             yaml=obj
         ))
         return
@@ -758,19 +748,19 @@ def handle_modified(core_v1_client, obj):
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
 
-    if not configmap_data.data.get("%s.info" % volname, None):
+    if not configmap_data.data.get(f"{pool_name}.info", None):
         logging.warning(logf(
-            "Volume config not found",
-            storagename=volname
+            "Pool config not found",
+            pool_name=pool_name
         ))
         # Volume doesn't exist yet, so create it
         handle_added(core_v1_client, obj)
         return
 
-    # Volume ID (uuid) is already generated, re-use
-    cfgmap = json.loads(configmap_data.data[volname + ".info"])
-    # Get volume-id from config map
-    obj["spec"]["volume_id"] = cfgmap["volume_id"]
+    # Pool ID (uuid) is already generated, re-use
+    cfgmap = json.loads(configmap_data.data[pool_name + ".info"])
+    # Get pool-id from config map
+    obj["spec"]["pool_id"] = cfgmap["pool_id"]
 
     # Set Node ID for each storage device from configmap
     for idx, _ in enumerate(obj["spec"]["storage"]):
@@ -781,24 +771,24 @@ def handle_modified(core_v1_client, obj):
     deploy_server_pods(obj)
 
     filename = os.path.join(MANIFESTS_DIR, "services.yaml")
-    template(filename, namespace=NAMESPACE, volname=volname)
+    template(filename, namespace=NAMESPACE, pool_name=pool_name)
     lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
-    logging.info(logf("Deployed Service", volname=volname, manifest=filename))
+    logging.info(logf("Deployed Service", volname=pool_name, manifest=filename))
 
 
 def handle_deleted(core_v1_client, obj):
     """
-    If number of pvs provisioned from that volume
+    If number of pvs provisioned from that Pool
     is zero - Delete the respective server pods
     If number of pvs is not zero, wait or periodically
     check for num_pvs. Delete Server pods only when pvs becomes zero.
     """
 
-    volname = obj["metadata"]["name"]
+    pool_name = obj["metadata"]["name"]
 
-    storage_info_data = get_configmap_data(volname)
+    storage_info_data = get_configmap_data(pool_name)
 
-    logging.info(logf("Delete requested", volname=volname))
+    logging.info(logf("Delete requested", pool_name=pool_name))
 
     pv_count = get_num_pvs(storage_info_data)
 
@@ -806,7 +796,7 @@ def handle_deleted(core_v1_client, obj):
         logging.error(
             logf("Storage delete failed. Failed to get PV count",
                  number_of_pvs=pv_count,
-                 storage=volname))
+                 pool_name=pool_name))
         return
 
     if pv_count != 0:
@@ -814,30 +804,30 @@ def handle_deleted(core_v1_client, obj):
         logging.warning(
             logf("Storage delete failed. Storage is not empty",
                  number_of_pvs=pv_count,
-                 storage=volname))
+                 pool_name=pool_name))
 
     elif pv_count == 0:
 
-        hostvol_type = storage_info_data.get("type")
+        pool_type = storage_info_data.get("type")
 
-        # We can't delete external volume but cleanup StorageClass and Configmap
+        # We can't delete external pool but cleanup StorageClass and Configmap
         # Delete Configmap and Storage class for both Native & External
-        delete_storage_class(volname, hostvol_type)
+        delete_storage_class(pool_name, pool_type)
         delete_config_map(core_v1_client, obj)
 
-        if hostvol_type != "External":
+        if pool_type != "External":
 
             delete_server_pods(storage_info_data, obj)
             filename = os.path.join(MANIFESTS_DIR, "services.yaml")
-            template(filename, namespace=NAMESPACE, volname=volname)
+            template(filename, namespace=NAMESPACE, volname=pool_name)
             lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
             logging.info(
-                logf("Deleted Service", volname=volname, manifest=filename))
+                logf("Deleted Service", pool_name=pool_name, manifest=filename))
 
     return
 
 
-def get_configmap_data(volname):
+def get_configmap_data(pool_name):
     """
     Get storage info data from kadalu configmap
     """
@@ -849,7 +839,7 @@ def get_configmap_data(volname):
         config_data = json.loads(resp.stdout)
 
         data = config_data['data']
-        storage_name = "%s.info" % volname
+        storage_name = "%s.info" % pool_name
         storage_info_data = data[storage_name]
 
         # Return data in 'dict' format
@@ -866,26 +856,26 @@ def get_configmap_data(volname):
 def get_num_pvs(storage_info_data):
     """
     Get number of PVs provisioned from
-    volume requested for deletion
+    pool requested for deletion
     through configmap.
     """
 
-    volname = storage_info_data['volname']
+    pool_name = storage_info_data['name']
     cmd = None
     if storage_info_data.get("type") == "External":
         # We can't access external cluster and so query existing PVs which are
         # using external storageclass
-        volname = "kadalu." + volname
+        pool_name = "kadalu." + pool_name
         jpath = ('jsonpath=\'{range .items[?(@.spec.storageClassName=="%s")]}'
-                 '{.spec.storageClassName}{"\\n"}{end}\'' % volname)
+                 '{.spec.storageClassName}{"\\n"}{end}\'' % pool_name)
         cmd = ["kubectl", "get", "pv", "-o", jpath]
     else:
         bricks = storage_info_data['bricks']
-        dbpath = "/bricks/" + volname + "/data/brick/stat.db"
+        dbpath = "/bricks/" + pool_name + "/data/brick/stat.db"
         query = ("select count(pvname) from pv_stats;")
         cmd = [
             "kubectl", "exec", "-i",
-            bricks[0]['node'].replace("." + volname, ""), "-c", "server",
+            bricks[0]['node'].replace("." + pool_name, ""), "-c", "server",
             "-nkadalu", "--", "sqlite3", dbpath, query
         ]
 
@@ -912,7 +902,7 @@ def get_num_pvs(storage_info_data):
             return 0
         logging.error(
             logf("Failed to get size details of the "
-                 "storage \"%s\"" % volname,
+                 "storage \"%s\"" % pool_name,
                  error=msg))
         # Return error as its -1
         return -1
@@ -920,18 +910,18 @@ def get_num_pvs(storage_info_data):
 
 def delete_server_pods(storage_info_data, obj):
     """
-    Delete server pods depending on type of Hosting
-    Volume and other options specified
+    Delete server pods depending on type of
+    Pool and other options specified
     """
 
-    volname = obj["metadata"]["name"]
-    voltype = storage_info_data['type']
-    volumeid = storage_info_data['volume_id']
+    pool_name = obj["metadata"]["name"]
+    pool_type = storage_info_data['type']
+    pool_id = storage_info_data['pool_id']
 
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
 
     shd_required = False
-    if voltype in (VOLUME_TYPE_REPLICA_3, VOLUME_TYPE_REPLICA_2):
+    if pool_type in (POOL_TYPE_REPLICA_3, POOL_TYPE_REPLICA_2):
         shd_required = True
 
     template_args = {
@@ -939,9 +929,9 @@ def delete_server_pods(storage_info_data, obj):
         "kadalu_version": VERSION,
         "docker_user": docker_user,
         "images_hub": IMAGES_HUB,
-        "volname": volname,
-        "voltype": voltype,
-        "volume_id": volumeid,
+        "pool_name": pool_name,
+        "pool_type": pool_type,
+        "pool_id": pool_id,
         "shd_required": shd_required
     }
 
@@ -954,11 +944,11 @@ def delete_server_pods(storage_info_data, obj):
         template_args["host_brick_path"] = brick['host_brick_path']
         template_args["kube_hostname"] = brick['kube_hostname']
         template_args["serverpod_name"] = get_brick_hostname(
-            volname,
+            pool_name,
             idx,
             suffix=False
         )
-        template_args["brick_path"] = "/bricks/%s/data/brick" % volname
+        template_args["brick_path"] = "/bricks/%s/data/brick" % pool_name
         template_args["brick_index"] = idx
         template_args["brick_device"] = brick['brick_device']
         template_args["pvc_name"] = brick['pvc_name']
@@ -971,7 +961,7 @@ def delete_server_pods(storage_info_data, obj):
         lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
         logging.info(logf(
             "Deleted Server pod",
-            volname=volname,
+            pool_name=pool_name,
             manifest=filename,
             node=brick['node']
         ))
@@ -979,37 +969,37 @@ def delete_server_pods(storage_info_data, obj):
 
 def delete_config_map(core_v1_client, obj):
     """
-    Volinfo of existing Volume is generated and ConfigMap is deleted
+    Poolinfo of existing Pool is generated and ConfigMap is deleted
     """
 
-    volname = obj["metadata"]["name"]
+    pool_name = obj["metadata"]["name"]
 
     # Add new entry in the existing config map
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
 
-    volinfo_file = "%s.info" % volname
-    configmap_data.data[volinfo_file] = None
+    poolinfo_file = "%s.info" % pool_name
+    configmap_data.data[poolinfo_file] = None
 
     core_v1_client.patch_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE, configmap_data)
     logging.info(logf(
         "Deleted configmap",
         name=KADALU_CONFIG_MAP,
-        volname=volname
+        pool_name=pool_name
     ))
 
 
-def delete_storage_class(hostvol_name, _):
+def delete_storage_class(pool_name, _):
     """
     Deletes deployed External and Custom StorageClass
     """
 
-    sc_name = "kadalu." + hostvol_name
+    sc_name = "kadalu." + pool_name
     lib_execute(KUBECTL_CMD, DELETE_CMD, "sc", sc_name)
     logging.info(logf(
         "Deleted Storage class",
-        volname=hostvol_name
+        pool_name=pool_name
     ))
 
 
@@ -1064,7 +1054,7 @@ def watch_stream(core_v1_client, k8s_client):
 
 def crd_watch(core_v1_client, k8s_client):
     """
-    Watches the CRD to provision new PV Hosting Volumes
+    Watches the CRD to provision new Pool
     """
     while True:
         try:
@@ -1182,7 +1172,7 @@ def deploy_storage_class(obj):
                               manifest=filename))
 
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
-                 hostvol_name=obj["metadata"]["name"],
+                 pool_name=obj["metadata"]["name"],
                  kadalu_format=obj["spec"].get("kadalu_format", "native"))
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
