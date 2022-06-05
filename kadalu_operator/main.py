@@ -639,6 +639,43 @@ def wait_till_pod_start():
     return 0
 
 
+def backup_kadalu_storage_config_to_configmap():
+    # Create a Snapshot
+    cmd = ["kadalu", "config-snapshot", "create", "latest", "--overwrite"]
+    try:
+        utils_execute(cmd)
+    except CommandError as err:
+        logging.error(logf(
+            "Failed to take Config Snapshot of Kadalu Storage.",
+            error=err
+        ))
+        sys.exit(-1)
+
+    # Create Archive (Change workdir to /var/lib/kadalu/config-snapshots)
+    cmd = ["tar", "cvzf", "latest.tar.gz", "latest"]
+    try:
+        utils_execute(cmd)
+    except CommandError as err:
+        logging.error(logf(
+            "Failed to archive of Kadalu Storage Config Snapshot.",
+            error=err
+        ))
+        sys.exit(-1)
+
+    # Create/Update ConfigMap entry
+    # TODO: Handle if the backup file size is more that 1MiB.
+    cmd = ["kubectl", "create", "configmap", "kadalu-mgr",
+           "--from-file=/var/lib/kadalu/config-snapshots/latest.tar.gz"]
+    try:
+        utils_execute(cmd)
+    except CommandError as err:
+        logging.error(logf(
+            "Failed to add Kadalu Storage Config backup to Configmap.",
+            error=err
+        ))
+        sys.exit(-1)
+
+
 def handle_added(core_v1_client, obj):
     """
     New Pool is requested. Update the configMap and deploy
@@ -732,6 +769,11 @@ def handle_added(core_v1_client, obj):
             "Failed to create kadalu volume",
             error=err
         ))
+
+    # Dump Kadalu Storage configurations to Configmap.
+    # So that Operator can restore the Configurations
+    # on every start.
+    backup_kadalu_storage_config_to_configmap()
 
 
 def handle_modified(core_v1_client, obj):
