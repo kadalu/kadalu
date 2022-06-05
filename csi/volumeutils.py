@@ -28,7 +28,7 @@ UNMOUNT_CMD = "/bin/umount"
 MKFS_XFS_CMD = "/sbin/mkfs.xfs"
 XFS_GROWFS_CMD = "/sbin/xfs_growfs"
 RESERVED_SIZE_PERCENTAGE = 10
-HOSTVOL_MOUNTDIR = "/mnt"
+POOL_MOUNTDIR = "/mnt"
 VOLFILES_DIR = "/kadalu/volfiles"
 TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
@@ -43,16 +43,16 @@ mount_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 
 class Volume():
     """Hosting Volume object"""
-    def __init__(self, volname, voltype, hostvol, **kwargs):
+    def __init__(self, volname, voltype, pool, **kwargs):
         self.voltype = voltype
         self.volname = volname
         self.volhash = kwargs.get("volhash", None)
         self.volpath = kwargs.get("volpath", None)
-        self.hostvol = hostvol
+        self.pool = pool
         self.size = kwargs.get("size", None)
         self.extra = {}
         self.extra['ghost'] = kwargs.get("ghost", None)
-        self.extra['hostvoltype'] = kwargs.get("hostvoltype", None)
+        self.extra['pool_type'] = kwargs.get("pool_type", None)
         self.extra['gvolname'] = kwargs.get("gvolname", None)
         self.extra['kformat'] = kwargs.get("kformat", 'native')
         self.setpath()
@@ -82,7 +82,7 @@ def filter_node_affinity(volume, filters):
             return None
 
         # Volume is not from the requested node
-        if node_name != volume["bricks"][0]["kube_hostname"]:
+        if node_name != volume["storage_units"][0]["kube_hostname"]:
             return None
 
     return volume
@@ -106,7 +106,7 @@ def filter_storage_type(volume, filters):
     """
     hvoltype = filters.get(
         "storage_type",
-        filters.get("hostvol_type", None)
+        filters.get("pool_type", None)
     )
     if hvoltype is not None and hvoltype != volume["type"]:
         return None
@@ -136,7 +136,7 @@ def filter_supported_pvtype(volume, filters):
 # Disabled pylint here because filters argument is used as
 # readonly in all functions
 # noqa # pylint: disable=dangerous-default-value
-def get_pv_hosting_volumes(filters={}, iteration=40):
+def get_storage_pools(filters={}, iteration=40):
     """Get list of pv hosting volumes"""
     volumes = []
     total_volumes = 0
@@ -197,21 +197,21 @@ def get_pv_hosting_volumes(filters={}, iteration=40):
     if total_volumes == 0 and iteration > 0:
         time.sleep(3)
         iteration -= 1
-        return get_pv_hosting_volumes(filters, iteration)
+        return get_storage_pools(filters, iteration)
 
     return volumes
 
 
-def update_free_size(hostvol, pvname, sizechange):
+def update_free_size(pool, pvname, sizechange):
     """Update the free size in respective host volume's stats.db file"""
 
-    mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
+    mntdir = os.path.join(POOL_MOUNTDIR, pool)
 
     # Check for mount availability before updating the free size
     retry_errors(os.statvfs, [mntdir], [ENOTCONN])
 
     with statfile_lock:
-        with SizeAccounting(hostvol, mntdir) as acc:
+        with SizeAccounting(pool, mntdir) as acc:
             # Reclaim space
             if sizechange > 0:
                 acc.remove_pv_record(pvname)
@@ -221,23 +221,23 @@ def update_free_size(hostvol, pvname, sizechange):
 
 def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
     """Mount each hosting volume to find available space"""
-    for volume in pv_hosting_volumes:
-        hvol = volume['name']
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
-        mount_glusterfs(volume, mntdir)
+    for pool in pv_hosting_volumes:
+        pool_name = pool['name']
+        mntdir = os.path.join(POOL_MOUNTDIR, hvol)
+        mount_glusterfs(pool, mntdir)
 
         with statfile_lock:
             # Stat done before `os.path.exists` to prevent ignoring
             # file not exists even in case of ENOTCONN
             mntdir_stat = retry_errors(os.statvfs, [mntdir], [ENOTCONN])
-            with SizeAccounting(hvol, mntdir) as acc:
+            with SizeAccounting(pool_name, mntdir) as acc:
                 acc.update_summary(mntdir_stat.f_bavail * mntdir_stat.f_bsize)
                 pv_stats = acc.get_stats()
                 reserved_size = pv_stats["free_size_bytes"] * RESERVED_SIZE_PERCENTAGE/100
 
             logging.debug(logf(
                 "pv stats",
-                hostvol=hvol,
+                pool=pool_name,
                 total_size_bytes=pv_stats["total_size_bytes"],
                 used_size_bytes=pv_stats["used_size_bytes"],
                 free_size_bytes=pv_stats["free_size_bytes"],
@@ -247,23 +247,23 @@ def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
             ))
 
             if required_size < (pv_stats["free_size_bytes"] - reserved_size):
-                return hvol
+                return pool_name
 
     return None
 
 
-def create_block_volume(pvtype, hostvol_mnt, volname, size):
+def create_block_volume(pvtype, pool_mnt, volname, size):
     """Create virtual block volume"""
     volhash = get_volname_hash(volname)
     volpath = get_volume_path(pvtype, volhash, volname)
-    volpath_full = os.path.join(hostvol_mnt, volpath)
+    volpath_full = os.path.join(pool_mnt, volpath)
     logging.debug(logf(
         "Volume hash",
         volhash=volhash
     ))
 
     # Check for mount availability before creating virtblock volume
-    retry_errors(os.statvfs, [hostvol_mnt], [ENOTCONN])
+    retry_errors(os.statvfs, [pool_mnt], [ENOTCONN])
 
     # Create a file with required size
     makedirs(os.path.dirname(volpath_full))
@@ -298,21 +298,21 @@ def create_block_volume(pvtype, hostvol_mnt, volname, size):
             command=MKFS_XFS_CMD
         ))
 
-    save_pv_metadata(hostvol_mnt, volpath, size)
+    save_pv_metadata(pool_mnt, volpath, size)
     return Volume(
         volname=volname,
         voltype=pvtype,
         volhash=volhash,
-        hostvol=os.path.basename(hostvol_mnt),
+        pool=os.path.basename(pool_mnt),
         size=size,
         volpath=volpath,
     )
 
 
-def save_pv_metadata(hostvol_mnt, pvpath, pvsize):
+def save_pv_metadata(pool_mnt, pvpath, pvsize):
     """Save PV metadata in info file"""
     # Create info dir if not exists
-    info_file_path = os.path.join(hostvol_mnt, "info", pvpath)
+    info_file_path = os.path.join(pool_mnt, "info", pvpath)
     info_file_dir = os.path.dirname(info_file_path)
 
     retry_errors(makedirs, [info_file_dir], [ENOTCONN])
@@ -332,7 +332,7 @@ def save_pv_metadata(hostvol_mnt, pvpath, pvsize):
         ))
 
 
-def create_subdir_volume(hostvol_mnt, volname, size, use_gluster_quota):
+def create_subdir_volume(pool_mnt, volname, size, use_gluster_quota):
     """Create sub directory Volume"""
     volhash = get_volname_hash(volname)
     volpath = get_volume_path(PV_TYPE_SUBVOL, volhash, volname)
@@ -342,25 +342,25 @@ def create_subdir_volume(hostvol_mnt, volname, size, use_gluster_quota):
     ))
 
     # Check for mount availability before creating subdir volume
-    retry_errors(os.statvfs, [hostvol_mnt], [ENOTCONN])
+    retry_errors(os.statvfs, [pool_mnt], [ENOTCONN])
 
     # Create a subdir
-    makedirs(os.path.join(hostvol_mnt, volpath))
+    makedirs(os.path.join(pool_mnt, volpath))
     logging.debug(logf(
         "Created PV directory",
         pvdir=volpath
     ))
 
-    # Write info file so that Brick's quotad sidecar
+    # Write info file so that Storage Unit's quotad sidecar
     # container picks it up (or) for external quota expansion
-    save_pv_metadata(hostvol_mnt, volpath, size)
+    save_pv_metadata(pool_mnt, volpath, size)
 
     if use_gluster_quota is True:
         return Volume(
             volname=volname,
             voltype=PV_TYPE_SUBVOL,
             volhash=volhash,
-            hostvol=os.path.basename(hostvol_mnt),
+            pool=os.path.basename(pool_mnt),
             size=size,
             volpath=volpath,
         )
@@ -380,12 +380,12 @@ def create_subdir_volume(hostvol_mnt, volname, size, use_gluster_quota):
     #setfattr -n trusted.gfs.squota.limit -v size
     try:
         retry_errors(os.setxattr,
-                     [os.path.join(hostvol_mnt, volpath),
+                     [os.path.join(pool_mnt, volpath),
                       "trusted.glusterfs.namespace",
                       "true".encode()],
                      [ENOTCONN])
         retry_errors(os.setxattr,
-                     [os.path.join(hostvol_mnt, volpath),
+                     [os.path.join(pool_mnt, volpath),
                       "trusted.gfs.squota.limit",
                       str(size).encode()],
                      [ENOTCONN])
@@ -399,7 +399,7 @@ def create_subdir_volume(hostvol_mnt, volname, size, use_gluster_quota):
     count = 0
     while True:
         count += 1
-        pvstat = retry_errors(os.statvfs, [os.path.join(hostvol_mnt, volpath)], [ENOTCONN])
+        pvstat = retry_errors(os.statvfs, [os.path.join(pool_mnt, volpath)], [ENOTCONN])
         volsize = pvstat.f_blocks * pvstat.f_bsize
         if pvsize_min < volsize < pvsize_max:
             logging.debug(logf(
@@ -423,29 +423,29 @@ def create_subdir_volume(hostvol_mnt, volname, size, use_gluster_quota):
         volname=volname,
         voltype=PV_TYPE_SUBVOL,
         volhash=volhash,
-        hostvol=os.path.basename(hostvol_mnt),
+        pool=os.path.basename(pool_mnt),
         size=size,
         volpath=volpath,
     )
 
 
-def is_hosting_volume_free(hostvol, requested_pvsize):
+def is_hosting_volume_free(pool, requested_pvsize):
     """Check if host volume is free to expand or create (external)volume"""
 
-    mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
+    mntdir = os.path.join(POOL_MOUNTDIR, pool)
     with statfile_lock:
 
         # Stat done before `os.path.exists` to prevent ignoring
         # file not exists even in case of ENOTCONN
         mntdir_stat = retry_errors(os.statvfs, [mntdir], [ENOTCONN])
-        with SizeAccounting(hostvol, mntdir) as acc:
+        with SizeAccounting(pool, mntdir) as acc:
             acc.update_summary(mntdir_stat.f_bavail * mntdir_stat.f_bsize)
             pv_stats = acc.get_stats()
             reserved_size = pv_stats["free_size_bytes"] * RESERVED_SIZE_PERCENTAGE/100
 
         logging.debug(logf(
             "pv stats",
-            hostvol=hostvol,
+            pool=pool,
             total_size_bytes=pv_stats["total_size_bytes"],
             used_size_bytes=pv_stats["used_size_bytes"],
             free_size_bytes=pv_stats["free_size_bytes"],
@@ -460,7 +460,7 @@ def is_hosting_volume_free(hostvol, requested_pvsize):
         return False
 
 
-def update_subdir_volume(hostvol_mnt, hostvoltype, volname, expansion_requested_pvsize):
+def update_subdir_volume(pool_mnt, pool_type, volname, expansion_requested_pvsize):
     """Update sub directory Volume"""
 
     volhash = get_volname_hash(volname)
@@ -471,18 +471,18 @@ def update_subdir_volume(hostvol_mnt, hostvoltype, volname, expansion_requested_
     ))
 
     # Check for mount availability before updating subdir volume
-    retry_errors(os.statvfs, [hostvol_mnt], [ENOTCONN])
+    retry_errors(os.statvfs, [pool_mnt], [ENOTCONN])
 
     # Create a subdir
-    makedirs(os.path.join(hostvol_mnt, volpath))
+    makedirs(os.path.join(pool_mnt, volpath))
     logging.debug(logf(
         "Updated PV directory",
         pvdir=volpath
     ))
 
-    # Write info file so that Brick's quotad sidecar
+    # Write info file so that Storage Unit's quotad sidecar
     # container picks it up.
-    update_pv_metadata(hostvol_mnt, volpath, expansion_requested_pvsize)
+    update_pv_metadata(pool_mnt, volpath, expansion_requested_pvsize)
 
     # Wait for quota set
     # TODO: Handle Timeout
@@ -496,11 +496,11 @@ def update_subdir_volume(hostvol_mnt, hostvoltype, volname, expansion_requested_
     ))
 
     # Handle this case in calling function
-    if hostvoltype == 'External':
+    if pool_type == 'External':
         return None
 
     retry_errors(os.setxattr,
-                 [os.path.join(hostvol_mnt, volpath),
+                 [os.path.join(pool_mnt, volpath),
                   "trusted.gfs.squota.limit",
                   str(expansion_requested_pvsize).encode()],
                  [ENOTCONN])
@@ -508,7 +508,7 @@ def update_subdir_volume(hostvol_mnt, hostvoltype, volname, expansion_requested_
     count = 0
     while True:
         count += 1
-        pvstat = retry_errors(os.statvfs, [os.path.join(hostvol_mnt, volpath)], [ENOTCONN])
+        pvstat = retry_errors(os.statvfs, [os.path.join(pool_mnt, volpath)], [ENOTCONN])
         volsize = pvstat.f_blocks * pvstat.f_bsize
         if pvsize_min < volsize < pvsize_max:
             logging.debug(logf(
@@ -534,25 +534,25 @@ def update_subdir_volume(hostvol_mnt, hostvoltype, volname, expansion_requested_
         volname=volname,
         voltype=PV_TYPE_SUBVOL,
         volhash=volhash,
-        hostvol=os.path.basename(hostvol_mnt),
+        pool=os.path.basename(pool_mnt),
         size=expansion_requested_pvsize,
         volpath=volpath,
     )
 
 
-def update_virtblock_volume(hostvol_mnt, volname, expansion_requested_pvsize):
+def update_virtblock_volume(pool_mnt, volname, expansion_requested_pvsize):
     """Update virtual block volume"""
 
     volhash = get_volname_hash(volname)
     volpath = get_volume_path(PV_TYPE_VIRTBLOCK, volhash, volname)
-    volpath_full = os.path.join(hostvol_mnt, volpath)
+    volpath_full = os.path.join(pool_mnt, volpath)
     logging.debug(logf(
         "Volume hash",
         volhash=volhash
     ))
 
     # Check for mount availability before updating virtblock volume
-    retry_errors(os.statvfs, [hostvol_mnt], [ENOTCONN])
+    retry_errors(os.statvfs, [pool_mnt], [ENOTCONN])
 
     # Update the file with required size
     makedirs(os.path.dirname(volpath_full))
@@ -579,22 +579,22 @@ def update_virtblock_volume(hostvol_mnt, volname, expansion_requested_pvsize):
         command=MKFS_XFS_CMD
     ))
 
-    update_pv_metadata(hostvol_mnt, volpath, expansion_requested_pvsize)
+    update_pv_metadata(pool_mnt, volpath, expansion_requested_pvsize)
     return Volume(
         volname=volname,
         voltype=PV_TYPE_VIRTBLOCK,
         volhash=volhash,
-        hostvol=os.path.basename(hostvol_mnt),
+        pool=os.path.basename(pool_mnt),
         size=expansion_requested_pvsize,
         volpath=volpath,
     )
 
 
-def update_pv_metadata(hostvol_mnt, pvpath, expansion_requested_pvsize):
+def update_pv_metadata(pool_mnt, pvpath, expansion_requested_pvsize):
     """Update PV metadata in info file"""
 
     # Create info dir if not exists
-    info_file_path = os.path.join(hostvol_mnt, "info", pvpath)
+    info_file_path = os.path.join(pool_mnt, "info", pvpath)
     info_file_dir = os.path.dirname(info_file_path)
 
     retry_errors(makedirs, [info_file_dir], [ENOTCONN])
@@ -637,20 +637,20 @@ def delete_volume(volname):
         volname=vol.volname,
         voltype=vol.voltype,
         volhash=vol.volhash,
-        hostvol=vol.hostvol
+        pool=vol.pool
     ))
 
     # Check for mount availability before deleting the volume
-    retry_errors(os.statvfs, [os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol)],
+    retry_errors(os.statvfs, [os.path.join(POOL_MOUNTDIR, vol.pool)],
                  [ENOTCONN])
 
-    storage_filename = vol.hostvol + ".info"
+    storage_filename = vol.pool + ".info"
     with open(os.path.join(VOLINFO_DIR, storage_filename)) as info_file:
         storage_data = json.load(info_file)
 
     pv_reclaim_policy = storage_data.get("pvReclaimPolicy", "delete")
 
-    volpath = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, vol.volpath)
+    volpath = os.path.join(POOL_MOUNTDIR, vol.pool, vol.volpath)
 
     # Stop the delete operation if the reclaim policy is set to "retain"
     if pv_reclaim_policy == "retain":
@@ -671,19 +671,19 @@ def delete_volume(volname):
         # Rename directory & files that are to be archived
         try:
 
-            # Brick/PVC
+            # Storage Unit/PVC
             os.rename(
-                os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, path_prefix, old_volname),
-                os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, path_prefix, vol.volname)
+                os.path.join(POOL_MOUNTDIR, vol.pool, path_prefix, old_volname),
+                os.path.join(POOL_MOUNTDIR, vol.pool, path_prefix, vol.volname)
             )
 
             # Info-File
             old_info_file_name = old_volname + ".json"
             info_file_name = vol.volname + ".json"
             os.rename(
-                os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info",
+                os.path.join(POOL_MOUNTDIR, vol.pool, "info",
                              path_prefix, old_info_file_name),
-                os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol, "info",
+                os.path.join(POOL_MOUNTDIR, vol.pool, "info",
                              path_prefix, info_file_name)
             )
 
@@ -725,7 +725,7 @@ def delete_volume(volname):
     ))
 
     # Delete Metadata file
-    info_file_path = os.path.join(HOSTVOL_MOUNTDIR, vol.hostvol,
+    info_file_path = os.path.join(POOL_MOUNTDIR, vol.pool,
                                   "info", vol.volpath+".json")
 
     try:
@@ -735,19 +735,19 @@ def delete_volume(volname):
             # developing thats not true. There can be a delete request for
             # previously created pvc, which would be assigned to you once
             # you come up. We can't fail then.
-            update_free_size(vol.hostvol, volname, data["size"])
+            update_free_size(vol.pool, volname, data["size"])
 
         os.remove(info_file_path)
         logging.debug(logf(
             "Removed volume metadata file",
             path="info/" + vol.volpath + ".json",
-            hostvol=vol.hostvol
+            pool=vol.pool
         ))
     except OSError as err:
         logging.info(logf(
             "Error while removing the file",
             path="info/" + vol.volpath + ".json",
-            hostvol=vol.hostvol,
+            pool=vol.pool,
             error=err,
         ))
 
@@ -760,11 +760,11 @@ def search_volume(volname):
     subdir_path = get_volume_path(PV_TYPE_SUBVOL, volhash, volname)
     virtblock_path = get_volume_path(PV_TYPE_VIRTBLOCK, volhash, volname)
 
-    host_volumes = get_pv_hosting_volumes({})
-    for volume in host_volumes:
-        hvol = volume['name']
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
-        mount_glusterfs(volume, mntdir)
+    pools = get_storage_pools({})
+    for pool in pools:
+        pool_name = pool['name']
+        mntdir = os.path.join(POOL_MOUNTDIR, hvol)
+        mount_glusterfs(pool, mntdir)
         # Check for mount availability before checking the info file
         retry_errors(os.statvfs, [mntdir], [ENOTCONN])
 
@@ -782,13 +782,13 @@ def search_volume(volname):
                     volname=volname,
                     voltype=voltype,
                     volhash=volhash,
-                    hostvol=hvol,
+                    pool=pool_name,
                     size=data["size"],
                     volpath=info_path,
-                    kformat=volume.get('kformat', 'native'),
-                    hostvoltype=volume.get('type', None),
-                    ghost=volume.get('g_host', None),
-                    gvolname=volume.get('g_volname', None),
+                    kformat=pool.get('kformat', 'native'),
+                    hostvoltype=pool.get('type', None),
+                    ghost=pool.get('g_host', None),
+                    gvolname=pool.get('g_volname', None),
                 )
     return None
 
@@ -814,7 +814,7 @@ def volume_list(voltype=None):
     volumes = []
     for volume in host_volumes:
         hvol = volume['name']
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
+        mntdir = os.path.join(POOL_MOUNTDIR, hvol)
         mount_glusterfs(volume, mntdir)
 
         # Check for mount availability before listing the Volumes
@@ -920,11 +920,11 @@ def generate_client_volfile(volname):
     data['dht_subvol'] = []
     decommissioned = []
     if data["type"] == "Replica1":
-        for brick in data["bricks"]:
-            brick_name = "%s-client-%d" % (data["volname"], brick["brick_index"])
-            data["dht_subvol"].append(brick_name)
-            if brick.get("decommissioned", "") != "":
-                decommissioned.append(brick_name)
+        for storage_unit in data["storage_units"]:
+            storage_unit_name = "%s-client-%d" % (data["volname"], storage_unit["index"])
+            data["dht_subvol"].append(storage_unit_name)
+            if storage_unit.get("decommissioned", "") != "":
+                decommissioned.append(storage_unit_name)
     else:
         count = 3
         if data["type"] == "Replica2":
@@ -934,16 +934,16 @@ def generate_client_volfile(volname):
             count = data["disperse"]["data"] + data["disperse"]["redundancy"]
             data["disperse_redundancy"] = data["disperse"]["redundancy"]
 
-        data["subvol_bricks_count"] = count
-        for i in range(0, int(len(data.get("bricks", [])) / count)):
-            brick_name = "%s-%s-%d" % (
+        data["subvol_storage_units_count"] = count
+        for i in range(0, int(len(data.get("storage_units", [])) / count)):
+            storage_unit_name = "%s-%s-%d" % (
                 data["volname"],
                 "disperse" if data["type"] == "Disperse" else "replica",
                 i
             )
-            data["dht_subvol"].append(brick_name)
-            if data.get("bricks", [])[(i * count)].get("decommissioned", "") != "":
-                decommissioned.append(brick_name)
+            data["dht_subvol"].append(storage_unit_name)
+            if data.get("storage_units", [])[(i * count)].get("decommissioned", "") != "":
+                decommissioned.append(storage_unit_name)
 
     data["decommissioned"] = "" if decommissioned == [] else ",".join(decommissioned)
     template_file_path = os.path.join(
@@ -1342,7 +1342,7 @@ def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None, is_clien
 
 def check_external_volume(pv_request, host_volumes):
     """Mount hosting volume"""
-    # Assumption is, this has to have 'hostvol_type' as External.
+    # Assumption is, this has to have 'pool_type' as External.
     params = {}
     for pkey, pvalue in pv_request.parameters.items():
         params[pkey] = pvalue
@@ -1360,7 +1360,7 @@ def check_external_volume(pv_request, host_volumes):
         if (vol["kformat"] == params["kadalu_format"]
                 and vol["g_volname"] == params["gluster_volname"]
                 and vol["g_host"] == params["gluster_hosts"]):
-            mntdir = os.path.join(HOSTVOL_MOUNTDIR, vol["name"])
+            mntdir = os.path.join(POOL_MOUNTDIR, vol["name"])
             hvol = vol
             break
 
@@ -1393,24 +1393,24 @@ def check_external_volume(pv_request, host_volumes):
 # 1. Is it critical enough to serve the storage to user? Fail fast
 # 2. Performing health checks or which can be eventually consistent (listvols)?
 # Handle gracefully
-def yield_hostvol_mount():
-    """Yields mount directory where hostvol is mounted"""
-    host_volumes = get_pv_hosting_volumes()
+def yield_pool_mount():
+    """Yields mount directory where pool is mounted"""
+    pools = get_storage_pools()
     info_exist = False
     for volume in host_volumes:
         hvol = volume['name']
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
+        mntdir = os.path.join(POOL_MOUNTDIR, hvol)
         try:
             mount_glusterfs(volume, mntdir)
         except CommandException as excep:
             logging.error(
                 logf("Unable to mount volume", hvol=hvol, excep=excep.args))
-            # We aren't able to mount this specific hostvol
+            # We aren't able to mount this specific pool
             yield None
         logging.info(logf("Volume is mounted successfully", hvol=hvol))
         info_path = os.path.join(mntdir, 'info')
         if os.path.isdir(info_path):
-            # After mounting a hostvol, start looking for PVC from '/mnt/<pool>/info'
+            # After mounting a pool, start looking for PVC from '/mnt/<pool>/info'
             info_exist = True
             yield info_path
     if not info_exist:
@@ -1449,10 +1449,10 @@ def yield_pvc_from_mntdir(mntdir):
             yield None
 
 
-def yield_pvc_from_hostvol():
-    """Yields a single PVC sequentially from all the hostvolumes"""
+def yield_pvc_from_pool():
+    """Yields a single PVC sequentially from all the Pools"""
     pvc_exist = False
-    for mntdir in yield_hostvol_mount():
+    for mntdir in yield_pool_mount():
         if mntdir is not None:
             # Only yield PVC if we are able to mount corresponding pool
             pvc = yield_pvc_from_mntdir(mntdir)
@@ -1487,7 +1487,7 @@ def yield_list_of_pvcs(max_entries=0):
     # 'name', 'mntdir')
     pvcs = []
     idx = -1
-    for idx, value in enumerate(wrap_pvc(yield_pvc_from_hostvol)):
+    for idx, value in enumerate(wrap_pvc(yield_pvc_from_pool)):
         pvc, last = value
         token = "" if last else str(idx)
         pvcs.append(pvc)

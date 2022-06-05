@@ -64,16 +64,16 @@ spec:
               value: {{ pool_type }}
             - name: POOL_MODE
               value: {{ pool_mode }}
-            - name: BRICK_PATH
-              value: {{ brick_path }}
+            - name: STORAGE_UNIT_PATH
+              value: {{ storage_unit_path }}
             - name: NODEID
-              value: {{ brick_node_id }}
+              value: {{ storage_unit_node_id }}
             - name: POOL_ID
               value: {{ pool_id }}
-            - name: BRICK_INDEX
-              value: "{{ brick_index }}"
-            - name: BRICK_DEVICE
-              value: "{{ brick_device }}"
+            - name: STORAGE_UNIT_INDEX
+              value: "{{ storage_unit_index }}"
+            - name: STORAGE_UNIT_DEVICE
+              value: "{{ storage_unit_device }}"
             - name: KADALU_VERSION
               value: "{{ kadalu_version }}"
             - name: K8S_DIST
@@ -101,10 +101,10 @@ spec:
             - name: glusterfsd-volfilesdir
               mountPath: "/var/lib/gluster"
             - name: glusterfsd-mountdir
-              mountPath: "/bricks/{{ pool_name }}"
-{%- if brick_device_dir != "" %}
-            - name: brick-device-dir
-              mountPath: "/brickdev"
+              mountPath: "/storages/{{ pool_name }}"
+{%- if storage_unit_device_dir != "" %}
+            - name: storage-unit-device-dir
+              mountPath: "/storage_unit_dev"
 {%- endif %}
       volumes:
         - name: gluster-dev
@@ -115,7 +115,7 @@ spec:
             path: "/sys/fs/cgroup"
         - name: moana-workdir
           hostPath:
-            path: "/var/lib/kadalu/{{ brick_node_id }}"
+            path: "/var/lib/kadalu/{{ storage_unit_node_id }}"
 {%- if pvc_name == "" %}
         - name: gluster-kmods
           hostPath:
@@ -128,16 +128,16 @@ spec:
 {%- if pvc_name != "" %}
           persistentVolumeClaim:
             claimName: {{ pvc_name }}
-{%- elif host_brick_path != "" %}
+{%- elif host_storage_unit_path != "" %}
           hostPath:
-            path: "{{ host_brick_path }}"
+            path: "{{ host_storage_unit_path }}"
             type: Directory
 {%- else %}
           emptyDir: {}
 {%- endif %}
-{%- if brick_device_dir != "" %}
-        - name: brick-device-dir
+{%- if storage_unit_device_dir != "" %}
+        - name: storage-unit-device-dir
           hostPath:
-            path: "{{ brick_device_dir }}"
+            path: "{{ storage_unit_device_dir }}"
             type: Directory
 {%- endif %}

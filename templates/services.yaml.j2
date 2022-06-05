@@ -16,12 +16,12 @@ spec:
     app.kubernetes.io/component: server
     app.kubernetes.io/name: server
   ports:
-    - name: brickport
+    - name: storage_unit_port
       protocol: TCP
       port: 24007
       targetPort: 24007
   ports:
-    - name: moanaport
+    - name: mgr_port
       protocol: TCP
       port: 3000
       targetPort: 3000
