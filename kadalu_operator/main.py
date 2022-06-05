@@ -71,23 +71,23 @@ def template(filename, **kwargs):
     return Template(content).stream(**kwargs).dump(filename)
 
 
-def bricks_validation(bricks):
-    """Validate Brick path and node options"""
+def storage_units_validation(storage_units):
+    """Validate Storage Unit path and node options"""
     ret = True
-    for idx, brick in enumerate(bricks):
+    for idx, storage_unit in enumerate(storage_units):
         if not ret:
             break
 
-        if brick.get("pvc", None) is not None:
+        if storage_unit.get("pvc", None) is not None:
             continue
 
-        if brick.get("path", None) is None and \
-           brick.get("device", None) is None:
+        if storage_unit.get("path", None) is None and \
+           storage_unit.get("device", None) is None:
             logging.error(logf("Storage path/device not specified",
                                number=idx+1))
             ret = False
 
-        if brick.get("node", None) is None:
+        if storage_unit.get("node", None) is None:
             logging.error(logf("Storage node not specified", number=idx+1))
             ret = False
 
@@ -133,7 +133,7 @@ def validate_ext_mode_details(obj):
 # pylint: disable=too-many-return-statements
 # pylint: disable=too-many-branches
 def validate_pool_request(obj):
-    """Validate the Pool request for Replica options, number of bricks etc"""
+    """Validate the Pool request for Replica options, number of Storage Units etc"""
     if not obj.get("spec", None):
         logging.error("Storage 'spec' not specified")
         return False
@@ -158,16 +158,16 @@ def validate_pool_request(obj):
     if pool_mode in [POOL_MODE_EXTERNAL_GLUSTER, POOL_MODE_EXTERNAL_KADALU]:
         return validate_ext_mode_details(obj)
 
-    bricks = obj["spec"].get("storage", [])
-    if not bricks_validation(bricks):
+    storage_units = obj["spec"].get("storage", [])
+    if not storage_units_validation(storage_units):
         return False
 
     decommissioned = ""
-    subvol_bricks_count = 1
+    subvol_storage_units_count = 1
     if pool_type == POOL_TYPE_REPLICA_2:
-        subvol_bricks_count = 2
+        subvol_storage_units_count = 2
     elif pool_type == POOL_TYPE_REPLICA_3:
-        subvol_bricks_count = 3
+        subvol_storage_units_count = 3
 
     if pool_type == POOL_TYPE_DISPERSE:
         disperse_config = obj["spec"].get("disperse", None)
@@ -176,51 +176,51 @@ def validate_pool_request(obj):
                           "count is not specified")
             return False
 
-        data_bricks = disperse_config.get("data", 0)
-        redundancy_bricks = disperse_config.get("redundancy", 0)
-        if data_bricks == 0 or redundancy_bricks == 0:
+        data_storage_units = disperse_config.get("data", 0)
+        redundancy_storage_units = disperse_config.get("redundancy", 0)
+        if data_storage_units == 0 or redundancy_storage_units == 0:
             logging.error("Disperse Pool data or redundancy "
                           "count is not specified")
             return False
 
-        subvol_bricks_count = data_bricks + redundancy_bricks
+        subvol_storage_units_count = data_storage_units + redundancy_storage_units
         # redundancy must be greater than 0, and the total number
-        # of bricks must be greater than 2 * redundancy. This
-        # means that a dispersed pool must have a minimum of 3 bricks.
-        if subvol_bricks_count <= (2 * redundancy_bricks):
+        # of storage units must be greater than 2 * redundancy. This
+        # means that a dispersed pool must have a minimum of 3 storage units.
+        if subvol_storage_units_count <= (2 * redundancy_storage_units):
             logging.error("Invalid redundancy for the Disperse Pool")
             return False
 
-        # stripe_size = (bricks_count - redundancy) * 512
-        # Using combinations of #Bricks/redundancy that give a power
+        # stripe_size = (storage_units_count - redundancy) * 512
+        # Using combinations of #Storage units/redundancy that give a power
         # of two for the stripe size will make the disperse pool
         # perform better in most workloads because it's more typical
         # to write information in blocks that are multiple of two
         # https://docs.gluster.org/en/latest/Administrator-Guide
         #    /Setting-Up-Volumes/#creating-dispersed-volumes
-        if data_bricks % 2 != 0:
+        if data_storage_units % 2 != 0:
             logging.error("Disperse Configuration is not Optimal")
             return False
 
-    if len(bricks) % subvol_bricks_count != 0:
+    if len(storage_units) % subvol_storage_units_count != 0:
         logging.error("Invalid number of storage directories/devices"
                       " specified")
         return False
 
-    if subvol_bricks_count > 1:
-        for i in range(0, int(len(bricks) / subvol_bricks_count)):
+    if subvol_storage_units_count > 1:
+        for i in range(0, int(len(storage_units) / subvol_storage_units_count)):
             decommissioned = ""
-            for k in range(0, subvol_bricks_count):
-                brick_idx = (i * subvol_bricks_count) + k
-                brick = bricks[brick_idx]
-                decom = brick.get("decommissioned", "")
+            for k in range(0, subvol_storage_units_count):
+                storage_unit_idx = (i * subvol_storage_units_count) + k
+                storage_unit = storage_units[storage_unit_idx]
+                decom = storage_unit.get("decommissioned", "")
                 if k == 0:
                     decommissioned = decom
                     continue
                 if decom != decommissioned:
                     logging.error(logf(
                         "All of distribute subvolume should be marked decommissioned",
-                        brick=brick, brick_index=brick_idx))
+                        storage_unit=storage_unit, storage_unit_index=storage_unit_idx))
                     return False
 
     # If we are here, decommissioned option is properly given.
@@ -238,28 +238,28 @@ def validate_pool_request(obj):
     return True
 
 
-def get_brick_device_dir(brick):
-    """If custom file is passed as brick device then the
+def get_storage_unit_device_dir(storage_unit):
+    """If custom file is passed as storage unit device then the
     parent directory needs to be mounted as is
     in server container"""
-    brick_device_dir = ""
-    logging.info(repr(brick))
-    brickdev = brick.get("device", "")
-    logging.info(brickdev)
-    if brickdev != "" and not brickdev.startswith("/dev/"):
-        brick_device_dir = os.path.dirname(brickdev)
+    device_dir = ""
+    logging.info(repr(storage_unit))
+    storage_unit_dev = storage_unit.get("device", "")
+    logging.info(storage_unit_dev)
+    if storage_unit_dev != "" and not storage_unit_dev.startswith("/dev/"):
+        device_dir = os.path.dirname(storage_unit_dev)
 
-    return brick_device_dir
+    return device_dir
 
 
-def get_brick_hostname(pool_name, idx, suffix=True):
-    """Brick hostname is <statefulset-name>-<ordinal>.<service-name>
+def get_storage_unit_hostname(pool_name, idx, suffix=True):
+    """Storage Unit hostname is <statefulset-name>-<ordinal>.<service-name>
     statefulset name is the one which is visible when the
     `get pods` command is run, so the format used for that name
     is "server-<pool_name>-<idx>". Escape dots from the
     hostname from the input otherwise will become invalid name.
     Service is created with name as Pool name. For example,
-    brick_hostname will be "server-spool1-0-0.spool1" and
+    storage_unit_hostname will be "server-spool1-0-0.spool1" and
     server pod name will be "server-spool1-0"
     """
     tmp_pool_name = pool_name.replace("-", "_")
@@ -310,12 +310,12 @@ def poolinfo_from_crd_spec(obj):
             data["storage_units"].append({
                 "path": f"/storages/{data['name']}/storage",
                 "kube_hostname": storage.get("node", ""),
-                "node": get_brick_hostname(data["name"], idx),
+                "node": get_storage_unit_hostname(data["name"], idx),
                 "node_id": storage.get("node_id", f"node-{idx}" % idx),
                 "host_path": storage.get("path", ""),
                 "device": storage.get("device", ""),
                 "pvc_name": storage.get("pvc", ""),
-                "device_dir": get_brick_device_dir(storage),
+                "device_dir": get_storage_unit_device_dir(storage),
                 "decommissioned": storage.get("decommissioned", ""),
                 "index": idx
             })
@@ -391,17 +391,17 @@ def upgrade_storage_pods(core_v1_client):
         obj["spec"]["storage"] = []
 
         # Need this loop so below array can be constructed in the proper order
-        for val in data["bricks"]:
+        for val in data["storage_units"]:
             obj["spec"]["storage"].append({})
 
         # Set Node ID for each storage device from configmap
-        for val in data["bricks"]:
-            idx = val["brick_index"]
+        for val in data["storage_units"]:
+            idx = val["storage_unit_index"]
 
             obj["spec"]["storage"][idx]["node_id"] = val["node_id"]
-            obj["spec"]["storage"][idx]["path"] = val["host_brick_path"]
+            obj["spec"]["storage"][idx]["path"] = val["host_storage_unit_path"]
             obj["spec"]["storage"][idx]["node"] = val["kube_hostname"]
-            obj["spec"]["storage"][idx]["device"] = val["brick_device"]
+            obj["spec"]["storage"][idx]["device"] = val["storage_unit_device"]
             obj["spec"]["storage"][idx]["pvc"] = val["pvc_name"]
 
         if data['type'] == POOL_TYPE_REPLICA_2:
@@ -430,7 +430,7 @@ def update_config_map(core_v1_client, obj):
         "kadalu_format": obj["spec"].get("kadalu_format", "native"),
         "type": pool_type,
         "pv_reclaim_policy" : pv_reclaim_policy,
-        "bricks": [],
+        "storage_units": [],
         "disperse": {
             "data": disperse_config.get("data", 0),
             "redundancy": disperse_config.get("redundancy", 0)
@@ -442,20 +442,20 @@ def update_config_map(core_v1_client, obj):
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
 
-    # For each brick, add brick path and node id
-    bricks = obj["spec"]["storage"]
-    for idx, storage in enumerate(bricks):
-        data["bricks"].append({
-            "brick_path": "/bricks/%s/data/brick" % pool_name,
+    # For each, storage unit add storage unit path and node id
+    storage_units = obj["spec"]["storage"]
+    for idx, storage in enumerate(storage_units):
+        data["storage_units"].append({
+            "storage_unit_path": "/storages/%s/data/storage" % pool_name,
             "kube_hostname": storage.get("node", ""),
-            "node": get_brick_hostname(pool_name, idx),
+            "node": get_storage_unit_hostname(pool_name, idx),
             "node_id": storage["node_id"],
-            "host_brick_path": storage.get("path", ""),
-            "brick_device": storage.get("device", ""),
+            "host_storage_unit_path": storage.get("path", ""),
+            "storage_unit_device": storage.get("device", ""),
             "pvc_name": storage.get("pvc", ""),
-            "brick_device_dir": get_brick_device_dir(storage),
+            "storage_unit_device_dir": get_storage_unit_device_dir(storage),
             "decommissioned": storage.get("decommissioned", ""),
-            "brick_index": idx
+            "storage_unit_index": idx
         })
 
     if pool_type == POOL_TYPE_REPLICA_2:
@@ -506,23 +506,23 @@ def deploy_server_pods(obj):
         "pool_id": obj["spec"]["pool_id"]
     }
 
-    # One StatefulSet per Brick
+    # One StatefulSet per Storage Unit
     for idx, storage in enumerate(obj["spec"]["storage"]):
-        template_args["host_brick_path"] = storage.get("path", "")
+        template_args["host_storage_unit_path"] = storage.get("path", "")
         template_args["kube_hostname"] = storage.get("node", "")
         # TODO: Understand the need, and usage of suffix
-        serverpod_name = get_brick_hostname(
+        serverpod_name = get_storage_unit_hostname(
             pool_name,
             idx,
             suffix=False
         )
         template_args["serverpod_name"] = serverpod_name
-        template_args["brick_path"] = "/bricks/%s/data/brick" % pool_name
-        template_args["brick_index"] = idx
-        template_args["brick_device"] = storage.get("device", "")
+        template_args["storage_unit_path"] = "/storages/%s/data/storage" % pool_name
+        template_args["storage_unit_index"] = idx
+        template_args["storage_unit_device"] = storage.get("device", "")
         template_args["pvc_name"] = storage.get("pvc", "")
-        template_args["brick_device_dir"] = get_brick_device_dir(storage)
-        template_args["brick_node_id"] = storage["node_id"]
+        template_args["storage_unit_device_dir"] = get_storage_unit_device_dir(storage)
+        template_args["storage_unit_node_id"] = storage["node_id"]
         template_args["k8s_dist"] = K8S_DIST
         template_args["verbose"] = VERBOSE
 
@@ -926,12 +926,12 @@ def get_num_pvs(storage_info_data):
                  '{.spec.storageClassName}{"\\n"}{end}\'' % pool_name)
         cmd = ["kubectl", "get", "pv", "-o", jpath]
     else:
-        bricks = storage_info_data['bricks']
-        dbpath = "/bricks/" + pool_name + "/data/brick/stat.db"
+        storage_units = storage_info_data['storage_units']
+        dbpath = "/storages/" + pool_name + "/data/storage/stat.db"
         query = ("select count(pvname) from pv_stats;")
         cmd = [
             "kubectl", "exec", "-i",
-            bricks[0]['node'].replace("." + pool_name, ""), "-c", "server",
+            storage_units[0]['node'].replace("." + pool_name, ""), "-c", "server",
             "-nkadalu", "--", "sqlite3", dbpath, query
         ]
 
@@ -991,25 +991,25 @@ def delete_server_pods(storage_info_data, obj):
         "shd_required": shd_required
     }
 
-    bricks = storage_info_data['bricks']
+    storage_units = storage_info_data['storage_units']
 
-    # Traverse all bricks from configmap
-    for brick in bricks:
+    # Traverse all storage units from configmap
+    for storage_unit in storage_units:
 
-        idx = brick['brick_index']
-        template_args["host_brick_path"] = brick['host_brick_path']
-        template_args["kube_hostname"] = brick['kube_hostname']
-        template_args["serverpod_name"] = get_brick_hostname(
+        idx = storage_unit['storage_unit_index']
+        template_args["host_path"] = storage_unit['host_path']
+        template_args["kube_hostname"] = storage_unit['kube_hostname']
+        template_args["serverpod_name"] = get_storage_unit_hostname(
             pool_name,
             idx,
             suffix=False
         )
-        template_args["brick_path"] = "/bricks/%s/data/brick" % pool_name
-        template_args["brick_index"] = idx
-        template_args["brick_device"] = brick['brick_device']
-        template_args["pvc_name"] = brick['pvc_name']
-        template_args["brick_device_dir"] = brick['brick_device_dir']
-        template_args["brick_node_id"] = brick['node_id']
+        template_args["storage_unit_path"] = "/storages/%s/data/storage" % pool_name
+        template_args["storage_unit_index"] = idx
+        template_args["storage_unit_device"] = storage_unit['device']
+        template_args["pvc_name"] = storage_unit['pvc_name']
+        template_args["storage_unit_device_dir"] = storage_unit['device_dir']
+        template_args["storage_unit_node_id"] = storage_unit['node_id']
         template_args["k8s_dist"] = K8S_DIST
 
         filename = os.path.join(MANIFESTS_DIR, "server.yaml")
@@ -1019,7 +1019,7 @@ def delete_server_pods(storage_info_data, obj):
             "Deleted Server pod",
             pool_name=pool_name,
             manifest=filename,
-            node=brick['node']
+            node=storage_unit['node']
         ))
 
 
