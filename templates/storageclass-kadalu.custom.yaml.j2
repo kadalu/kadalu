@@ -3,9 +3,9 @@
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
-  name: kadalu.{{ hostvol_name }}
+  name: kadalu.{{ pool_name }}
 provisioner: kadalu
 allowVolumeExpansion: {%- if kadalu_format == "native" %} true{%- else %} false{%- endif %}
 parameters:
-  storage_name: {{ hostvol_name }}
+  storage_name: {{ pool_name }}
   kadalu_format: {{ kadalu_format }}

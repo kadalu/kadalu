@@ -35,10 +35,12 @@ spec:
                       type: integer
                 type:
                   type: string
-                pvReclaimPolicy:
+                mode:
+                  type: string
+                pv_reclaim_policy:
                   type: string
                   default: delete
-                volume_id:
+                pool_id:
                   type: string
                 kadalu_format:
                   type: string
@@ -86,19 +88,6 @@ spec:
                       type: string
                     port:
                       type: integer
-                details:
-                  type: object
-                  properties:
-                    gluster_host:
-                      type: string
-                    gluster_hosts:
-                      type: array
-                      items:
-                        type: string
-                    gluster_volname:
-                      type: string
-                    gluster_options:
-                      type: string
                 gluster_volume:
                   type: object
                   properties:
