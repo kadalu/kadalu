@@ -36,17 +36,21 @@ CSI_POD_PREFIX = "csi-"
 STORAGE_CLASS_NAME_PREFIX = "kadalu."
 # TODO: Add ThinArbiter
 VALID_PV_RECLAIM_POLICY_TYPES = ["delete", "archive", "retain"]
+POOL_TYPE_EXTERNAL = "External"
 POOL_TYPE_REPLICA_1 = "Replica1"
 POOL_TYPE_REPLICA_2 = "Replica2"
 POOL_TYPE_REPLICA_3 = "Replica3"
-POOL_TYPE_EXTERNAL = "External"
-POOL_TYPE_EXTERNAL_GLUSTER = "ExternalGluster"
-POOL_TYPE_EXTERNAL_KADALU = "ExternalKadalu"
+POOL_MODE_NATIVE = "Native"
+POOL_MODE_EXTERNAL_GLUSTER = "ExternalGluster"
+POOL_MODE_EXTERNAL_KADALU = "ExternalKadalu"
 POOL_TYPE_DISPERSE = "Disperse"
 VALID_POOL_TYPES = [
     POOL_TYPE_REPLICA_1, POOL_TYPE_REPLICA_2, POOL_TYPE_REPLICA_3,
-    POOL_TYPE_DISPERSE, POOL_TYPE_EXTERNAL,
-    POOL_TYPE_EXTERNAL_KADALU, POOL_TYPE_EXTERNAL_GLUSTER
+    POOL_TYPE_DISPERSE, POOL_TYPE_EXTERNAL
+]
+VALID_POOL_MODES = [
+    POOL_MODE_NATIVE, POOL_MODE_EXTERNAL_GLUSTER,
+    POOL_MODE_EXTERNAL_KADALU
 ]
 CREATE_CMD = "create"
 APPLY_CMD = "apply"
@@ -89,6 +93,7 @@ def bricks_validation(bricks):
 
     return ret
 
+
 def spec_keys_valid(details, keys):
     valid = True
     for key in keys:
@@ -99,10 +104,10 @@ def spec_keys_valid(details, keys):
     return valid
 
 
-def validate_ext_details(obj):
+def validate_ext_mode_details(obj):
     """Validate external Pool details"""
     valid = True
-    if obj["spec"]["type"] == POOL_TYPE_EXTERNAL_GLUSTER:
+    if obj["spec"]["mode"] == POOL_MODE_EXTERNAL_GLUSTER:
         details = obj["spec"].get("gluster_volume", None)
         if not details:
             logging.error(logf("External Gluster Volume details not given."))
@@ -139,6 +144,7 @@ def validate_pool_request(obj):
         return False
 
     pool_type = obj["spec"].get("type", None)
+    pool_mode = obj["spec"].get("mode", None)
     if pool_type is None:
         logging.error("Storage type not specified")
         return False
@@ -149,8 +155,8 @@ def validate_pool_request(obj):
                            provided_type=pool_type))
         return False
 
-    if pool_type == POOL_TYPE_EXTERNAL:
-        return validate_ext_details(obj)
+    if pool_mode in [POOL_MODE_EXTERNAL_GLUSTER, POOL_MODE_EXTERNAL_KADALU]:
+        return validate_ext_mode_details(obj)
 
     bricks = obj["spec"].get("storage", [])
     if not bricks_validation(bricks):
@@ -267,8 +273,10 @@ def get_brick_hostname(pool_name, idx, suffix=True):
 
 def poolinfo_from_crd_spec(obj):
     pool_type = obj["spec"]["type"]
+    pool_mode = obj["spec"].get("mode", POOL_MODE_NATIVE)
     data = {
         "name": obj["metadata"]["name"],
+        "mode": pool_mode,
         "id": obj["spec"].get("pool_id", str(uuid.uuid1())),
         "type": pool_type,
         "pvReclaimPolicy": obj["spec"].get("pvReclaimPolicy", "delete"),
@@ -276,12 +284,12 @@ def poolinfo_from_crd_spec(obj):
         "kadalu_format": obj["spec"].get("kadalu_format", "native")
     }
 
-    if pool_type == POOL_TYPE_EXTERNAL_KADALU:
+    if pool_mode == POOL_MODE_EXTERNAL_KADALU:
         details = obj["spec"]["kadalu_volume"]
         data["mgr_url"] = details["mgr_url"]
         data["external_volume_name"] = details["volume_name"]
         data["external_volume_options"] = details.get("volume_options", "")
-    elif pool_type == POOL_TYPE_EXTERNAL_GLUSTER:
+    elif pool_mode == POOL_MODE_EXTERNAL_GLUSTER:
         details = obj["spec"]["gluster_volume"]
         data["hosts"] = details["hosts"]
         data["external_volume_name"] = details["volume_name"]
@@ -331,6 +339,10 @@ def poolinfo_from_crd_spec(obj):
     return data
 
 
+def is_pool_mode_external(mode):
+    return mode in [POOL_MODE_EXTERNAL_GLUSTER, POOL_MODE_EXTERNAL_KADALU]
+
+
 def upgrade_storage_pods(core_v1_client):
     """
     Upgrade the Storage pods after operator pod upgrade
@@ -343,11 +355,13 @@ def upgrade_storage_pods(core_v1_client):
         if ".info" not in key:
             continue
 
+        # TODO: Upgrade poolinfo and call Kadalu Storage Volume API/CLI
+
         pool_name = key.replace('.info', '')
         data = json.loads(configmap_data.data[key])
 
         logging.info(logf("config map", pool_name=pool_name, data=data))
-        if data['type'] == POOL_TYPE_EXTERNAL:
+        if is_pool_mode_external(data['mode']):
             # nothing to be done for upgrade, say we are good.
             logging.debug(logf(
                 "pool type external, nothing to upgrade",
@@ -730,11 +744,11 @@ def handle_modified(core_v1_client, obj):
 
     pool_name = obj["metadata"]["name"]
 
-    pool_type = obj["spec"]["type"]
-    if pool_type == POOL_TYPE_EXTERNAL:
-        # Modification of 'External' volume type is not supported
+    pool_mode = obj["spec"].get("mode", POOL_MODE_NATIVE)
+    if is_pool_mode_external(pool_mode):
+        # Modification of 'External' volume mode is not supported
         logging.info(logf(
-            "Modification of 'External' volume type is not supported",
+            "Modification of 'External' volume mode is not supported",
             pool_name=pool_name
         ))
         return
@@ -809,14 +823,14 @@ def handle_deleted(core_v1_client, obj):
     elif pv_count == 0:
 
         pool_type = storage_info_data.get("type")
+        pool_mode = storage_info_data.get("mode")
 
         # We can't delete external pool but cleanup StorageClass and Configmap
         # Delete Configmap and Storage class for both Native & External
         delete_storage_class(pool_name, pool_type)
         delete_config_map(core_v1_client, obj)
 
-        if pool_type != "External":
-
+        if not is_pool_mode_external(pool_mode):
             delete_server_pods(storage_info_data, obj)
             filename = os.path.join(MANIFESTS_DIR, "services.yaml")
             template(filename, namespace=NAMESPACE, volname=pool_name)
@@ -862,7 +876,7 @@ def get_num_pvs(storage_info_data):
 
     pool_name = storage_info_data['name']
     cmd = None
-    if storage_info_data.get("type") == "External":
+    if is_pool_mode_external(storage_info_data.get("mode")):
         # We can't access external cluster and so query existing PVs which are
         # using external storageclass
         pool_name = "kadalu." + pool_name
@@ -882,7 +896,7 @@ def get_num_pvs(storage_info_data):
     try:
         resp = utils_execute(cmd)
         parts = resp.stdout.strip("'").split()
-        if storage_info_data.get("type") == "External":
+        if is_pool_mode_external(storage_info_data.get("mode")):
             return len(parts)
         pv_count = int(parts[0])
         return pv_count
