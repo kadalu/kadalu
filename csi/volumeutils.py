@@ -328,7 +328,7 @@ class PersistentVolume:
             pvdir=pvol.path
         ))
 
-        # Write info file so that Brick's quotad sidecar
+        # Write info file so that Storage Unit's quotad sidecar
         # container picks it up (or) for external quota expansion
         pvol.save_metadata()
 
@@ -437,7 +437,7 @@ class PersistentVolume:
 
         self.size = requested_pvsize
 
-        # Write info file so that Brick's quotad sidecar
+        # Write info file so that Storage Unit's quotad sidecar
         # container picks it up.
         self.save_metadata()
 
@@ -612,7 +612,7 @@ class PersistentVolume:
 
         # Rename directory & files that are to be archived
         try:
-            # Brick/PVC
+            # Storage_unit/PVC
             os.rename(self.abspath, archive_pv.abspath)
 
             # Info-File
@@ -760,7 +760,7 @@ def filter_node_affinity(pool, filters):
             return None
 
         # Volume is not from the requested node
-        if node_name != pool.bricks[0].kube_hostname:
+        if node_name != pool.storage_units[0].kube_hostname:
             return None
 
     return pool
@@ -874,8 +874,8 @@ def register_pool_mount(mountpoint, pool_name, mount_suffix, opts,
 
 
 # noqa # pylint: disable=too-few-public-methods
-class Brick:
-    """Brick Object"""
+class StorageUnit:
+    """Storage Unit Object"""
     def __init__(self):
         self.path = ""
         self.kube_hostname = ""
@@ -895,7 +895,7 @@ class Pool:
         self.name = kwargs.get("name", "")
         self.id = ""  # noqa # pylint: disable=invalid-name
         self.pv_reclaim_policy = "delete"
-        self.bricks = []
+        self.storage_units = []
         self.type = ""
         self.mode = ""
         self.disperse_data = 0
@@ -908,18 +908,18 @@ class Pool:
         self.supported_pvtype = "all"
         self.dht_subvol = []
         self.distribute_count = 1
-        self.subvol_bricks_count = 1
+        self.subvol_storage_units_count = 1
         self.decommissioned = ""
 
     def set_dependent_fields(self):
         """Set dependent fields of the Pool"""
         decommissioned = []
         if self.type == "Replica1":
-            for brick in self.bricks:
-                brick_name = f"{self.name}-client-{brick.index}"
-                self.dht_subvol.append(brick_name)
-                if brick.decommissioned != "":
-                    decommissioned.append(brick_name)
+            for storage_unit in self.storage_units:
+                storage_unit_name = f"{self.name}-client-{storage_unit.index}"
+                self.dht_subvol.append(storage_unit_name)
+                if storage_unit.decommissioned != "":
+                    decommissioned.append(storage_unit_name)
         else:
             count = 3
             if self.type == "Replica2":
@@ -928,16 +928,16 @@ class Pool:
             if self.type == "Disperse":
                 count = self.disperse_data + self.disperse_redundancy
 
-            self.subvol_bricks_count = count
-            for i in range(0, int(len(self.bricks) / count)):
-                brick_name = "%s-%s-%d" % (
+            self.subvol_storage_units_count = count
+            for i in range(0, int(len(self.storage_units) / count)):
+                storage_unit_name = "%s-%s-%d" % (
                     self.name,
                     "disperse" if self.type == "Disperse" else "replica",
                     i
                 )
-                self.dht_subvol.append(brick_name)
-                if self.bricks[(i * count)].decommissioned != "":
-                    decommissioned.append(brick_name)
+                self.dht_subvol.append(storage_unit_name)
+                if self.storage_units[(i * count)].decommissioned != "":
+                    decommissioned.append(storage_unit_name)
 
         self.decommissioned = ",".join(decommissioned)
 
@@ -954,7 +954,7 @@ class Pool:
         pinfo.name = data["volname"]
         pinfo.id = data["volume_id"]
         pinfo.pv_reclaim_policy = data["pvReclaimPolicy"]
-        pinfo.bricks = []
+        pinfo.storage_units = []
         pinfo.type = "" if data["type"].lower() == "external" else data["type"]
         pinfo.mode = "external" if data["type"].lower() == "external" else "native"
         pinfo.gluster_volname = data.get("gluster_volname", None)
@@ -969,20 +969,20 @@ class Pool:
         pinfo.disperse_data = data.get("disperse", {}).get("data", 0)
         pinfo.disperse_redundancy = data.get("disperse", {}).get("redundancy", 0)
 
-        for brick_data in data.get("bricks", []):
-            brick = Brick()
-            brick.path = brick_data["brick_path"]
-            brick.kube_hostname = brick_data["kube_hostname"]
-            brick.node = brick_data["node"]
-            brick.node_id = brick_data["node_id"]
-            brick.host_path = brick_data["host_brick_path"]
-            brick.device = brick_data["brick_device"]
-            brick.pvc_name = brick_data["pvc_name"]
-            brick.device_dir = brick_data["brick_device_dir"]
-            brick.decommissioned = brick_data["decommissioned"]
-            brick.index = brick_data["brick_index"]
+        for storage_unit_data in data.get("bricks", []):
+            storage_unit = StorageUnit()
+            storage_unit.path = storage_unit_data["brick_path"]
+            storage_unit.kube_hostname = storage_unit_data["kube_hostname"]
+            storage_unit.node = storage_unit_data["node"]
+            storage_unit.node_id = storage_unit_data["node_id"]
+            storage_unit.host_path = storage_unit_data["host_brick_path"]
+            storage_unit.device = storage_unit_data["brick_device"]
+            storage_unit.pvc_name = storage_unit_data["pvc_name"]
+            storage_unit.device_dir = storage_unit_data["brick_device_dir"]
+            storage_unit.decommissioned = storage_unit_data["decommissioned"]
+            storage_unit.index = storage_unit_data["brick_index"]
 
-            pinfo.bricks.append(brick)
+            pinfo.storage_units.append(storage_unit)
 
         pinfo.set_dependent_fields()
         return pinfo
@@ -1669,7 +1669,7 @@ def yield_list_of_pvcs(max_entries=0):
     # 'name', 'mntdir')
     pvcs = []
     idx = -1
-    for idx, value in enumerate(wrap_pvc(yield_pvc_from_hostvol)):
+    for idx, value in enumerate(wrap_pvc(yield_pvc_from_pool)):
         pvc, last = value
         token = "" if last else str(idx)
         pvcs.append(pvc)

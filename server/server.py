@@ -7,10 +7,10 @@ Prepares, Validates and then starts the Moana Agent Process
 import os
 
 from kadalulib import Monitor, Proc, logging_setup
-from brickutils import (
-    create_and_mount_brick,
-    create_brickdir,
-    verify_brickdir_xattr_support
+from storage_unit_utils import (
+    create_and_mount_storage_unit,
+    create_storage_unit_dir,
+    verify_storage_unit_dir_xattr_support
 )
 
 
@@ -18,14 +18,15 @@ def start_server_process():
     """
     Start Moana Agent Process and Exporter Service
     """
-    brick_device = os.environ.get("BRICK_DEVICE", None)
-    brick_path = os.environ["BRICK_PATH"]
-    if brick_device is not None and brick_device != "":
-        brickfs = os.environ.get("BRICK_FS", "xfs")
-        create_and_mount_brick(brick_device, brick_path, brickfs)
+    storage_unit_device = os.environ.get("STORAGE_UNIT_DEVICE", None)
+    storage_unit_path = os.environ["STORAGE_UNIT_PATH"]
+    if storage_unit_device is not None and storage_unit_device != "":
+        storage_unit_fs = os.environ.get("STORAGE_UNIT_FS", "xfs")
+        create_and_mount_storage_unit(storage_unit_device, storage_unit_path,
+                                      storage_unit_fs)
 
-    create_brickdir(brick_path)
-    verify_brickdir_xattr_support(brick_path)
+    create_storage_unit_dir(storage_unit_path)
+    verify_storage_unit_dir_xattr_support(storage_unit_path)
 
     mon = Monitor()
 
