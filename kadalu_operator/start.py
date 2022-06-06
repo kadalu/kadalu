@@ -10,13 +10,16 @@ from utils import execute as utils_execute
 
 
 def restore_kadalu_storage_config_from_configmap():
+    """
+    Restore Kadalu Storage Configuration from Configmap based backup.
+    """
     filepath = "/var/lib/kadalu/config-snapshots/latest.tar.gz"
 
     cmd = ["kubectl", "get", "configmap", "kadalu-mgr", "--output=json"]
     try:
         resp = utils_execute(cmd)
     except CommandError as err:
-        if "not found" in err:
+        if "not found" in err.stderr:
             # No backups found in Configmap so fresh setup.
             return
 
@@ -58,6 +61,7 @@ def restore_kadalu_storage_config_from_configmap():
         sys.exit(1)
 
 
+# pylint: disable=missing-function-docstring
 def main():
     curr_dir = os.path.dirname(__file__)
 

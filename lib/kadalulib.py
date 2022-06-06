@@ -66,8 +66,8 @@ def is_gluster_mount_proc_running(volname, mountpoint):
     """
     cmd = (
         r'ps ax | grep -w "/opt/sbin/glusterfs" '
-        r'| grep -w "\-\-volfile\-id %s" '
-        r'| grep -w -q "%s"' % (volname, mountpoint)
+        fr'| grep -w "\-\-volfile\-id {volname}" '
+        fr'| grep -w -q "{mountpoint}"'
     )
 
     with subprocess.Popen(cmd,
@@ -123,7 +123,7 @@ class CommandException(Exception):
         self.ret = ret
         self.out = out
         self.err = err
-        msg = "[%d] %s %s" % (ret, out, err)
+        msg = f"[{ret}] {out} {err}"
         super().__init__(msg)
 
 
@@ -134,12 +134,7 @@ def get_volname_hash(volname):
 
 def get_volume_path(voltype, volhash, volname):
     """Volume path based on hash"""
-    return "%s/%s/%s/%s" % (
-        voltype,
-        volhash[0:2],
-        volhash[2:4],
-        volname
-    )
+    return f"{voltype}/{volhash[0:2]}/{volhash[2:4]}/{volname}"
 
 
 def execute(*cmd):
@@ -163,7 +158,7 @@ def logf(msg, **kwargs):
         msg += "\t"
 
     for msg_key, msg_value in kwargs.items():
-        msg += " %s=%s" % (msg_key, msg_value)
+        msg += f" {msg_key}={msg_value}"
 
     return msg
 
