@@ -346,6 +346,39 @@ def poolinfo_from_crd_spec(obj):
     return data
 
 
+def upgrade_poolinfo(poolinfo):
+    new_poolinfo = {
+        "version": LATEST_CRD_VERSION,
+        "name": poolinfo["volname"],
+        "id": poolinfo["volume_id"],
+        "pv_reclaim_policy": poolinfo["pvReclaimPolicy"],
+        "storage_units": []
+    }
+
+    for data in poolinfo.get("bricks", []):
+        new_poolinfo["storage_units"].append(
+            {
+                "path": data["brick_path"],
+                "kube_hostname": data["kube_hostname"],
+                "node": data["node"],
+                "node_id": data["node_id"],
+                "host_path": data["host_brick_path"],
+                "device": data["brick_device"],
+                "pvc_name": data["pvc_name"],
+                "device_dir": data["brick_device_dir"],
+                "decommissioned": data["decommissioned"],
+                "index": data["brick_index"]
+            }
+        )
+
+    # Handle the Change of Type -> Mode for External
+    if poolinfo["type"] == "External":
+        new_poolinfo["type"] = ""
+        new_poolinfo["mode"] = "ExternalGluster"
+
+    return new_poolinfo
+
+
 def is_pool_mode_external(mode):
     return mode in [POOL_MODE_EXTERNAL_GLUSTER, POOL_MODE_EXTERNAL_KADALU]
 
@@ -355,68 +388,48 @@ def upgrade_storage_pods(core_v1_client):
     Upgrade the Storage pods after operator pod upgrade
     """
     # Add new entry in the existing config map
-    configmap_data = core_v1_client.read_namespaced_config_map(
-        KADALU_CONFIG_MAP, NAMESPACE)
+    pools = list_poolinfo_from_configmap(core_v1_client)
 
-    for key in configmap_data.data:
-        if ".info" not in key:
-            continue
+    for poolinfo in pools:
+        if poolinfo.get("version", 0) != LATEST_CRD_VERSION:
+            poolinfo = upgrade_poolinfo(poolinfo)
+            if not is_pool_mode_external(poolinfo['mode']):
+                deploy_server_pods(poolinfo, None)
+                deploy_pool_service(poolinfo)
+                # TODO: Handle if the Kadalu Volume is already created
+                # and Handle errors
+                kadalu_volume_create(poolinfo)
 
-        # TODO: Upgrade poolinfo and call Kadalu Storage Volume API/CLI
+            poolinfo_to_configmap(core_v1_client, poolinfo)
 
-        pool_name = key.replace('.info', '')
-        data = json.loads(configmap_data.data[key])
+        # pool_name = key.replace('.info', '')
+        # data = json.loads(configmap_data.data[key])
 
-        logging.info(logf("config map", pool_name=pool_name, data=data))
-        if is_pool_mode_external(data['mode']):
+        logging.info(logf("config map", pool_name=poolinfo["name"],
+                          data=poolinfo))
+        if is_pool_mode_external(poolinfo['mode']):
             # nothing to be done for upgrade, say we are good.
             logging.debug(logf(
                 "pool type external, nothing to upgrade",
-                pool_name=pool_name,
-                data=data))
+                pool_name=poolinfo["name"],
+                data=poolinfo))
             continue
 
-        if data['type'] == POOL_TYPE_REPLICA_1:
+        if poolinfo['type'] == POOL_TYPE_REPLICA_1:
             # No promise of high availability, upgrade
             logging.debug(logf(
                 "pool type Replica1, calling upgrade",
-                pool_name=pool_name,
-                data=data))
+                pool_name=poolinfo["name"],
+                data=poolinfo))
             # TODO: call upgrade
 
         # Replica 2 and Replica 3 needs to check for self-heal
         # count 0 before going ahead with upgrade.
 
         # glfsheal volname --file-path=/template/file info-summary
-        obj = {}
-        obj["metadata"] = {}
-        obj["spec"] = {}
-        obj["metadata"]["name"] = pool_name
-        obj["spec"]["type"] = data['type']
-        obj["spec"]["pvReclaimPolicy"] = data.get("pvReclaimPolicy", "delete")
-        obj["spec"]["pool_id"] = data["pool_id"]
-        obj["spec"]["storage"] = []
-
-        # Need this loop so below array can be constructed in the proper order
-        for val in data["storage_units"]:
-            obj["spec"]["storage"].append({})
-
-        # Set Node ID for each storage device from configmap
-        for val in data["storage_units"]:
-            idx = val["storage_unit_index"]
-
-            obj["spec"]["storage"][idx]["node_id"] = val["node_id"]
-            obj["spec"]["storage"][idx]["path"] = val["host_storage_unit_path"]
-            obj["spec"]["storage"][idx]["node"] = val["kube_hostname"]
-            obj["spec"]["storage"][idx]["device"] = val["storage_unit_device"]
-            obj["spec"]["storage"][idx]["pvc"] = val["pvc_name"]
-
-        if data['type'] == POOL_TYPE_REPLICA_2:
-            if "tie-breaker.kadalu.io" not in data['tiebreaker']['node']:
-                obj["spec"]["tiebreaker"] = data['tiebreaker']
 
         # TODO: call upgrade_pods_with_heal_check() here
-        deploy_server_pods(obj)
+        deploy_server_pods(poolinfo, None)
 
 
 def deploy_server_pods(poolinfo, tolerations):
@@ -613,6 +626,38 @@ def pool_exists(core_v1_client, pool_name):
     return configmap_data.data.get(f"{pool_name}.info", None) is not None
 
 
+def kadalu_volume_create(poolinfo):
+    if is_pool_mode_external(poolinfo["mode"]):
+        return
+
+    # TODO: Add intelligence to reach unreachable pods again
+    if not wait_till_pod_start(poolinfo["name"]):
+        logging.info(logf("Server pods were not properly deployed"))
+        # TODO: Revert Storage Class, Server Pods etc
+        return
+
+    cmd = [
+        "kadalu", "volume", "create",
+        "--auto-create-pool", "--auto-add-nodes",
+        f"kadalu-storage/{poolinfo['name']}"
+    ]
+
+    cmd += [
+        f"{storage_unit['node']}:{storage_unit['path']}:24007"
+        for storage_unit in poolinfo["storage_units"]
+    ]
+
+    try:
+        utils_execute(cmd)
+        return True
+    except CommandError as err:
+        logging.error(logf(
+            "Failed to create kadalu volume",
+            error=err
+        ))
+        return False
+
+
 def handle_added(core_v1_client, obj):
     """
     New Pool is requested. Update the configMap and deploy
@@ -643,6 +688,7 @@ def handle_added(core_v1_client, obj):
         logging.debug(logf(
             "Ignoring already updated Pool config",
             pool_name=poolinfo["name"]
+        ))
         return
 
     poolinfo_to_configmap(core_v1_client, poolinfo)
@@ -657,30 +703,7 @@ def handle_added(core_v1_client, obj):
     deploy_server_pods(poolinfo, tolerations)
     deploy_pool_service(poolinfo)
 
-    # TODO: Add intelligence to reach unreachable pods again
-    if not wait_till_pod_start():
-        logging.info(logf("Server pods were not properly deployed"))
-        # TODO: Revert Storage Class, Server Pods etc
-        return
-
-    cmd = [
-        "kadalu", "volume", "create",
-        "--auto-create-pool", "--auto-add-nodes",
-        f"kadalu-storage/{poolinfo['name']}"
-    ]
-
-    cmd += [
-        f"{storage_unit['node']}:{storage_unit['path']}:24007"
-        for storage_unit in poolinfo["storage_units"]
-    ]
-
-    try:
-        utils_execute(cmd)
-    except CommandError as err:
-        logging.error(logf(
-            "Failed to create kadalu volume",
-            error=err
-        ))
+    kadalu_volume_create(poolinfo)
 
     # Dump Kadalu Storage configurations to Configmap.
     # So that Operator can restore the Configurations
@@ -698,6 +721,18 @@ def poolinfo_from_configmap(core_v1_client, pool_name):
         return None
 
     return json.loads(data)
+
+
+def list_poolinfo_from_configmap(core_v1_client):
+    configmap_data = core_v1_client.read_namespaced_config_map(
+        KADALU_CONFIG_MAP, NAMESPACE)
+
+    data = []
+    for name, item in configmap_data.data.items():
+        if name.endswith(".info"):
+            data.append(json.loads(item))
+
+    return data
 
 
 def handle_modified(core_v1_client, obj):
