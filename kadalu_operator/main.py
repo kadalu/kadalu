@@ -251,6 +251,12 @@ def get_storage_unit_device_dir(storage_unit):
     return device_dir
 
 
+def serverpod_name_pool_prefix(pool_name):
+    tmp_pool_name = pool_name.replace("-", "_")
+    dns_friendly_pool_name = re.sub(r'\W+', '', tmp_pool_name).replace("_", "-")
+    return f"server-{dns_friendly_pool_name}-"
+
+
 def get_storage_unit_hostname(pool_name, idx, suffix=True):
     """Storage Unit hostname is <statefulset-name>-<ordinal>.<service-name>
     statefulset name is the one which is visible when the
@@ -261,9 +267,8 @@ def get_storage_unit_hostname(pool_name, idx, suffix=True):
     storage_unit_hostname will be "server-spool1-0-0.spool1" and
     server pod name will be "server-spool1-0"
     """
-    tmp_pool_name = pool_name.replace("-", "_")
-    dns_friendly_pool_name = re.sub(r'\W+', '', tmp_pool_name).replace("_", "-")
-    hostname = f"server-{dns_friendly_pool_name}-{idx}"
+
+    hostname = f"{serverpod_name_pool_prefix(pool_name)}{idx}"
     if suffix:
         return "{hostname}-0.{pool_name}"
 
@@ -548,7 +553,7 @@ def handle_external_storage_addition(poolinfo, tolerations):
     add_tolerations("daemonset", NODE_PLUGIN, tolerations)
 
 
-def get_server_pod_status():
+def get_server_pod_status(pool_name):
 
     cmd = ["kubectl", "get", "pods", "-nkadalu", "-ojson"]
 
@@ -563,10 +568,10 @@ def get_server_pod_status():
 
     data = json.loads(resp.stdout)
     pod_status = {}
+    prefix = serverpod_name_pool_prefix(pool_name)
 
     for item in data["items"]:
-
-        if "server" in item["metadata"]["name"]:
+        if item["metadata"]["name"].startswith(prefix):
             pod_name = item["metadata"]["name"]
             pod_phase = item["status"]["phase"]
 
@@ -575,36 +580,40 @@ def get_server_pod_status():
     return pod_status
 
 
-def wait_till_pod_start():
-
+def wait_till_pod_start(pool_name):
     timeout = 60
     start_time = time.time()
     server_pods_ready = 0
     while True:
-        pod_status = get_server_pod_status()
-        for k,v in pod_status.items():
+        pod_status = get_server_pod_status(pool_name)
+        for k, v in pod_status.items():
             curr_time = time.time()
 
             if curr_time >= start_time + timeout:
                 logging.info(logf(
                     "Timeout waiting for server pods to start"
                 ))
-                return -1
+                return False
 
             if len(pod_status.keys()) == server_pods_ready:
-                return 0
+                # Time required for service to start
+                time.sleep(40)
+                return True
 
             if v in ["ImagePullBackOff", "CrashLoopBackOff"]:
                 logging.info(logf(
                     "Server pod has crashed"
                 ))
-                return -1
+                return False
             elif "Running" in v:
                 server_pods_ready+=1
                 continue
             else:
                 time.sleep(5)
-    return 0
+
+    # Time required for service to start
+    time.sleep(40)
+    return True
 
 
 def backup_kadalu_storage_config_to_configmap():
@@ -715,12 +724,10 @@ def handle_added(core_v1_client, obj):
     deploy_pool_service(poolinfo)
 
     # TODO: Add intelligence to reach unreachable pods again
-    if wait_till_pod_start() == -1:
+    if not wait_till_pod_start():
         logging.info(logf("Server pods were not properly deployed"))
+        # TODO: Revert Storage Class, Server Pods etc
         return
-
-    # Time required for service to start
-    time.sleep(40)
 
     cmd = [
         "kadalu", "volume", "create",
