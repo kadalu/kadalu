@@ -675,6 +675,13 @@ def deploy_pool_service(poolinfo):
              pool_name=poolinfo["name"], manifest=filename))
 
 
+def pool_exists(core_v1_client, pool_name):
+    configmap_data = core_v1_client.read_namespaced_config_map(
+        KADALU_CONFIG_MAP, NAMESPACE)
+
+    return configmap_data.data.get(f"{pool_name}.info", None) is not None
+
+
 def handle_added(core_v1_client, obj):
     """
     New Pool is requested. Update the configMap and deploy
@@ -701,15 +708,10 @@ def handle_added(core_v1_client, obj):
             return
 
     # Add new entry in the existing config map
-    configmap_data = core_v1_client.read_namespaced_config_map(
-        KADALU_CONFIG_MAP, NAMESPACE)
-
-    if configmap_data.data.get(f"{poolinfo['name']}.info", None):
-        # Pool already exists
+    if pool_exists(core_v1_client, poolinfo["name"]):
         logging.debug(logf(
-            "Ignoring already updated pool config",
+            "Ignoring already updated Pool config",
             pool_name=poolinfo["name"]
-        ))
         return
 
     poolinfo_to_configmap(core_v1_client, poolinfo)
