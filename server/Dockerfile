@@ -39,7 +39,7 @@ RUN mkdir -p /var/run/gluster /var/log/glusterfs
 
 COPY lib/kadalulib.py        /kadalu/kadalulib.py
 COPY server/server.py        /kadalu/server.py
-COPY server/brickutils.py    /kadalu/brickutils.py
+COPY server/storage_unit_utils.py    /kadalu/storage_unit_utils.py
 COPY lib/startup.sh          /kadalu/startup.sh
 COPY server/stop-server.sh   /kadalu/stop-server.sh
 COPY server/exporter.py      /kadalu/exporter.py
