@@ -22,6 +22,7 @@ from urllib3.exceptions import NewConnectionError, ProtocolError
 from utils import CommandError
 from utils import execute as utils_execute
 
+LATEST_CRD_VERSION = 2
 NAMESPACE = os.environ.get("KADALU_NAMESPACE", "kadalu")
 VERSION = os.environ.get("KADALU_VERSION", "latest")
 K8S_DIST = os.environ.get("K8S_DIST", "kubernetes")
@@ -279,6 +280,7 @@ def poolinfo_from_crd_spec(obj):
     pool_type = obj["spec"]["type"]
     pool_mode = obj["spec"].get("mode", POOL_MODE_NATIVE)
     data = {
+        "version": LATEST_CRD_VERSION,
         "name": obj["metadata"]["name"],
         "mode": pool_mode,
         "id": obj["spec"].get("pool_id", str(uuid.uuid1())),
@@ -414,77 +416,6 @@ def upgrade_storage_pods(core_v1_client):
 
         # TODO: call upgrade_pods_with_heal_check() here
         deploy_server_pods(obj)
-
-
-def update_config_map(core_v1_client, obj):
-    """
-    Poolinfo of new Pool is generated and updated to ConfigMap
-    """
-    pool_name = obj["metadata"]["name"]
-    pool_type = obj["spec"]["type"]
-    pv_reclaim_policy = obj["spec"].get("pvReclaimPolicy", "delete")
-    pool_id = obj["spec"]["pool_id"]
-    disperse_config = obj["spec"].get("disperse", {})
-
-    data = {
-        "namespace": NAMESPACE,
-        "kadalu_version": VERSION,
-        "name": pool_name,
-        "id": pool_id,
-        "kadalu_format": obj["spec"].get("kadalu_format", "native"),
-        "type": pool_type,
-        "pv_reclaim_policy" : pv_reclaim_policy,
-        "storage_units": [],
-        "disperse": {
-            "data": disperse_config.get("data", 0),
-            "redundancy": disperse_config.get("redundancy", 0)
-        },
-        "options": obj["spec"].get("options", {})
-    }
-
-    # Add new entry in the existing config map
-    configmap_data = core_v1_client.read_namespaced_config_map(
-        KADALU_CONFIG_MAP, NAMESPACE)
-
-    # For each, storage unit add storage unit path and node id
-    storage_units = obj["spec"]["storage"]
-    for idx, storage in enumerate(storage_units):
-        data["storage_units"].append({
-            "storage_unit_path": "/storages/%s/data/storage" % pool_name,
-            "kube_hostname": storage.get("node", ""),
-            "node": get_storage_unit_hostname(pool_name, idx),
-            "node_id": storage["node_id"],
-            "host_storage_unit_path": storage.get("path", ""),
-            "storage_unit_device": storage.get("device", ""),
-            "pvc_name": storage.get("pvc", ""),
-            "storage_unit_device_dir": get_storage_unit_device_dir(storage),
-            "decommissioned": storage.get("decommissioned", ""),
-            "storage_unit_index": idx
-        })
-
-    if pool_type == POOL_TYPE_REPLICA_2:
-        tiebreaker = obj["spec"].get("tiebreaker", None)
-        if not tiebreaker:
-            logging.warning(logf("No 'tiebreaker' provided for replica2 "
-                                 "config. Using default tie-breaker.kadalu.io:/mnt",
-                                 pool_name=pool_name))
-            # Add default tiebreaker if no tie-breaker option provided
-            tiebreaker = {
-                "node": "tie-breaker.kadalu.io",
-                "path": "/mnt",
-            }
-        if not tiebreaker.get("port", None):
-            tiebreaker["port"] = 24007
-
-        data["tiebreaker"] = tiebreaker
-
-    poolinfo_file = "%s.info" % pool_name
-    configmap_data.data[poolinfo_file] = json.dumps(data)
-
-    core_v1_client.patch_namespaced_config_map(
-        KADALU_CONFIG_MAP, NAMESPACE, configmap_data)
-    logging.info(logf("Updated configmap", name=KADALU_CONFIG_MAP,
-                      pool_name=pool_name))
 
 
 def deploy_server_pods(poolinfo, tolerations):
