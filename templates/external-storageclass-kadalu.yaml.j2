@@ -2,15 +2,16 @@
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
-  name: kadalu.{{ volname }}
+  name: kadalu.{{ pool_name }}
 provisioner: kadalu
 allowVolumeExpansion: {%- if kadalu_format == "native" %} true{%- else %} false{%- endif %}
 parameters:
-  hostvol_type: "External"
-  gluster_hosts: {{ gluster_hosts }}
-  gluster_volname: {{ gluster_volname }}
-{%- if gluster_options != "" %}
-  gluster_options: {{ gluster_options }}
+  hostvol_type: "ExternalKadalu"
+  mgr_url: {{ mgr_url }}
+  pool_name: {{ pool_name }}
+  volume_name: {{ volume_name }}
+{%- if kadalu_options != "" %}
+  kadalu_options: {{ kadalu_options }}
 {%- endif %}
   # Subdir inside this volume would be a PV if 'kadalu_format' is 'native'
   # else whole volume is used as a single PV if it's 'non-native'
