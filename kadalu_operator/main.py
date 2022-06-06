@@ -482,16 +482,11 @@ def update_config_map(core_v1_client, obj):
                       pool_name=pool_name))
 
 
-def deploy_server_pods(obj):
+def deploy_server_pods(poolinfo, tolerations):
     """
     Deploy server pods depending on type of
     Pool and other options specified
     """
-    # Deploy server pod
-    pool_name = obj["metadata"]["name"]
-    pool_type = obj["spec"]["type"]
-    pv_reclaim_policy = obj["spec"].get("pvReclaimPolicy", "delete")
-    tolerations = obj["spec"].get("tolerations")
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
 
     template_args = {
@@ -499,24 +494,25 @@ def deploy_server_pods(obj):
         "kadalu_version": VERSION,
         "images_hub": IMAGES_HUB,
         "docker_user": docker_user,
-        "pool_name": pool_name,
-        "pool_type": pool_type,
-        "pv_reclaim_policy": pv_reclaim_policy,
-        "pool_id": obj["spec"]["pool_id"]
+        "pool_name": poolinfo["name"],
+        "pool_type": poolinfo["type"],
+        "pool_mode": poolinfo["mode"],
+        "pv_reclaim_policy": poolinfo["pv_reclaim_policy"],
+        "pool_id": poolinfo["id"]
     }
 
     # One StatefulSet per Storage Unit
-    for idx, storage in enumerate(obj["spec"]["storage"]):
+    for idx, storage in enumerate(poolinfo["storage_units"]):
         template_args["host_storage_unit_path"] = storage.get("path", "")
         template_args["kube_hostname"] = storage.get("node", "")
         # TODO: Understand the need, and usage of suffix
         serverpod_name = get_storage_unit_hostname(
-            pool_name,
+            poolinfo["name"],
             idx,
             suffix=False
         )
         template_args["serverpod_name"] = serverpod_name
-        template_args["storage_unit_path"] = "/storages/%s/data/storage" % pool_name
+        template_args["storage_unit_path"] = "/storages/%s/data/storage" % poolinfo["name"]
         template_args["storage_unit_index"] = idx
         template_args["storage_unit_device"] = storage.get("device", "")
         template_args["pvc_name"] = storage.get("pvc", "")
@@ -529,54 +525,26 @@ def deploy_server_pods(obj):
         template(filename, **template_args)
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed Server pod",
-                          pool_name=pool_name,
+                          pool_name=poolinfo["name"],
                           manifest=filename,
                           node=storage.get("node", "")))
         add_tolerations("statefulsets", serverpod_name, tolerations)
     add_tolerations("daemonset", NODE_PLUGIN, tolerations)
 
 
-def handle_external_storage_addition(core_v1_client, obj):
-    """Deploy service(One service per Pool)"""
-    pool_name = obj["metadata"]["name"]
-    details = obj["spec"]["details"]
-    pv_reclaim_policy = obj["spec"].get("pvReclaimPolicy", "delete")
-    tolerations = obj["spec"].get("tolerations")
+def handle_external_storage_addition(poolinfo, tolerations):
+    """Deploy service(One service per Volume)"""
+    if poolinfo["mode"] == POOL_MODE_EXTERNAL_KADALU:
+        filename = "external-storageclass-gluster.yaml"
+    else:
+        filename = "external-storageclass-kadalu.yaml"
 
-    hosts = []
-    ghost = details.get("gluster_host", None)
-    ghosts = details.get("gluster_hosts", None)
-    if ghost:
-        hosts.append(ghost)
-    if ghosts:
-        hosts.extend(ghosts)
+    filepath = os.path.join(MANIFESTS_DIR, filename)
+    template(filepath, **poolinfo)
+    lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filepath)
+    logging.info(logf("Deployed External StorageClass",
+                      pool_name=poolinfo["name"], manifest=filepath))
 
-    data = {
-        "pool_name": pool_name,
-        "pool_id": obj["spec"]["volume_id"],
-        "type": POOL_TYPE_EXTERNAL,
-        "pv_reclaim_policy": pv_reclaim_policy,
-        # CRD would set 'native' but just being cautious
-        "kadalu_format": obj["spec"].get("kadalu_format", "native"),
-        "gluster_hosts": details["hosts"],
-        "gluster_volname": details["gluster_volname"],
-        "gluster_options": details.get("gluster_options", ""),
-    }
-
-    # Add new entry in the existing config map
-    configmap_data = core_v1_client.read_namespaced_config_map(
-        KADALU_CONFIG_MAP, NAMESPACE)
-    poolinfo_file = f"{pool_name}.info"
-    configmap_data.data[poolinfo_file] = json.dumps(data)
-
-    core_v1_client.patch_namespaced_config_map(
-        KADALU_CONFIG_MAP, NAMESPACE, configmap_data)
-    logging.info(logf("Updated configmap", name=KADALU_CONFIG_MAP,
-                      pool_name=pool_name))
-    filename = os.path.join(MANIFESTS_DIR, "external-storageclass.yaml")
-    template(filename, **data)
-    lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
-    logging.info(logf("Deployed External StorageClass", pool_name=pool_name, manifest=filename))
     add_tolerations("daemonset", NODE_PLUGIN, tolerations)
 
 
@@ -676,6 +644,27 @@ def backup_kadalu_storage_config_to_configmap():
         sys.exit(-1)
 
 
+def poolinfo_to_configmap(core_v1_client, poolinfo):
+    configmap_data = core_v1_client.read_namespaced_config_map(
+        KADALU_CONFIG_MAP, NAMESPACE)
+    configmap_data.data[f"{poolinfo.name}.info"] = json.dumps(poolinfo)
+
+    core_v1_client.patch_namespaced_config_map(
+        KADALU_CONFIG_MAP, NAMESPACE, configmap_data)
+
+    logging.info(logf("Updated configmap", name=KADALU_CONFIG_MAP,
+                      pool_name=poolinfo["name"]))
+
+
+def deploy_pool_service(poolinfo):
+    filename = os.path.join(MANIFESTS_DIR, "services.yaml")
+    template(filename, namespace=NAMESPACE, pool_name=poolinfo["name"])
+    lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
+    logging.info(
+        logf("Deployed Service",
+             pool_name=poolinfo["name"], manifest=filename))
+
+
 def handle_added(core_v1_client, obj):
     """
     New Pool is requested. Update the configMap and deploy
@@ -689,14 +678,15 @@ def handle_added(core_v1_client, obj):
         ))
         return
 
+    poolinfo = poolinfo_from_crd_spec(obj)
+
     # Ignore if already deployed
-    pool_name = obj["metadata"]["name"]
     pods = core_v1_client.list_namespaced_pod(NAMESPACE)
     for pod in pods.items:
-        if pod.metadata.name.startswith("server-" + pool_name + "-"):
+        if pod.metadata.name.startswith("server-" + poolinfo["name"] + "-"):
             logging.debug(logf(
                 "Ignoring already deployed server statefulsets",
-                pool_name=pool_name
+                pool_name=poolinfo["name"]
             ))
             return
 
@@ -704,53 +694,34 @@ def handle_added(core_v1_client, obj):
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
 
-    if configmap_data.data.get("%s.info" % pool_name, None):
+    if configmap_data.data.get(f"{poolinfo['name']}.info", None):
         # Pool already exists
         logging.debug(logf(
             "Ignoring already updated pool config",
-            pool_name=pool_name
+            pool_name=poolinfo["name"]
         ))
         return
 
-    # Generate new Pool ID
-    if obj["spec"].get("pool_id", None) is None:
-        obj["spec"]["pool_id"] = str(uuid.uuid1())
-    # Apply existing Pool ID to recreate storage pool from existing device/path
-    else:
-        logging.info(logf(
-            "Applying existing pool id",
-            pool_id=obj["spec"]["pool_id"]
-        ))
+    poolinfo_to_configmap(core_v1_client, poolinfo)
+    tolerations = obj["spec"].get("tolerations")
 
-    pool_type = obj["spec"]["type"]
-    if pool_type == POOL_TYPE_EXTERNAL:
-        handle_external_storage_addition(core_v1_client, obj)
+    if is_pool_mode_external(poolinfo["mode"]):
+        handle_external_storage_addition(poolinfo, tolerations)
         return
-
-    # Generate Node ID for each storage device.
-    for idx, _ in enumerate(obj["spec"]["storage"]):
-        obj["spec"]["storage"][idx]["node_id"] = "node-%d" % idx
 
     # Storage Class
-    deploy_storage_class(obj)
-
-    update_config_map(core_v1_client, obj)
-    deploy_server_pods(obj)
+    deploy_storage_class(poolinfo)
+    deploy_server_pods(poolinfo, tolerations)
+    deploy_pool_service(poolinfo)
 
     # TODO: Add intelligence to reach unreachable pods again
     if wait_till_pod_start() == -1:
         logging.info(logf("Server pods were not properly deployed"))
         return
 
-    filename = os.path.join(MANIFESTS_DIR, "services.yaml")
-    template(filename, namespace=NAMESPACE, pool_name=pool_name)
-    lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
-    logging.info(logf("Deployed Service", pool_name=pool_name, manifest=filename))
-
     # Time required for service to start
     time.sleep(40)
 
-    poolinfo = poolinfo_from_crd_spec(obj)
     cmd = [
         "kadalu", "volume", "create",
         "--auto-create-pool", "--auto-add-nodes",
@@ -776,6 +747,18 @@ def handle_added(core_v1_client, obj):
     backup_kadalu_storage_config_to_configmap()
 
 
+def poolinfo_from_configmap(core_v1_client, pool_name):
+    configmap_data = core_v1_client.read_namespaced_config_map(
+        KADALU_CONFIG_MAP, NAMESPACE)
+
+    data = configmap_data.data.get(f"{pool_name}.info", None)
+
+    if not data:
+        return None
+
+    return json.loads(data)
+
+
 def handle_modified(core_v1_client, obj):
     """
     Handle when Pool option is updated or Pool
@@ -783,14 +766,19 @@ def handle_modified(core_v1_client, obj):
     """
     # TODO: Handle Volume maintenance mode
 
-    pool_name = obj["metadata"]["name"]
+    poolinfo = poolinfo_from_configmap(core_v1_client, obj["metadata"]["name"])
+    if poolinfo is None:
+        logging.error(logf(
+            "Pool config not found",
+            pool_name=obj["metadata"]["name"]
+        ))
+        return
 
-    pool_mode = obj["spec"].get("mode", POOL_MODE_NATIVE)
-    if is_pool_mode_external(pool_mode):
+    if is_pool_mode_external(poolinfo["mode"]):
         # Modification of 'External' volume mode is not supported
         logging.info(logf(
             "Modification of 'External' volume mode is not supported",
-            pool_name=pool_name
+            pool_name=poolinfo["name"]
         ))
         return
 
@@ -813,23 +801,24 @@ def handle_modified(core_v1_client, obj):
         handle_added(core_v1_client, obj)
         return
 
-    # Pool ID (uuid) is already generated, re-use
-    cfgmap = json.loads(configmap_data.data[pool_name + ".info"])
-    # Get pool-id from config map
-    obj["spec"]["pool_id"] = cfgmap["pool_id"]
+    new_poolinfo = poolinfo_from_crd_spec(obj)
 
-    # Set Node ID for each storage device from configmap
-    for idx, _ in enumerate(obj["spec"]["storage"]):
-        obj["spec"]["storage"][idx]["node_id"] = "node-%d" % idx
+    # TODO: Detect Storage units addition and Volume Option
+    # Changes by comparing poolinfo and new_poolinfo
+
+    # TODO: Call Kadalu Storage CLI to expand the Pool or to
+    # update the Options change.
 
     # Add new entry in the existing config map
-    update_config_map(core_v1_client, obj)
-    deploy_server_pods(obj)
+    poolinfo_to_configmap(core_v1_client, poolinfo)
+    tolerations = obj["spec"].get("tolerations")
+    deploy_server_pods(poolinfo, tolerations)
 
     filename = os.path.join(MANIFESTS_DIR, "services.yaml")
-    template(filename, namespace=NAMESPACE, pool_name=pool_name)
+    template(filename, namespace=NAMESPACE, pool_name=poolinfo["name"])
     lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
-    logging.info(logf("Deployed Service", volname=pool_name, manifest=filename))
+    logging.info(logf("Deployed Service", volname=poolinfo["name"],
+                      manifest=filename))
 
 
 def handle_deleted(core_v1_client, obj):
@@ -840,19 +829,17 @@ def handle_deleted(core_v1_client, obj):
     check for num_pvs. Delete Server pods only when pvs becomes zero.
     """
 
-    pool_name = obj["metadata"]["name"]
+    poolinfo = poolinfo_from_configmap(core_v1_client, obj["metadata"]["name"])
 
-    storage_info_data = get_configmap_data(pool_name)
+    logging.info(logf("Delete requested", pool_name=poolinfo["name"]))
 
-    logging.info(logf("Delete requested", pool_name=pool_name))
-
-    pv_count = get_num_pvs(storage_info_data)
+    pv_count = get_num_pvs(poolinfo)
 
     if pv_count == -1:
         logging.error(
             logf("Storage delete failed. Failed to get PV count",
                  number_of_pvs=pv_count,
-                 pool_name=pool_name))
+                 pool_name=poolinfo["name"]))
         return
 
     if pv_count != 0:
@@ -860,53 +847,28 @@ def handle_deleted(core_v1_client, obj):
         logging.warning(
             logf("Storage delete failed. Storage is not empty",
                  number_of_pvs=pv_count,
-                 pool_name=pool_name))
+                 pool_name=poolinfo["name"]))
 
     elif pv_count == 0:
 
-        pool_type = storage_info_data.get("type")
-        pool_mode = storage_info_data.get("mode")
+        pool_type = poolinfo.get("type")
+        pool_mode = poolinfo.get("mode")
 
         # We can't delete external pool but cleanup StorageClass and Configmap
         # Delete Configmap and Storage class for both Native & External
-        delete_storage_class(pool_name, pool_type)
-        delete_config_map(core_v1_client, obj)
+        delete_storage_class(poolinfo["name"], pool_type)
+        delete_config_map(core_v1_client, poolinfo)
 
         if not is_pool_mode_external(pool_mode):
-            delete_server_pods(storage_info_data, obj)
+            delete_server_pods(poolinfo)
             filename = os.path.join(MANIFESTS_DIR, "services.yaml")
-            template(filename, namespace=NAMESPACE, volname=pool_name)
+            template(filename, namespace=NAMESPACE, volname=poolinfo["name"])
             lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
             logging.info(
-                logf("Deleted Service", pool_name=pool_name, manifest=filename))
+                logf("Deleted Service", pool_name=poolinfo["name"],
+                     manifest=filename))
 
     return
-
-
-def get_configmap_data(pool_name):
-    """
-    Get storage info data from kadalu configmap
-    """
-
-    cmd = ["kubectl", "get", "configmap", "kadalu-info", "-nkadalu", "-ojson"]
-
-    try:
-        resp = utils_execute(cmd)
-        config_data = json.loads(resp.stdout)
-
-        data = config_data['data']
-        storage_name = "%s.info" % pool_name
-        storage_info_data = data[storage_name]
-
-        # Return data in 'dict' format
-        return json.loads(storage_info_data)
-
-    except CommandError as err:
-        logging.error(logf(
-            "Failed to get details from configmap",
-            error=err
-        ))
-        return None
 
 
 def get_num_pvs(storage_info_data):
@@ -964,47 +926,41 @@ def get_num_pvs(storage_info_data):
         return -1
 
 
-def delete_server_pods(storage_info_data, obj):
+def delete_server_pods(poolinfo):
     """
     Delete server pods depending on type of
     Pool and other options specified
     """
 
-    pool_name = obj["metadata"]["name"]
-    pool_type = storage_info_data['type']
-    pool_id = storage_info_data['pool_id']
+    # TODO: Delete the server pods by name, no need for full yaml generation.
 
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
-
-    shd_required = False
-    if pool_type in (POOL_TYPE_REPLICA_3, POOL_TYPE_REPLICA_2):
-        shd_required = True
 
     template_args = {
         "namespace": NAMESPACE,
         "kadalu_version": VERSION,
         "docker_user": docker_user,
         "images_hub": IMAGES_HUB,
-        "pool_name": pool_name,
-        "pool_type": pool_type,
-        "pool_id": pool_id,
-        "shd_required": shd_required
+        "pool_name": poolinfo["name"],
+        "pool_type": poolinfo["type"],
+        "pool_id": poolinfo["id"]
     }
 
-    storage_units = storage_info_data['storage_units']
+    storage_units = poolinfo['storage_units']
 
     # Traverse all storage units from configmap
     for storage_unit in storage_units:
 
-        idx = storage_unit['storage_unit_index']
+        idx = storage_unit['index']
         template_args["host_path"] = storage_unit['host_path']
         template_args["kube_hostname"] = storage_unit['kube_hostname']
         template_args["serverpod_name"] = get_storage_unit_hostname(
-            pool_name,
+            poolinfo["name"],
             idx,
             suffix=False
         )
-        template_args["storage_unit_path"] = "/storages/%s/data/storage" % pool_name
+        template_args["storage_unit_path"] = \
+            f"/storages/{poolinfo['name']}/data/storage"
         template_args["storage_unit_index"] = idx
         template_args["storage_unit_device"] = storage_unit['device']
         template_args["pvc_name"] = storage_unit['pvc_name']
@@ -1017,7 +973,7 @@ def delete_server_pods(storage_info_data, obj):
         lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
         logging.info(logf(
             "Deleted Server pod",
-            pool_name=pool_name,
+            pool_name=poolinfo["name"],
             manifest=filename,
             node=storage_unit['node']
         ))
