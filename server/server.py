@@ -6,12 +6,12 @@ Prepares, Validates and then starts the Moana Agent Process
 
 import os
 
-from kadalulib import Monitor, Proc, logging_setup
 from storage_unit_utils import (
     create_and_mount_storage_unit,
     create_storage_unit_dir,
     verify_storage_unit_dir_xattr_support
 )
+from kadalulib import Monitor, Proc, logging_setup
 
 
 def start_server_process():

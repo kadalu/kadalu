@@ -95,6 +95,7 @@ def storage_units_validation(storage_units):
 
 
 def spec_keys_valid(details, keys):
+    """CRD spec keys verification"""
     valid = True
     for key in keys:
         if details.get(key, None) is None:
@@ -253,6 +254,7 @@ def get_storage_unit_device_dir(storage_unit):
 
 
 def serverpod_name_pool_prefix(pool_name):
+    """Server pod name prefix (server-<pool-name>-)"""
     tmp_pool_name = pool_name.replace("-", "_")
     dns_friendly_pool_name = re.sub(r'\W+', '', tmp_pool_name).replace("_", "-")
     return f"server-{dns_friendly_pool_name}-"
@@ -277,6 +279,7 @@ def get_storage_unit_hostname(pool_name, idx, suffix=True):
 
 
 def poolinfo_from_crd_spec(obj):
+    """Parse Poolinfo from CRD object"""
     pool_type = obj["spec"]["type"]
     pool_mode = obj["spec"].get("mode", POOL_MODE_NATIVE)
     data = {
@@ -346,6 +349,7 @@ def poolinfo_from_crd_spec(obj):
 
 
 def upgrade_poolinfo(poolinfo):
+    """Upgrade the Poolinfo by updating changed fields"""
     new_poolinfo = {
         "version": LATEST_CRD_VERSION,
         "name": poolinfo["volname"],
@@ -379,6 +383,7 @@ def upgrade_poolinfo(poolinfo):
 
 
 def is_pool_mode_external(mode):
+    """Check if the Pool is hosted Externally"""
     return mode in [POOL_MODE_EXTERNAL_GLUSTER, POOL_MODE_EXTERNAL_KADALU]
 
 
@@ -498,7 +503,10 @@ def handle_external_storage_addition(poolinfo, tolerations):
 
 
 def get_server_pod_status(pool_name):
-
+    """
+    Check Server Pod status before calling Node
+    add or Kadalu Volume create
+    """
     cmd = ["kubectl", "get", "pods", "-nkadalu", "-ojson"]
 
     try:
@@ -525,12 +533,13 @@ def get_server_pod_status(pool_name):
 
 
 def wait_till_pod_start(pool_name):
+    """Expect all Pods status as Running"""
     timeout = 60
     start_time = time.time()
     server_pods_ready = 0
     while True:
         pod_status = get_server_pod_status(pool_name)
-        for k, v in pod_status.items():
+        for _key, val in pod_status.items():
             curr_time = time.time()
 
             if curr_time >= start_time + timeout:
@@ -544,16 +553,17 @@ def wait_till_pod_start(pool_name):
                 time.sleep(40)
                 return True
 
-            if v in ["ImagePullBackOff", "CrashLoopBackOff"]:
+            if val in ["ImagePullBackOff", "CrashLoopBackOff"]:
                 logging.info(logf(
                     "Server pod has crashed"
                 ))
                 return False
-            elif "Running" in v:
+
+            if "Running" in val:
                 server_pods_ready+=1
                 continue
-            else:
-                time.sleep(5)
+
+            time.sleep(5)
 
     # Time required for service to start
     time.sleep(40)
@@ -561,6 +571,10 @@ def wait_till_pod_start(pool_name):
 
 
 def backup_kadalu_storage_config_to_configmap():
+    """
+    Take Snapshot of Storage Configurations, create tar archive and
+    then save to Configmap as binary file
+    """
     # Create a Snapshot
     cmd = ["kadalu", "config-snapshot", "create", "latest", "--overwrite"]
     try:
@@ -598,6 +612,9 @@ def backup_kadalu_storage_config_to_configmap():
 
 
 def poolinfo_to_configmap(core_v1_client, poolinfo):
+    """
+    Update the Configmap content of the given Pool
+    """
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
     configmap_data.data[f"{poolinfo.name}.info"] = json.dumps(poolinfo)
@@ -610,6 +627,7 @@ def poolinfo_to_configmap(core_v1_client, poolinfo):
 
 
 def deploy_pool_service(poolinfo):
+    """Deploy Services required for the Pool."""
     filename = os.path.join(MANIFESTS_DIR, "services.yaml")
     template(filename, namespace=NAMESPACE, pool_name=poolinfo["name"])
     lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
@@ -619,6 +637,7 @@ def deploy_pool_service(poolinfo):
 
 
 def pool_exists(core_v1_client, pool_name):
+    """Check if Pool exists in Configmap or not"""
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
 
@@ -626,6 +645,7 @@ def pool_exists(core_v1_client, pool_name):
 
 
 def kadalu_volume_create(poolinfo):
+    """Handle Kadalu Storage Volume create"""
     if is_pool_mode_external(poolinfo["mode"]):
         return
 
@@ -711,6 +731,9 @@ def handle_added(core_v1_client, obj):
 
 
 def poolinfo_from_configmap(core_v1_client, pool_name):
+    """
+    Read poolinfo from Configmap
+    """
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
 
@@ -723,6 +746,7 @@ def poolinfo_from_configmap(core_v1_client, pool_name):
 
 
 def list_poolinfo_from_configmap(core_v1_client):
+    """List all Pools from ConfigMap"""
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
 
@@ -776,7 +800,7 @@ def handle_modified(core_v1_client, obj):
         handle_added(core_v1_client, obj)
         return
 
-    new_poolinfo = poolinfo_from_crd_spec(obj)
+    _new_poolinfo = poolinfo_from_crd_spec(obj)
 
     # TODO: Detect Storage units addition and Volume Option
     # Changes by comparing poolinfo and new_poolinfo
@@ -1153,7 +1177,7 @@ def deploy_storage_class(obj):
 
     installed_scs = [item.metadata.name for item in scs.items]
     for sc_name in sc_names:
-        filename = os.path.join(MANIFESTS_DIR, "storageclass-%s.yaml" % sc_name)
+        filename = os.path.join(MANIFESTS_DIR, f"storageclass-{sc_name}.yaml")
         if sc_name in installed_scs:
             logging.info(logf("StorageClass already present, continuing with Apply",
                               manifest=filename))
@@ -1163,6 +1187,7 @@ def deploy_storage_class(obj):
                  kadalu_format=obj["spec"].get("kadalu_format", "native"))
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
+
 
 def add_tolerations(resource, name, tolerations):
     """Adds tolerations to kubernetes resource/name object"""
@@ -1181,6 +1206,7 @@ def add_tolerations(resource, name, tolerations):
 
 
 def create_and_login_kadalu_storage_user(username, password):
+    """Create Kadalu Storage user and login"""
     cmd = ["kadalu","user", "create", username, f"--password={password}"]
     try:
         utils_execute(cmd)

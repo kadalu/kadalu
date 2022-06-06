@@ -90,13 +90,9 @@ pylint:
 	@cp lib/kadalulib.py server/
 	@cp lib/kadalulib.py kadalu_operator/
 	@cp cli/kubectl_kadalu/utils.py kadalu_operator/
-	@cp server/kadalu_quotad/quotad.py server/kadalu_quotad/glusterutils.py server/
 	@pylint --disable=W0511,C0209 -s n lib/kadalulib.py
-	@pylint --disable=W0511,W1514,C0209 -s n server/glusterfsd.py
 	@pylint --disable W0511,W0603,W1514,C0209 -s n server/quotad.py
 	@pylint --disable=W0511,C0209 -s n server/server.py
-	@pylint --disable=W0511,W1514,C0209 -s n server/shd.py
-	@pylint --disable=W0603,W1514,C0209 -s n server/glusterutils.py
 	@pylint --disable=W0511,R0911,W0603,W1514,C0209 -s n csi/controllerserver.py
 	@pylint --disable=W0511,C0209 -s n csi/identityserver.py
 	@pylint --disable=W0511,R1732,C0209 -s n csi/main.py
@@ -110,8 +106,6 @@ pylint:
 	@rm server/kadalulib.py
 	@rm kadalu_operator/kadalulib.py
 	@rm kadalu_operator/utils.py
-	@rm server/quotad.py
-	@rm server/glusterutils.py
 	@cd cli && make gen-version pylint pytest --keep-going
 
 ifeq ($(KADALU_VERSION), latest)
