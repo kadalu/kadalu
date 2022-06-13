@@ -5,7 +5,6 @@ import json
 import os
 
 from jinja2 import Template
-
 from kadalulib import Proc
 
 VOLFILES_DIR = "/kadalu/volfiles"
