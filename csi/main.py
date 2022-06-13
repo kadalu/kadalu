@@ -11,11 +11,10 @@ import csi_pb2_grpc
 import grpc
 from controllerserver import ControllerServer
 from identityserver import IdentityServer
+from kadalulib import CommandException, logf, logging_setup
 from nodeserver import NodeServer
 from volumeutils import (HOSTVOL_MOUNTDIR, get_pv_hosting_volumes,
                          mount_glusterfs, reload_glusterfs)
-
-from kadalulib import CommandException, logf, logging_setup
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 

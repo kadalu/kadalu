@@ -8,7 +8,6 @@ import uuid
 
 import xattr
 from jinja2 import Template
-
 from kadalulib import (CommandException, Proc, execute, logf,
                        send_analytics_tracker)
 
