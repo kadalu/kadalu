@@ -47,7 +47,7 @@ jobs:
 
       - name: Get the CLI build (kubectl-kadalu)
         run: |
-          python -m pip install --upgrade --upgrade-strategy eager -r requirements/ci_merge-requirements.txt -e .
+          python -m pip install --upgrade --upgrade-strategy eager -r requirements/ci_merge-requirements.txt -e ./requirements
           KADALU_VERSION=devel make cli-build
 
       - name: Builder Image
