@@ -6,15 +6,15 @@ and Prometheus as metrics at PORT=8050
 """
 
 import json
-import os
 import logging
+import os
+
+import metrics as storage_metrics
 import requests
 import uvicorn
-
 from fastapi import FastAPI
-from prometheus_client import make_asgi_app
-import metrics as storage_metrics
 from kadalulib import logf, logging_setup
+from prometheus_client import make_asgi_app
 from utils import CommandError, execute
 
 metrics_app = FastAPI()

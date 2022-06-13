@@ -12,10 +12,9 @@ import threading
 import time
 from errno import ENOTCONN
 from pathlib import Path
+
 import xxhash
-
 from jinja2 import Template
-
 from kadalulib import (PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
                        CommandException, SizeAccounting, execute,
                        get_volname_hash, get_volume_path,

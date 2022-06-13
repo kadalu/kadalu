@@ -3,9 +3,8 @@ import os
 
 import uvicorn
 from fastapi import FastAPI
-from volumeutils import HOSTVOL_MOUNTDIR, yield_pvc_from_mntdir
-
 from kadalulib import logf, logging_setup
+from volumeutils import HOSTVOL_MOUNTDIR, yield_pvc_from_mntdir
 
 metrics_app = FastAPI()
 
