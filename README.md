@@ -1,9 +1,9 @@
 # kaDalu
 
-[![TravisCI](https://travis-ci.com/kadalu/kadalu.svg?branch=devel)](https://travis-ci.com/kadalu/kadalu)
 [![Operator Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg?label=DockerPulls%20Operator)](https://img.shields.io/docker/pulls/kadalu/kadalu-operator.svg)
 [![Server Docker Pulls](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg?label=DockerPulls%20Server)](https://img.shields.io/docker/pulls/kadalu/kadalu-server.svg)
-[![BuildX](https://github.com/kadalu/kadalu/workflows/buildx/badge.svg)](https://github.com/kadalu/kadalu/actions?query=workflow%3Abuildx)
+![Devel](https://github.com/kadalu/kadalu/actions/workflows/on-pr-merge.yml/badge.svg)
+![Release](https://github.com/kadalu/kadalu/actions/workflows/on-release-tag.yml/badge.svg)
 
 ## What is Kadalu ?
 
