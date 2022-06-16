@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.15] - 2022-06-16
+
+- Enhance PV status command to check the Status from Provisioner pod instead of
+  Server Pod to avoid errors when the Db file hashed to different distribute group
+  other than first server Pod.
+- Fix Monitoring/Prometheus labels for OCP setup.
+- Fix the stale metrics from deleted Storage pools, PVs and other entities.
+- Fix Quota crawler issues.
+- Removed empty log lines from Quota crawler.
+
 ## [0.8.14] - 2022-04-16
 
 - Added support for Private container registry
@@ -329,7 +339,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.14...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.15...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
@@ -359,3 +369,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.8.12]: https://github.com/kadalu/kadalu/compare/0.8.11...0.8.12
 [0.8.13]: https://github.com/kadalu/kadalu/compare/0.8.12...0.8.13
 [0.8.14]: https://github.com/kadalu/kadalu/compare/0.8.13...0.8.14
+[0.8.15]: https://github.com/kadalu/kadalu/compare/0.8.14...0.8.15
