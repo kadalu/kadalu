@@ -63,7 +63,7 @@ spec:
             - name: ADDRESS
               value: /plugin/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              value: {{ kubelet_dir }}/plugins_registry/kadalu/csi.sock
+              value: {{ kubelet_dir }}/plugins/kadalu/csi.sock
             - name: KUBE_NODE_NAME
               valueFrom:
                 fieldRef:
@@ -120,7 +120,7 @@ spec:
       volumes:
         - name: plugin-dir
           hostPath:
-            path: {{ kubelet_dir }}/plugins_registry/kadalu
+            path: {{ kubelet_dir }}/plugins/kadalu
             type: DirectoryOrCreate
         - name: pods-mount-dir
           hostPath:

@@ -38,7 +38,7 @@ spec:
       volumes:
         - name: plugin-dir
           hostPath:
-            path: /var/lib/kubelet/plugins_registry/kadalu
+            path: /var/lib/kubelet/plugins/kadalu
             type: Directory
 ---
 apiVersion: apps/v1
