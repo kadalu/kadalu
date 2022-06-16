@@ -1112,11 +1112,6 @@ def deploy_csi_pods(core_v1_client):
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
 
-    else:
-        filename = os.path.join(MANIFESTS_DIR, "csi-driver-crd.yaml")
-        template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-        lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
-
     filename = os.path.join(MANIFESTS_DIR, "csi.yaml")
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
     template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
