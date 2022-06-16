@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Use helm for generating devel manifests
+- Harden RBAC permissions
 
 ## [0.8.15] - 2022-06-16
 
