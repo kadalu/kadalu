@@ -6,6 +6,8 @@ type: application
 # Value of 'version' will be replaced with correct version on part of release
 version: 0.0.0-0
 dependencies:
+  - name: common
+    repository: file://charts/common
   - name: operator
     repository: file://charts/operator
     condition: operator.enabled

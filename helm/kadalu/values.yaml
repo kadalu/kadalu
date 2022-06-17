@@ -2,10 +2,13 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+global:
+  kubeletDir: '/var/lib/kubelet'
+  kubernetesDistro: 'kubernetes'
+
 # Values while deploying operator
 operator:
   enabled: false
-  kubernetesDistro: 'kubernetes'
   verbose: 'no'
   imagesHub: 'docker.io'
   dockerUser: 'kadalu'
@@ -13,7 +16,6 @@ operator:
 # Values while deploying csi-nodeplugin
 csi-nodeplugin:
   enabled: false
-  kubernetesDistro: 'kubernetes'
   verbose: 'no'
   imagesHub: 'docker.io'
   dockerUser: 'kadalu'
