@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix the stale metrics from deleted Storage pools, PVs and other entities.
 - Fix Quota crawler issues.
 - Removed empty log lines from Quota crawler.
+- Multiple CSI fixes around expanding Block vols, PVC deletion leftovers and fix broken Nomad deployments.
 
 ## [0.8.14] - 2022-04-16
 
