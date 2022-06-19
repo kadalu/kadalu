@@ -26,12 +26,13 @@ class CommandError(Exception):
         self.stderr = err
 
 
-def execute(cmd):
+def execute(cmd, cwd=None):
     """ execute the CLI command """
 
     with subprocess.Popen(cmd,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE,
+                          cwd=cwd,
                           universal_newlines=True) as proc:
         out, err = proc.communicate()
         if proc.returncode == 0:
