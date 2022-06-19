@@ -274,7 +274,7 @@ def get_storage_unit_hostname(pool_name, idx, suffix=True):
 
     hostname = f"{serverpod_name_pool_prefix(pool_name)}{idx}"
     if suffix:
-        return "{hostname}-0.{pool_name}"
+        return f"{hostname}-0.{pool_name}"
 
     return hostname
 
@@ -289,7 +289,7 @@ def poolinfo_from_crd_spec(obj):
         "mode": pool_mode,
         "id": obj["spec"].get("pool_id", str(uuid.uuid1())),
         "type": pool_type,
-        "pvReclaimPolicy": obj["spec"].get("pvReclaimPolicy", "delete"),
+        "pv_reclaim_policy": obj["spec"].get("pvReclaimPolicy", "delete"),
         # CRD would set 'native' but just being cautious
         "kadalu_format": obj["spec"].get("kadalu_format", "native")
     }
@@ -321,7 +321,7 @@ def poolinfo_from_crd_spec(obj):
                 "path": f"/storages/{data['name']}/storage",
                 "kube_hostname": storage.get("node", ""),
                 "node": get_storage_unit_hostname(data["name"], idx),
-                "node_id": storage.get("node_id", f"node-{idx}" % idx),
+                "node_id": storage.get("node_id", f"node-{idx}"),
                 "host_path": storage.get("path", ""),
                 "device": storage.get("device", ""),
                 "pvc_name": storage.get("pvc", ""),
@@ -458,8 +458,8 @@ def deploy_server_pods(poolinfo, tolerations):
 
     # One StatefulSet per Storage Unit
     for idx, storage in enumerate(poolinfo["storage_units"]):
-        template_args["host_storage_unit_path"] = storage.get("path", "")
-        template_args["kube_hostname"] = storage.get("node", "")
+        template_args["host_storage_unit_path"] = storage.get("host_path", "")
+        template_args["kube_hostname"] = storage.get("kube_hostname", "")
         # TODO: Understand the need, and usage of suffix
         serverpod_name = get_storage_unit_hostname(
             poolinfo["name"],
@@ -467,7 +467,7 @@ def deploy_server_pods(poolinfo, tolerations):
             suffix=False
         )
         template_args["serverpod_name"] = serverpod_name
-        template_args["storage_unit_path"] = "/storages/%s/data/storage" % poolinfo["name"]
+        template_args["storage_unit_path"] = f"/storages/{poolinfo['name']}/data/storage"
         template_args["storage_unit_index"] = idx
         template_args["storage_unit_device"] = storage.get("device", "")
         template_args["pvc_name"] = storage.get("pvc", "")
@@ -550,7 +550,7 @@ def wait_till_pod_start(pool_name):
                 return False
 
             if len(pod_status.keys()) == server_pods_ready:
-                # Time required for service to start
+                # TODO: Remove this sleep by checking the ReST API availability
                 time.sleep(40)
                 return True
 
@@ -566,7 +566,7 @@ def wait_till_pod_start(pool_name):
 
             time.sleep(5)
 
-    # Time required for service to start
+    # TODO: Remove this sleep by checking the ReST API availability
     time.sleep(40)
     return True
 
@@ -590,7 +590,7 @@ def backup_kadalu_storage_config_to_configmap():
     # Create Archive (Change workdir to /var/lib/kadalu/config-snapshots)
     cmd = ["tar", "cvzf", "latest.tar.gz", "latest"]
     try:
-        utils_execute(cmd)
+        utils_execute(cmd, cwd="/var/lib/kadalu/config-snapshots")
     except CommandError as err:
         logging.error(logf(
             "Failed to archive of Kadalu Storage Config Snapshot.",
@@ -611,6 +611,11 @@ def backup_kadalu_storage_config_to_configmap():
         ))
         sys.exit(-1)
 
+    logging.info(logf(
+        "Kadalu Storage Configurations backup stored to Configmap",
+        configmap_name="kadalu-mgr"
+    ))
+
 
 def poolinfo_to_configmap(core_v1_client, poolinfo):
     """
@@ -618,7 +623,7 @@ def poolinfo_to_configmap(core_v1_client, poolinfo):
     """
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
-    configmap_data.data[f"{poolinfo.name}.info"] = json.dumps(poolinfo)
+    configmap_data.data[f"{poolinfo['name']}.info"] = json.dumps(poolinfo)
 
     core_v1_client.patch_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE, configmap_data)
@@ -663,17 +668,19 @@ def kadalu_volume_create(poolinfo):
     ]
 
     cmd += [
-        f"{storage_unit['node']}:{storage_unit['path']}:24007"
+        f"{storage_unit['node']}:24007:{storage_unit['path']}"
         for storage_unit in poolinfo["storage_units"]
     ]
 
     try:
         utils_execute(cmd)
+        logging.info(logf("Created a Kadalu Volume", command=" ".join(cmd)))
         return True
     except CommandError as err:
         logging.error(logf(
             "Failed to create kadalu volume",
-            error=err
+            error=err,
+            command=" ".join(cmd)
         ))
         return False
 
@@ -1156,7 +1163,7 @@ def deploy_config_map(core_v1_client):
     return uid, upgrade
 
 
-def deploy_storage_class(obj):
+def deploy_storage_class(poolinfo):
     """Deploys the default and custom storage class for KaDalu if not exists"""
 
     # Deploy defalut Storage Class
@@ -1177,8 +1184,8 @@ def deploy_storage_class(obj):
                               manifest=filename))
 
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
-                 pool_name=obj["metadata"]["name"],
-                 kadalu_format=obj["spec"].get("kadalu_format", "native"))
+                 pool_name=poolinfo["name"],
+                 kadalu_format=poolinfo["kadalu_format"])
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
 

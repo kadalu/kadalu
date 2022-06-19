@@ -13,7 +13,7 @@ FROM python:3.10-slim-bullseye as prod
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
-    apt-get install -y curl && \
+    apt-get install -y curl tar && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -46,7 +46,8 @@ COPY templates/csi-driver-object.yaml.j2    /kadalu/templates/csi-driver-object.
 COPY templates/csi-driver-object-v1.yaml.j2    /kadalu/templates/csi-driver-object-v1.yaml.j2
 COPY templates/configmap.yaml.j2               /kadalu/templates/configmap.yaml.j2
 COPY templates/storageclass-kadalu.custom.yaml.j2    /kadalu/templates/storageclass-kadalu.custom.yaml.j2
-COPY templates/external-storageclass.yaml.j2         /kadalu/templates/external-storageclass.yaml.j2
+COPY templates/external-storageclass-gluster.yaml.j2         /kadalu/templates/external-storageclass-gluster.yaml.j2
+COPY templates/external-storageclass-kadalu.yaml.j2         /kadalu/templates/external-storageclass-kadalu.yaml.j2
 COPY lib/kadalulib.py                       /kadalu/kadalulib.py
 COPY cli/kubectl_kadalu/utils.py            /kadalu/utils.py
 COPY kadalu_operator/main.py                       /kadalu/

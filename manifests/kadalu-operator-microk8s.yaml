@@ -358,10 +358,10 @@ spec:
       volumes:
         - name: user-management
           hostPath:
-            path: "/root/.kadalu/"
+            path: "/var/lib/kadalu/operator/home"
         - name: moana-workdir
           hostPath:
-            path: "/var/lib/kadalu"
+            path: "/var/lib/kadalu/operator/workdir"
 
 ---
 kind: Service

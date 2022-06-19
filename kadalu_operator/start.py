@@ -33,14 +33,14 @@ def restore_kadalu_storage_config_from_configmap():
 
     os.makedirs(os.path.dirname(filepath), mode = 0o700, exist_ok = True)
 
-    data = json.loads(resp)
+    data = json.loads(resp.stdout)
     with open(filepath, "wb") as cm_file:
         cm_file.write(base64.b64decode(data["binaryData"]["latest.tar.gz"]))
 
     # Extract Archive (Change workdir to /var/lib/kadalu/config-snapshots)
     cmd = ["tar", "xvzf", "latest.tar.gz", "latest"]
     try:
-        utils_execute(cmd)
+        utils_execute(cmd, cwd="/var/lib/kadalu/config-snapshots")
     except CommandError as err:
         logging.error(logf(
             "Failed to extract Kadalu Storage Configurations backup",
@@ -60,6 +60,11 @@ def restore_kadalu_storage_config_from_configmap():
         ))
         sys.exit(1)
 
+    logging.info(logf(
+        "Operator restarted and Kadalu Storage configurations "
+        "restored from ConfigMap",
+        configmap_name="kadalu-mgr"
+    ))
 
 # pylint: disable=missing-function-docstring
 def main():
