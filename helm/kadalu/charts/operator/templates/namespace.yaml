@@ -1,0 +1,9 @@
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: {{ .Release.Namespace }}
+  {{- if (eq .Values.kubernetesDistro "openshift") }}
+  labels:
+    openshift.io/cluster-monitoring: "true"
+  {{- end }}
