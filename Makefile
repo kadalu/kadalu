@@ -4,6 +4,7 @@ IMAGES_HUB?=docker.io
 DOCKER_USER?=kadalu
 KADALU_VERSION?=devel
 KADALU_LATEST?=latest
+DISTRO?=kubernetes
 
 help:
 	@echo "    make build-grpc        - To generate grpc Python Code"
@@ -28,19 +29,39 @@ build-containers: cli-build
 test-containers:
 	DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} bash build.sh
 
+filename_suffix=
+ifneq ($(DISTRO),kubernetes)
+	filename_suffix=-$(DISTRO)
+endif
+
+helm-manifest:
+	@echo ---------------------------------------------------------------------
+	@helm template --namespace kadalu helm/kadalu \
+		--set operator.enabled=true \
+		--set operator.kubernetesDistro=${DISTRO} \
+		--set operator.imagesHub=${IMAGES_HUB} \
+		--set operator.dockerUser=${DOCKER_USER} \
+		--set .Chart.version=${KADALU_VERSION} > manifests/kadalu-operator${filename_suffix}.yaml
+	@helm template --namespace kadalu helm/kadalu \
+		--set csi-nodeplugin.enabled=true \
+		--set csi-nodeplugin.kubernetesDistro=${DISTRO} \
+		--set csi-nodeplugin.imagesHub=${IMAGES_HUB} \
+		--set csi-nodeplugin.dockerUser=${DOCKER_USER} \
+		--set .Chart.version=${KADALU_VERSION} > manifests/csi-nodeplugin${filename_suffix}.yaml
+
+	@echo "kubectl apply -f manifests/kadalu-operator${filename_suffix}.yaml"
+	@echo "kubectl apply -f manifests/csi-nodeplugin${filename_suffix}.yaml"
+	@echo ---------------------------------------------------------------------
+
+
 gen-manifest:
 	@echo "Generating manifest files, run the following commands"
 	@echo
 	@echo "Install Kadalu Operator followed by CSI Nodeplugin"
 	@echo
 	@mkdir -p manifests
-	@IMAGES_HUB=${IMAGES_HUB} DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
-		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator.yaml
-	@echo "kubectl apply -f manifests/kadalu-operator.yaml"
-	@echo "kubectl apply -f manifests/csi-nodeplugin.yaml"
-	@IMAGES_HUB=${IMAGES_HUB} DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
-		K8S_DIST=openshift                                   \
-		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-openshift.yaml
+	@DISTRO=kubernetes $(MAKE) -s helm-manifest
+
 	@echo
 	@echo "In the case of OpenShift, deploy Kadalu Operator by running "
 	@echo "the following command"
@@ -48,28 +69,19 @@ gen-manifest:
 	@echo "Note: Security Context Constraints can be applied only by admins, "
 	@echo 'Run `oc login -u system:admin` to login as admin'
 	@echo
-	@echo "oc create -f manifests/kadalu-operator-openshift.yaml"
-	@echo "oc create -f manifests/csi-nodeplugin-openshift.yaml"
+	@DISTRO=openshift $(MAKE) -s helm-manifest
 
-	@IMAGES_HUB=${IMAGES_HUB} DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
-		K8S_DIST=microk8s                                    \
-		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-microk8s.yaml
 	@echo
 	@echo "In the case of MicroK8s, deploy Kadalu Operator by running "
 	@echo "the following command"
 	@echo
-	@echo "kubectl apply -f manifests/kadalu-operator-microk8s.yaml"
-	@echo "kubectl apply -f manifests/csi-nodeplugin-microk8s.yaml"
+	@DISTRO=microk8s $(MAKE) -s helm-manifest
 
-	@IMAGES_HUB=${IMAGES_HUB} DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
-		K8S_DIST=rke                                    \
-		python3 extras/scripts/gen_manifest.py manifests/kadalu-operator-rke.yaml
 	@echo
 	@echo "In the case of Rancher (RKE), deploy Kadalu Operator by running "
 	@echo "the following command"
 	@echo
-	@echo "kubectl apply -f manifests/kadalu-operator-rke.yaml"
-	@echo "kubectl apply -f manifests/csi-nodeplugin-rke.yaml"
+	@DISTRO=rke $(MAKE) -s helm-manifest
 
 # W0511: TODO Statements
 # W1514: Using 'open' with default encoding (in our usage it shouldn't matter)
@@ -91,7 +103,6 @@ pylint:
 	@pylint --disable=W0511 -s n csi/nodeserver.py
 	@pylint --disable=W0511,C0302,W1514,R1710 -s n csi/volumeutils.py
 	@pylint --disable=W0511,C0302,W1514 -s n kadalu_operator/main.py
-	@pylint --disable=W0511,W1514 -s n extras/scripts/gen_manifest.py
 	@pylint --disable=W0511,R0903,R0914,C0201,E0401 -s n kadalu_operator/exporter.py
 	@pylint --disable=W0511,R0914,E0401,C0114 -s n csi/exporter.py
 	@pylint --disable=W0511,E0401,C0114 -s n server/exporter.py
