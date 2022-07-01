@@ -271,17 +271,14 @@ def create_block_volume(pvtype, pool_mnt, volname, size):
         path=os.path.dirname(volpath)
     ))
 
-    if os.path.exists(volpath_full):
-        rand = time.time()
-        logging.info(logf(
-            "Getting 'Create request' on existing file, renaming.",
-            path=volpath_full, random=rand
-        ))
-        os.rename(volpath_full, "%s.%s" % (volpath_full, rand))
+    # at times orchestrator will send same request if earlier request times
+    # out and truncate file if doesn't exist since if we reach here the request
+    # is a valid one
+    if not os.path.exists(volpath_full):
+        volpath_fd = os.open(volpath_full, os.O_CREAT | os.O_RDWR)
+        os.close(volpath_fd)
+        os.truncate(volpath_full, size)
 
-    volpath_fd = os.open(volpath_full, os.O_CREAT | os.O_RDWR)
-    os.close(volpath_fd)
-    os.truncate(volpath_full, size)
     logging.debug(logf(
         "Truncated file to required size",
         path=volpath,
@@ -298,6 +295,7 @@ def create_block_volume(pvtype, pool_mnt, volname, size):
         ))
 
     save_pv_metadata(pool_mnt, volpath, size)
+
     return Volume(
         volname=volname,
         voltype=pvtype,
