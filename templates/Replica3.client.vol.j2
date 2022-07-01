@@ -1,16 +1,16 @@
-{% for brick in bricks %}
-volume {{ volname }}-client-{{ brick["brick_index"] }}
+{% for brick in gvol.bricks %}
+volume {{ gvol.name }}-client-{{ brick.index }}
     type protocol/client
-    option volfile-key /{{ volname }}
+    option volfile-key /{{ gvol.name }}
     option transport.socket.read-fail-log false
-    option remote-subvolume {{ brick["brick_path"] }}
-    option remote-host {{ brick["node"] }}
+    option remote-subvolume {{ brick.path }}
+    option remote-host {{ brick.node }}
 end-volume
 
 {% endfor %}
 
-{% for i in range(dht_subvol|length) %}
-volume {{ volname }}-replica-{{ i }}
+{% for i in range(gvol.dht_subvol|length) %}
+volume {{ gvol.name }}-replica-{{ i }}
     type cluster/replicate
     option data-self-heal on
     option granular-entry-heal on
@@ -18,30 +18,30 @@ volume {{ volname }}-replica-{{ i }}
     option metadata-self-heal on
     option entry-self-heal on
     option read-hash-mode 5
-    subvolumes {{ volname }}-client-{{ i * 3 }} {{ volname }}-client-{{ (i * 3) + 1}} {{ volname }}-client-{{ (i * 3) + 2}}
+    subvolumes {{ gvol.name }}-client-{{ i * 3 }} {{ gvol.name }}-client-{{ (i * 3) + 1}} {{ gvol.name }}-client-{{ (i * 3) + 2}}
 end-volume
 
 {% endfor %}
 
-volume {{ volname }}-dht
+volume {{ gvol.name }}-dht
     type cluster/distribute
-    subvolumes {{ dht_subvol|join(' ') }}
+    subvolumes {{ gvol.dht_subvol|join(' ') }}
 end-volume
 
-volume {{ volname }}-utime
+volume {{ gvol.name }}-utime
     type features/utime
     option noatime on
-    subvolumes {{ volname }}-dht
+    subvolumes {{ gvol.name }}-dht
 end-volume
 
-volume {{ volname }}-write-behind
+volume {{ gvol.name }}-write-behind
     type performance/write-behind
     option flush-behind on
     option write-behind on
-    subvolumes {{ volname }}-utime
+    subvolumes {{ gvol.name }}-utime
 end-volume
 
-volume {{ volname }}
+volume {{ gvol.name }}
     type debug/io-stats
-    subvolumes {{ volname }}-write-behind
+    subvolumes {{ gvol.name }}-write-behind
 end-volume

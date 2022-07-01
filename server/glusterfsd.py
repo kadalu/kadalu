@@ -125,19 +125,19 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
                     fstype=brickfs,
                     device=brick_device,
                     ))
-            except CommandException as err:
-                if "appears to contain an existing filesystem" not in err.err:
+            except CommandException as err1:
+                if "appears to contain an existing filesystem" not in err1.err:
                     logging.error(logf(
                         "Failed to create file system",
                         fstype=brickfs,
                         device=brick_device,
-                        error=err,
+                        error=err1,
                     ))
                     sys.exit(1)
                 else:
                     logging.info(logf(
                         "Failed to perform mkfs on device. continuing with mount",
-                        err=err,
+                        err=err1,
                         device=brick_device,
                         mountdir=mountdir,
                     ))
@@ -149,13 +149,13 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
                     device=brick_device,
                     mountdir=mountdir,
                     ))
-            except CommandException as err:
+            except CommandException as err1:
                 logging.error(logf(
                     "Failed to mount export brick (after mkfs)",
                     fstype=brickfs,
                     device=brick_device,
                     mountdir=mountdir,
-                    error=err,
+                    error=err1,
                 ))
                 sys.exit(1)
 
@@ -194,8 +194,8 @@ def start_args():
     verify_brickdir_xattr_support(brick_path)
     set_volume_id_xattr(brick_path, volume_id)
 
-    volfile_id = "%s.%s.%s" % (volname, nodename, brick_path_name)
-    volfile_path = os.path.join(VOLFILES_DIR, "%s.vol" % volfile_id)
+    volfile_id = f"{volname}.{nodename}.{brick_path_name}"
+    volfile_path = os.path.join(VOLFILES_DIR, f"{volfile_id}.vol")
     generate_brick_volfile(volfile_path, volname, volume_id, brick_path)
 
     # UID is stored at the time of installation in configmap.
@@ -214,16 +214,16 @@ def start_args():
         [
             "-N",
             "--volfile-id", volfile_id,
-            "-p", "/var/run/gluster/glusterfsd-%s.pid" % brick_path_name,
+            "-p", f"/var/run/gluster/glusterfsd-{brick_path_name}.pid",
             "-S", "/var/run/gluster/brick.socket",
             "--brick-name", brick_path,
             "-l", "-",  # Log to stderr
             "--xlator-option",
-            "*-posix.glusterd-uuid=%s" % os.environ["NODEID"],
+            f"*-posix.glusterd-uuid={os.environ['NODEID']}",
             "--process-name", "brick",
             "--brick-port", "24007",
             "--xlator-option",
-            "%s-server.listen-port=24007" % volname,
+            f"{volname}-server.listen-port=24007",
             "-f", volfile_path
         ]
     )

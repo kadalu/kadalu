@@ -9,16 +9,11 @@ import csi_pb2
 import csi_pb2_grpc
 import grpc
 from kadalulib import logf
-from volumeutils import mount_glusterfs, mount_volume, unmount_volume
+from volumeutils import PersistentVolume, PvException
 
-HOSTVOL_MOUNTDIR = "/mnt"
-GLUSTERFS_CMD = "/opt/sbin/glusterfs"
-MOUNT_CMD = "/bin/mount"
-UNMOUNT_CMD = "/bin/umount"
 
 # noqa # pylint: disable=too-many-locals
 # noqa # pylint: disable=too-many-statements
-
 class NodeServer(csi_pb2_grpc.NodeServicer):
     """
     NodeServer object is responsible for handling host
@@ -55,80 +50,37 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             return csi_pb2.NodePublishVolumeResponse()
 
-        hostvol = request.volume_context.get("hostvol", "")
-        pvpath = request.volume_context.get("path", "")
-        pvtype = request.volume_context.get("pvtype", "")
-        voltype = request.volume_context.get("type", "")
-        gserver = request.volume_context.get("gserver", None)
-        gvolname = request.volume_context.get("gvolname", None)
-        options = request.volume_context.get("options", None)
-
-        # Storage volfile options
-        storage_options = request.volume_context.get("storage_options", "")
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
-
-        pvpath_full = os.path.join(mntdir, pvpath)
+        pvol = PersistentVolume.from_volume_context(request.volume_context)
 
         logging.debug(logf(
             "Received a valid mount request",
             request=request,
-            voltype=voltype,
-            hostvol=hostvol,
-            pvpath=pvpath,
-            pvtype=pvtype,
-            pvpath_full=pvpath_full,
-            storage_options=storage_options
+            voltype=pvol.type,
+            pool_name=pvol.pool.name,
+            pvpath=pvol.path,
+            pvtype=pvol.type,
+            pvpath_full=pvol.abspath
         ))
 
-        volume = {
-            'name': hostvol,
-            'g_volname': gvolname,
-            'g_host': gserver,
-            'g_options': options,
-            'type': voltype,
-        }
-
-        mountpoint = mount_glusterfs(volume, mntdir, storage_options, True)
-
-        if voltype == "External":
-            logging.debug(logf(
-                "Mounted Volume for PV",
-                volume=volume,
-                mntdir=mntdir,
-                storage_options=storage_options
-            ))
-            # return csi_pb2.NodePublishVolumeResponse()
-
-        # When 'storage_options' is configured mountpoint & volfile path change,
-        # Update pvpath_full accordingly.
-        if storage_options != "":
-            pvpath_full = os.path.join(mountpoint, pvpath)
-
-        logging.debug(logf(
-            "Mounted Hosting Volume",
-            pv=request.volume_id,
-            hostvol=hostvol,
-            mntdir=mntdir
-        ))
         # Mount the PV
         # TODO: Handle Volume capability mount flags
-        if mount_volume(pvpath_full, request.target_path, pvtype, fstype=None):
+        try:
+            pvol.mount(request.target_path)
             logging.info(logf(
                 "Mounted PV",
                 volume=request.volume_id,
-                pvpath=pvpath,
-                pvtype=pvtype,
-                hostvol=hostvol,
+                pvpath=pvol.path,
+                pvtype=pvol.type,
+                pv_name=pvol.pool.name,
                 target_path=request.target_path,
                 duration_seconds=time.time() - start_time
             ))
-        else:
-            errmsg = "Unable to bind PV to target path"
-            logging.error(errmsg)
+        except PvException as ex:
+            logging.error(ex)
             context.set_details(errmsg)
             context.set_code(grpc.StatusCode.FAILED_PRECONDITION)
-        return csi_pb2.NodePublishVolumeResponse()
 
+        return csi_pb2.NodePublishVolumeResponse()
 
     def NodeUnpublishVolume(self, request, context):
         # TODO: Validation and handle target_path failures
@@ -151,7 +103,7 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             "Received the unmount request",
             volume=request.volume_id,
         ))
-        unmount_volume(request.target_path)
+        PersistentVolume.unmount(request.target_path)
 
         return csi_pb2.NodeUnpublishVolumeResponse()
 

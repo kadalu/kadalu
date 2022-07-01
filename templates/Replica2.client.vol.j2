@@ -1,24 +1,24 @@
-volume {{ volume_id }}-ta
+volume {{ gvol.id }}-ta
     type protocol/client
     option transport.socket.read-fail-log false
-    option remote-host {{ tiebreaker["node"] }}
-    option remote-port {{ tiebreaker["port"] }}
-    option remote-subvolume {{ tiebreaker["path"] }}
+    option remote-host {{ gvol.tiebreaker_node }}
+    option remote-port {{ gvol.tiebreaker_port }}
+    option remote-subvolume {{ gvol.tiebreaker_path }}
 end-volume
 
-{% for brick in bricks %}
-volume {{ volname }}-client-{{ brick["brick_index"] }}
+{% for brick in gvol.bricks %}
+volume {{ gvol.name }}-client-{{ brick.index }}
     type protocol/client
     option transport.socket.read-fail-log false
-    option volfile-key /{{ volname }}
-    option remote-subvolume {{ brick["brick_path"] }}
-    option remote-host {{ brick["node"] }}
+    option volfile-key /{{ gvol.name }}
+    option remote-subvolume {{ brick.path }}
+    option remote-host {{ brick.node }}
 end-volume
 
 {% endfor %}
 
-{% for i in range(dht_subvol|length) %}
-volume {{ volname }}-replica-{{ i }}
+{% for i in range(gvol.dht_subvol|length) %}
+volume {{ gvol.name }}-replica-{{ i }}
     type cluster/replicate
     option data-self-heal on
     option granular-entry-heal on
@@ -26,53 +26,53 @@ volume {{ volname }}-replica-{{ i }}
     option metadata-self-heal on
     option entry-self-heal on
     option read-hash-mode 5
-    option afr-pending-xattr {{ volname }}-client-{{ i * 2 }},{{ volname }}-client-{{ (i * 2) + 1}},{{ volume_id }}-ta
-    option thin-arbiter {{ tiebreaker["node"] }}:{{ tiebreaker["path"] }}
-    subvolumes {{ volname }}-client-{{ i * 2 }} {{ volname }}-client-{{ (i * 2) + 1}} {{ volume_id }}-ta
+    option afr-pending-xattr {{ gvol.name }}-client-{{ i * 2 }},{{ gvol.name }}-client-{{ (i * 2) + 1}},{{ gvol.id }}-ta
+    option thin-arbiter {{ gvol.tiebreaker_node }}:{{ gvol.tiebreaker_path }}
+    subvolumes {{ gvol.name }}-client-{{ i * 2 }} {{ gvol.name }}-client-{{ (i * 2) + 1}} {{ gvol.id }}-ta
 end-volume
 
 {% endfor %}
 
-volume {{ volname }}-dht
+volume {{ gvol.name }}-dht
     type cluster/distribute
-    subvolumes {{ dht_subvol|join(' ') }}
+    subvolumes {{ gvol.dht_subvol|join(' ') }}
 end-volume
 
-volume {{ volname }}-utime
+volume {{ gvol.name }}-utime
     type features/utime
     option noatime on
-    subvolumes {{ volname }}-dht
+    subvolumes {{ gvol.name }}-dht
 end-volume
 
-volume {{ volname }}-md-cache
+volume {{ gvol.name }}-md-cache
     type performance/md-cache
-    subvolumes {{ volname }}-utime
+    subvolumes {{ gvol.name }}-utime
 end-volume
 
-volume {{ volname }}-write-behind
+volume {{ gvol.name }}-write-behind
     type performance/write-behind
     option flush-behind on
     option write-behind on
-    subvolumes {{ volname }}-md-cache
+    subvolumes {{ gvol.name }}-md-cache
 end-volume
 
-volume {{ volname }}-open-behind
+volume {{ gvol.name }}-open-behind
     type performance/open-behind
     option use-anonymous-fd no
     option open-behind on
     option pass-through false
     option read-after-open yes
     option lazy-open yes
-    subvolumes {{ volname }}-write-behind
+    subvolumes {{ gvol.name }}-write-behind
 end-volume
 
-volume {{ volname }}-nl-cache
+volume {{ gvol.name }}-nl-cache
     type performance/nl-cache
     option nl-cache on
-    subvolumes {{ volname }}-open-behind
+    subvolumes {{ gvol.name }}-open-behind
 end-volume
 
-volume {{ volname }}
+volume {{ gvol.name }}
     type debug/io-stats
-    subvolumes {{ volname }}-nl-cache
+    subvolumes {{ gvol.name }}-nl-cache
 end-volume

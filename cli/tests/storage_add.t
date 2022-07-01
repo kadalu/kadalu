@@ -4,10 +4,6 @@ def diff(expected, actual)
   "Expected:\n#{expected}\n\nActual:\n#{actual}\n"
 end
 
-def EQUAL(expected, actual, desc)
-  TRUE expected == actual, desc, diff(expected, actual)
-end
-
 # External Storage Pool
 expected = %(Storage Yaml file for your reference:
 

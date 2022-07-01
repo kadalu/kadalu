@@ -4,7 +4,7 @@ import os
 import uvicorn
 from fastapi import FastAPI
 from kadalulib import logf, logging_setup
-from volumeutils import HOSTVOL_MOUNTDIR, yield_pvc_from_mntdir
+from volumeutils import POOL_MOUNTDIR, yield_pvc_from_mntdir
 
 metrics_app = FastAPI()
 
@@ -48,16 +48,16 @@ def metrics():
 
     # Handle condition for no storage & PVC,
     # sometimes storage name is not shown at /mnt until server is mounted.
-    if len(os.listdir(HOSTVOL_MOUNTDIR)) == 0:
+    if len(os.listdir(POOL_MOUNTDIR)) == 0:
         logging.debug(logf(
             "No storage-pool found! Try again by creating a storage.",
-            HOSTVOL_MOUNTDIR=HOSTVOL_MOUNTDIR
+            POOL_MOUNTDIR=POOL_MOUNTDIR
         ))
         return data
 
     # Gathers metrics for each storage
-    for dirname in os.listdir(HOSTVOL_MOUNTDIR):
-        storage_path = os.path.join(HOSTVOL_MOUNTDIR, dirname)
+    for dirname in os.listdir(POOL_MOUNTDIR):
+        storage_path = os.path.join(POOL_MOUNTDIR, dirname)
 
         if os.path.ismount(storage_path):
 
@@ -73,6 +73,9 @@ def metrics():
             free_inodes = stat.f_favail
             used_inodes = total_inodes - free_inodes
 
+            # TODO: Handle extracting Pool name from Mountpoint
+            # when mount suffix is used or external Gluster
+            # Volume(<pool>_<gluster_volname>)
             storage = {
                 "name": dirname,
                 "total_capacity_bytes": total_capacity_bytes,

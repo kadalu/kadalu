@@ -32,6 +32,8 @@ PV_TYPE_SUBVOL = "subvol"
 PV_TYPE_RAWBLOCK = "rawblock"
 
 KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
+POOL_MOUNTDIR = "/mnt"
+POOLINFO_DIR = "/var/lib/gluster"
 
 
 class TimeoutOSError(OSError):
@@ -66,8 +68,8 @@ def is_gluster_mount_proc_running(volname, mountpoint):
     """
     cmd = (
         r'ps ax | grep -w "/opt/sbin/glusterfs" '
-        r'| grep -w "\-\-volfile\-id %s" '
-        r'| grep -w -q "%s"' % (volname, mountpoint)
+        rf'| grep -w "\-\-volfile\-id {volname}" '
+        rf'| grep -w -q "{mountpoint}"'
     )
 
     with subprocess.Popen(cmd,
@@ -79,31 +81,30 @@ def is_gluster_mount_proc_running(volname, mountpoint):
         return proc.returncode == 0
 
 
-def is_host_reachable(hosts, port):
+def is_host_reachable(host, port):
     """Check if glusterd is reachable in the given node"""
     timeout = 5
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(timeout)
-    for host in hosts:
-        try:
-            sock.connect((host, int(port)))
-            sock.shutdown(socket.SHUT_RDWR)
-            return True
-        except socket.error as msg:
-            logging.error(logf("Failed to open socket connection",
-                               error=msg, host=host))
-            continue
-        finally:
-            sock.close()
+    try:
+        sock.connect((host, int(port)))
+        sock.shutdown(socket.SHUT_RDWR)
+        return True
+    except socket.error as msg:
+        logging.error(logf("Failed to open socket connection",
+                           error=msg, host=host))
+    finally:
+        sock.close()
+
     return False
 
 
-def reachable_host(hosts):
+def reachable_host(hosts, port=22):
     """Return first reachable host for dir-quota SSH"""
     hosts = hosts.strip().split(',')
     for host in hosts:
         host = host.strip()
-        if is_host_reachable([host], 22):
+        if is_host_reachable(host, port):
             return host
     return None
 
@@ -123,7 +124,7 @@ class CommandException(Exception):
         self.ret = ret
         self.out = out
         self.err = err
-        msg = "[%d] %s %s" % (ret, out, err)
+        msg = f"[{ret}] {out} {err}"
         super().__init__(msg)
 
 
@@ -134,12 +135,7 @@ def get_volname_hash(volname):
 
 def get_volume_path(voltype, volhash, volname):
     """Volume path based on hash"""
-    return "%s/%s/%s/%s" % (
-        voltype,
-        volhash[0:2],
-        volhash[2:4],
-        volname
-    )
+    return f"{voltype}/{volhash[0:2]}/{volhash[2:4]}/{volname}"
 
 
 def execute(*cmd):
@@ -163,7 +159,7 @@ def logf(msg, **kwargs):
         msg += "\t"
 
     for msg_key, msg_value in kwargs.items():
-        msg += " %s=%s" % (msg_key, msg_value)
+        msg += f" {msg_key}={msg_value}"
 
     return msg
 
@@ -348,6 +344,25 @@ class ProcState:
         self.start()
 
 
+def monitor_proc(state, terminating):
+    """Monitor single process"""
+    if not state.enabled:
+        return
+
+    if terminating:
+        state.stop()
+        logging.info(logf("Terminated Process", name=state.proc.name))
+        return
+
+    ret = state.subproc.poll()
+    if ret is None:
+        return
+
+    if not terminating:
+        state.restart()
+        logging.info(logf("Restarted Process", name=state.proc.name))
+
+
 class Monitor:
     """Start and Monitor multiple processes"""
     def __init__(self, procs=None):
@@ -385,25 +400,6 @@ class Monitor:
         """When SIGTERM/SIGINT received"""
         self.terminating = True
 
-    # noqa # pylint: disable=no-self-use
-    def monitor_proc(self, state, terminating):
-        """Monitor single process"""
-        if not state.enabled:
-            return
-
-        if terminating:
-            state.stop()
-            logging.info(logf("Terminated Process", name=state.proc.name))
-            return
-
-        ret = state.subproc.poll()
-        if ret is None:
-            return
-
-        if not terminating:
-            state.restart()
-            logging.info(logf("Restarted Process", name=state.proc.name))
-
     def monitor(self):
         """
         Start monitoring all the started processes.
@@ -414,7 +410,7 @@ class Monitor:
                 terminating = self.terminating
 
                 for _, state in self.procs.items():
-                    self.monitor_proc(state, terminating)
+                    monitor_proc(state, terminating)
 
                 if terminating:
                     logging.info("Terminating Monitor process")

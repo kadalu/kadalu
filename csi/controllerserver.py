@@ -1,29 +1,17 @@
 """
 controller server implementation
 """
-import json
 import logging
-import os
 import random
 import time
 
 import csi_pb2
 import csi_pb2_grpc
 import grpc
-from kadalulib import (PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
-                       CommandException, execute, logf, reachable_host,
-                       send_analytics_tracker)
-from volumeutils import (HOSTVOL_MOUNTDIR, check_external_volume,
-                         create_block_volume, create_subdir_volume,
-                         delete_volume, expand_mounted_volume,
-                         get_pv_hosting_volumes, is_hosting_volume_free,
-                         mount_and_select_hosting_volume, search_volume,
-                         unmount_glusterfs, update_block_volume,
-                         update_free_size, update_subdir_volume,
-                         yield_list_of_pvcs)
-
-VOLINFO_DIR = "/var/lib/gluster"
-KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
+from kadalulib import logf
+from volumeutils import (PersistentVolume, Pool, PvException,
+                         yield_list_of_pvcs, SINGLE_NODE_WRITER,
+                         MULTI_NODE_MULTI_WRITER)
 
 # Generator to be used in ListVolumes
 GEN = None
@@ -33,58 +21,35 @@ GEN = None
 LIMIT = 30
 
 
-# noqa # pylint: disable=too-many-arguments
-def execute_gluster_quota_command(privkey, user, host, gvolname, path, size):
-    """
-    Function to execute the GlusterFS's quota command on external cluster
-    """
-    # 'size' can always be parsed as integer with no errors
-    size = int(size) * 0.95
+def validate_create_volume_request(request, context):
+    """Validate the Volume Create request"""
+    if not request.name:
+        errmsg = "Volume name is empty and must be provided"
+        logging.error(errmsg)
+        context.set_details(errmsg)
+        context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+        return csi_pb2.CreateVolumeResponse()
 
-    host = reachable_host(host)
-    if host is None:
-        errmsg = "All hosts are not reachable"
-        logging.error(logf(errmsg))
-        return errmsg
+    if not request.volume_capabilities:
+        errmsg = "Volume Capabilities is empty and must be provided"
+        logging.error(errmsg)
+        context.set_details(errmsg)
+        context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+        return csi_pb2.CreateVolumeResponse()
 
-    quota_cmd = [
-        "ssh",
-        "-oStrictHostKeyChecking=no",
-        "-i",
-        "%s" % privkey,
-        "%s@%s" % (user, host),
-        "sudo",
-        "gluster",
-        "volume",
-        "quota",
-        "%s" % gvolname,
-        "limit-usage",
-        "/%s" % path,
-        "%s" % size,
-    ]
-    try:
-        execute(*quota_cmd)
-    except CommandException as err:
-        errmsg = "Unable to set Gluster Quota via ssh"
-        logging.error(logf(errmsg, error=err))
-        return errmsg
+    # Check for same name and different capacity
+    pvol = PersistentVolume.search_by_name(request.name)
+    if pvol.pool is not None:
+        if pvol.size != request.capacity_range.required_bytes:
+            errmsg = ("Failed to create PV with same name with "
+                      f"different capacity (Existing: {pvol.size}, "
+                      f"Requested: {request.capacity_range.required_bytes})")
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.ALREADY_EXISTS)
+            return csi_pb2.CreateVolumeResponse()
 
     return None
-
-# Assuming multiple volume_capabilities isn't requested
-def is_block_request(request):
-    """Returns True if the PVC requests rawblock"""
-    for vol_capability in request.volume_capabilities:
-        if vol_capability.WhichOneof("access_type") == "block":
-            return True
-    return False
-
-# Assuming multiple volume_capabilities isn't requested
-def pvc_access_mode(request):
-    """Fetch Access modes from Volume capabilities"""
-    for vol_capability in request.volume_capabilities:
-        # TODO: A PVC can be asked with multiple access modes
-        return vol_capability.access_mode.mode
 
 
 class ControllerServer(csi_pb2_grpc.ControllerServicer):
@@ -102,308 +67,79 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             request=request
         ))
 
-        if not request.name:
-            errmsg = "Volume name is empty and must be provided"
-            logging.error(errmsg)
-            context.set_details(errmsg)
-            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            return csi_pb2.CreateVolumeResponse()
+        err = validate_create_volume_request(request, context)
+        if err is not None:
+            return err
 
-        if not request.volume_capabilities:
-            errmsg = "Volume Capabilities is empty and must be provided"
-            logging.error(errmsg)
-            context.set_details(errmsg)
-            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            return csi_pb2.CreateVolumeResponse()
+        pv_req = PersistentVolume.from_csi_request(request)
 
-        # Check for same name and different capacity
-        volume = search_volume(request.name)
-        if volume:
-            if volume.size != request.capacity_range.required_bytes:
-                errmsg = "Failed to create volume with same name with different capacity"
-                logging.error(errmsg)
-                context.set_details(errmsg)
-                context.set_code(grpc.StatusCode.ALREADY_EXISTS)
-                return csi_pb2.CreateVolumeResponse()
-
-        pvsize = request.capacity_range.required_bytes
-
-        pvtype = PV_TYPE_SUBVOL
-        is_block = False
-
-        storage_options = request.parameters.get("storage_options", "")
-
-        # Mounted BlockVolume is requested via Storage Class.
-        # GlusterFS File Volume may not be useful for some workloads
-        # they can request for the Virtual Block formated and mounted
-        # as default MountVolume.
-        if request.parameters.get("pv_type", "").lower() == "block":
-            pvtype = PV_TYPE_VIRTBLOCK
-            is_block = True
-
-        # RawBlock volume is requested via PVC
-        if is_block_request(request):
-            pvtype = PV_TYPE_RAWBLOCK
-            is_block = True
-
-        if is_block:
-            single_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
-                                         "SINGLE_NODE_WRITER")
-
+        if not pv_req.valid_block_access_mode():
             # Multi node writer is not allowed for PV_TYPE_VIRTBLOCK/PV_TYPE_RAWBLOCK
-            if pvc_access_mode(request) != single_node_writer:
-                errmsg = "Only SINGLE_NODE_WRITER is allowed for block Volume"
-                logging.error(errmsg)
-                context.set_details(errmsg)
-                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-                return csi_pb2.CreateVolumeResponse()
+            errmsg = "Only SINGLE_NODE_WRITER is allowed for block Volume"
+            logging.error(errmsg)
+            context.set_details(errmsg)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.CreateVolumeResponse()
 
         logging.debug(logf(
             "Found PV type",
-            pvtype=pvtype,
+            pvtype=pv_req.type,
             capabilities=request.volume_capabilities
         ))
 
-        # TODO: Check the available space under lock
-
-        # Add everything from parameter as filter item
-        filters = {}
-        for pkey, pvalue in request.parameters.items():
-            filters[pkey] = pvalue
-
+        pools = Pool.list(filters=pv_req.sc_parameters)
         logging.debug(logf(
-            "Filters applied to choose storage",
-            **filters
+            "Got filtered list of Pools for the PV",
+            pools=",".join(p.name for p in pools),
+            pv=pv_req.name
         ))
 
-        # UID is stored at the time of installation in configmap.
-        uid = None
-        with open(os.path.join(VOLINFO_DIR, "uid")) as uid_file:
-            uid = uid_file.read()
+        # Select any one Pool for provisioning the PV
+        # Randomize the entries so we can issue PV from different storage pool
+        # It is possible to enhance this step to sort the Storage pools based
+        # on the available size and select the Pool that has more space.
+        random.shuffle(pools)
 
-        host_volumes = get_pv_hosting_volumes(filters)
-        logging.debug(logf(
-            "Got list of hosting Volumes",
-            volumes=",".join(v['name'] for v in host_volumes)
-        ))
-        hostvol = None
-        ext_volume = None
-        data = {}
-        hostvoltype = filters.get("hostvol_type", None)
-        if not hostvoltype:
-            # This means, the request came on 'kadalu' storage class type.
-
-            # Randomize the entries so we can issue PV from different storage
-            random.shuffle(host_volumes)
-
-            hostvol = mount_and_select_hosting_volume(host_volumes, pvsize)
-            if hostvol is None:
-                errmsg = "No Hosting Volumes available, add more storage"
-                logging.error(errmsg)
-                context.set_details(errmsg)
-                context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
-                return csi_pb2.CreateVolumeResponse()
-
-            info_file_path = os.path.join(VOLINFO_DIR, "%s.info" % hostvol)
-            with open(info_file_path) as info_file:
-                data = json.load(info_file)
-
-            hostvoltype = data['type']
-
-        kformat = filters.get('kadalu_format', "native")
-        if hostvoltype == 'External':
-            ext_volume = check_external_volume(request, host_volumes)
-
-            if ext_volume:
-                mntdir = os.path.join(HOSTVOL_MOUNTDIR, ext_volume['name'])
-
-                # By default 'kadalu_format' is set to 'native' as part of CRD
-                # definition
-                if kformat == 'non-native':
-                    # If 'kadalu_format' is 'non-native', the request will be
-                    # considered as to map 1 PV to 1 Gluster volume
-
-                    # No need to keep the mount on controller
-                    unmount_glusterfs(mntdir)
-
-                    logging.info(logf(
-                        "Volume (External) created",
-                        name=request.name,
-                        size=pvsize,
-                        mount=mntdir,
-                        hostvol=ext_volume['g_volname'],
-                        pvtype=pvtype,
-                        volpath=ext_volume['g_host'],
-                        duration_seconds=time.time() - start_time
-                    ))
-
-                    send_analytics_tracker("pvc-external", uid)
-                    return csi_pb2.CreateVolumeResponse(
-                        volume={
-                            "volume_id": request.name,
-                            "capacity_bytes": pvsize,
-                            "volume_context": {
-                                "type": hostvoltype,
-                                "hostvol": ext_volume['name'],
-                                "pvtype": pvtype,
-                                "gvolname": ext_volume['g_volname'],
-                                "gserver": ext_volume['g_host'],
-                                "fstype": "xfs",
-                                "options": ext_volume['g_options'],
-                                "kformat": kformat,
-                            }
-                        }
-                    )
-
-                # The external volume should be used as kadalu host vol
-
-                if not is_hosting_volume_free(ext_volume['name'], pvsize):
-
-                    logging.error(logf(
-                        "Hosting volume is full. Add more storage",
-                        volume=ext_volume['name']
-                    ))
-                    errmsg = "External resource is exhausted"
-                    context.set_details(errmsg)
-                    context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
-                    return csi_pb2.CreateVolumeResponse()
-
-                if pvtype in [PV_TYPE_VIRTBLOCK, PV_TYPE_RAWBLOCK]:
-                    vol = create_block_volume(
-                        pvtype, mntdir, request.name, pvsize)
-                else:
-                    use_gluster_quota = False
-                    if (os.path.isfile("/etc/secret-volume/ssh-privatekey") \
-                        and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
-                        use_gluster_quota = True
-                    secret_private_key = "/etc/secret-volume/ssh-privatekey"
-                    secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
-                    hostname = filters.get("gluster_hosts", None)
-                    gluster_vol_name = filters.get("gluster_volname", None)
-                    vol = create_subdir_volume(
-                        mntdir, request.name, pvsize, use_gluster_quota)
-                    quota_size = pvsize
-                    quota_path = vol.volpath
-                    if use_gluster_quota is False:
-                        logging.debug(logf("Set Quota in the native way"))
-                    else:
-                        logging.debug(logf("Set Quota using gluster directory Quota"))
-                        errmsg = execute_gluster_quota_command(
-                            secret_private_key, secret_username, hostname,
-                            gluster_vol_name, quota_path, quota_size)
-                        if errmsg:
-                            context.set_details(errmsg)
-                            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-                            return csi_pb2.CreateVolumeResponse()
-                logging.info(logf(
-                    "Volume created",
-                    name=request.name,
-                    size=pvsize,
-                    hostvol=ext_volume['name'],
-                    pvtype=pvtype,
-                    volpath=vol.volpath,
-                    duration_seconds=time.time() - start_time
-                ))
-
-                send_analytics_tracker("pvc-external-kadalu", uid)
-                # Pass required argument to get mount working on
-                # nodeplugin through volume_context
-                return csi_pb2.CreateVolumeResponse(
-                    volume={
-                        "volume_id": request.name,
-                        "capacity_bytes": pvsize,
-                        "volume_context": {
-                            "type": hostvoltype,
-                            "hostvol": ext_volume['name'],
-                            "pvtype": pvtype,
-                            "path": vol.volpath,
-                            "gvolname": ext_volume['g_volname'],
-                            "gserver": ext_volume['g_host'],
-                            "fstype": "xfs",
-                            "options": ext_volume['g_options'],
-                            "kformat": kformat,
-                        }
-                    }
-                )
-
-            # If external volume not found
-            logging.debug(logf(
-                "Here as checking external volume failed",
-                external_volume=ext_volume
-            ))
-            errmsg = "External Storage provided not valid"
-            logging.error(errmsg)
+        # From the list of Pools available, select and assign a Pool based
+        # on size availability.
+        pv_req.mount_and_select_pool(pools)
+        if pv_req.pool is None:
+            errmsg = "No Storage Pools available for the PV request"
+            logging.error(logf(errmsg, pv_name=pv_req.name))
             context.set_details(errmsg)
-            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
             return csi_pb2.CreateVolumeResponse()
 
-        if not hostvol:
-            # Randomize the entries so we can issue PV from different storage
-            random.shuffle(host_volumes)
+        # TODO: Handle Error
+        try:
+            pvol = PersistentVolume.create(pv_req)
+        except PvException as ex:
+            context.set_details(ex)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.CreateVolumeResponse()
+        finally:
+            if pv_req.sc_parameters["single_pv_per_pool"]:
+                # If 'kadalu_format' is 'non-native', the request will be
+                # considered as to map 1 PV to 1 Gluster volume
 
-            hostvol = mount_and_select_hosting_volume(host_volumes, pvsize)
-            if hostvol is None:
-                errmsg = "No Hosting Volumes available, add more storage"
-                logging.error(errmsg)
-                context.set_details(errmsg)
-                context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
-                return csi_pb2.CreateVolumeResponse()
+                # No need to keep the mount on controller
+                pv_req.pool.unmount()
 
-        if kformat == 'non-native':
-            # Then mount the whole volume as PV
-            msg = "non-native way of Kadalu mount expected"
-            logging.info(msg)
-            return csi_pb2.CreateVolumeResponse(
-                volume={
-                    "volume_id": request.name,
-                    "capacity_bytes": pvsize,
-                    "volume_context": {
-                        "type": hostvoltype,
-                        "hostvol": hostvol,
-                        "pvtype": pvtype,
-                        "fstype": "xfs",
-                        "kformat": kformat,
-                    }
-                }
-            )
-
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
-        if pvtype in [PV_TYPE_VIRTBLOCK, PV_TYPE_RAWBLOCK]:
-            vol = create_block_volume(
-                pvtype, mntdir, request.name, pvsize)
-        else:
-            use_gluster_quota = False
-            vol = create_subdir_volume(
-                mntdir, request.name, pvsize, use_gluster_quota)
         logging.info(logf(
-            "Volume created",
+            "PV created",
             name=request.name,
-            size=pvsize,
-            hostvol=hostvol,
-            pvtype=pvtype,
-            volpath=vol.volpath,
+            pv_type=pvol.type,
+            size=pvol.size,
+            pool_name=pvol.pool.name,
             duration_seconds=time.time() - start_time
         ))
-
-        update_free_size(hostvol, request.name, -pvsize)
-
-        send_analytics_tracker("pvc-%s" % hostvoltype, uid)
-
         return csi_pb2.CreateVolumeResponse(
             volume={
-                "volume_id": request.name,
-                "capacity_bytes": pvsize,
-                "volume_context": {
-                    "type": hostvoltype,
-                    "hostvol": hostvol,
-                    "pvtype": pvtype,
-                    "path": vol.volpath,
-                    "fstype": "xfs",
-                    "kformat": kformat,
-                    "storage_options": storage_options
-                }
-            })
-
+                "volume_id": pvol.name,
+                "capacity_bytes": pvol.size,
+                "volume_context": pvol.to_volume_context()
+            }
+        )
 
     def DeleteVolume(self, request, context):
         start_time = time.time()
@@ -415,7 +151,16 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             return csi_pb2.DeleteVolumeResponse()
 
-        delete_volume(request.volume_id)
+        pvol = PersistentVolume.search_by_name(request.volume_id)
+        if pvol.pool is None:
+            logging.warning(logf(
+                "PV not found for delete",
+                pv_name=pvol.name
+            ))
+
+        if pvol.pool is not None:
+            pvol.delete()
+
         logging.info(logf(
             "Delete Volume response completed",
             name=request.volume_id,
@@ -432,7 +177,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             return csi_pb2.ValidateVolumeCapabilitiesResponse()
 
-        if not search_volume(request.volume_id):
+        pvol = PersistentVolume.search_by_name(request.volume_id)
+        if pvol.pool is None:
             errmsg = "Requested volume does not exist"
             logging.error(errmsg)
             context.set_details(errmsg)
@@ -455,13 +201,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             volume_capabilities=volume_capabilities
         ))
 
-        single_node_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
-                                     "SINGLE_NODE_WRITER")
-
-        multi_node_multi_writer = getattr(csi_pb2.VolumeCapability.AccessMode,
-                                          "MULTI_NODE_MULTI_WRITER")
-
-        modes = [single_node_writer, multi_node_multi_writer]
+        modes = [SINGLE_NODE_WRITER, MULTI_NODE_MULTI_WRITER]
 
         for volume_capability in volume_capabilities:
             if volume_capability.access_mode.mode not in modes:
@@ -478,8 +218,6 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             }
         )
 
-
-
     def ListVolumes(self, request, context):
         """Returns list of all PVCs with sizes existing in Kadalu Storage"""
 
@@ -487,10 +225,10 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         global GEN
         # Need to check for no hostvol creation only once
         if GEN is None:
-            # Handle no hostvol creation, with ~10s timeout
-            volumes = get_pv_hosting_volumes(iteration=3)
-            if not volumes:
-                errmsg = "No PV hosting volume is created yet"
+            # Handle no pool creation, with ~10s timeout
+            pools = Pool.list(iteration=3)
+            if not pools:
+                errmsg = "No Pool is created yet"
                 logging.error(errmsg)
                 context.set_details(errmsg)
                 context.set_code(grpc.StatusCode.ABORTED)
@@ -605,8 +343,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         expansion_requested_pvsize = request.capacity_range.required_bytes
 
         # Get existing volume
-        existing_volume = search_volume(request.volume_id)
-        if not existing_volume:
+        pvol = PersistentVolume.search_by_name(request.volume_id)
+        if pvol.pool is None:
             errmsg = logf(
                 "Unable to find volume",
                 volume_id=request.volume_id
@@ -616,96 +354,52 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             return csi_pb2.ControllerExpandVolumeResponse()
 
-        if existing_volume.extra['kformat'] == 'non-native':
+        if pvol.pool.single_pv_per_pool:
             errmsg = "PV with kadalu_format == non-native doesn't support Expansion"
             logging.error(errmsg)
             # But lets not fail the call, and continue here
             return csi_pb2.ControllerExpandVolumeResponse()
 
         # Volume size before expansion
-        existing_pvsize = existing_volume.size
-        pvname = existing_volume.volname
-
         logging.info(logf(
             "Existing PV size and Expansion requested PV size",
-            existing_pvsize=existing_pvsize,
+            existing_pvsize=pvol.size,
             expansion_requested_pvsize=expansion_requested_pvsize
         ))
 
-        # reuse the data that was set while creating a volume
-        pvtype = existing_volume.voltype
-
         logging.debug(logf(
             "Found PV type",
-            pvtype=pvtype,
+            pvtype=pvol.type,
             capability=request.volume_capability
         ))
 
-        hostvol = existing_volume.hostvol
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
-        use_gluster_quota = False
-
         # Check free-size in storage-pool before expansion
-        if not is_hosting_volume_free(hostvol, expansion_requested_pvsize):
-
+        if not pvol.pool.is_size_available(expansion_requested_pvsize):
             logging.error(logf(
-                "Hosting volume is full. Add more storage",
-                volume=hostvol
+                "Storage Pool is full. Add more storage",
+                pool_name=pvol.pool.name
             ))
-            errmsg = "Host volume resource is exhausted"
+            errmsg = "Storage Pool resource is exhausted"
             context.set_details(errmsg)
             context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
             return csi_pb2.CreateVolumeResponse()
 
-        hostvoltype = existing_volume.extra['hostvoltype']
-
-        if pvtype == PV_TYPE_SUBVOL:
-            update_subdir_volume(
-                mntdir, hostvoltype, pvname, expansion_requested_pvsize)
-        else:
-            volume = update_block_volume(
-                pvtype, mntdir, pvname, expansion_requested_pvsize)
-            if pvtype == PV_TYPE_VIRTBLOCK:
-                expand_mounted_volume(os.path.join(mntdir, volume.volpath))
-
-        if hostvoltype == 'External':
-            # Use Gluster quota if set
-            if (os.path.isfile("/etc/secret-volume/ssh-privatekey") \
-                and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
-                use_gluster_quota = True
-
-        # Can be true only if its 'External'
-        if use_gluster_quota:
-            secret_private_key = "/etc/secret-volume/ssh-privatekey"
-            secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
-
-            logging.debug(logf("Set Quota (expand) using gluster directory Quota"))
-            errmsg = execute_gluster_quota_command(
-                secret_private_key, secret_username, existing_volume.extra['ghost'],
-                existing_volume.extra['gvolname'], existing_volume.volpath,
-                expansion_requested_pvsize)
-            if errmsg:
-                context.set_details(errmsg)
-                context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-                return csi_pb2.ControllerExpandVolumeResponse()
+        try:
+            pvol.expand(expansion_requested_pvsize)
+        except PvException as ex:
+            context.set_details(ex)
+            context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
+            return csi_pb2.CreateVolumeResponse()
 
         logging.info(logf(
             "Volume expanded",
-            name=pvname,
+            name=pvol.name,
             size=expansion_requested_pvsize,
-            hostvol=hostvol,
-            pvtype=pvtype,
-            volpath=existing_volume.volpath,
+            pool_name=pvol.pool.name,
+            pvtype=pvol.type,
+            volpath=pvol.path,
             duration_seconds=time.time() - start_time
         ))
-
-        # sizechanged is the additional change to be
-        # subtracted from storage-pool
-        sizechange = expansion_requested_pvsize - existing_pvsize
-        update_free_size(hostvol, pvname, -sizechange)
-
-        # if not hostvoltype:
-        #     hostvoltype = "unknown"
 
         # send_analytics_tracker("pvc-%s" % hostvoltype, uid)
         return csi_pb2.ControllerExpandVolumeResponse(
