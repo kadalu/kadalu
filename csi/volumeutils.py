@@ -271,33 +271,30 @@ def create_block_volume(pvtype, hostvol_mnt, volname, size):
         path=os.path.dirname(volpath)
     ))
 
-    if os.path.exists(volpath_full):
-        rand = time.time()
-        logging.info(logf(
-            "Getting 'Create request' on existing file, renaming.",
-            path=volpath_full, random=rand
-        ))
-        os.rename(volpath_full, "%s.%s" % (volpath_full, rand))
-
-    volpath_fd = os.open(volpath_full, os.O_CREAT | os.O_RDWR)
-    os.close(volpath_fd)
-    os.truncate(volpath_full, size)
-    logging.debug(logf(
-        "Truncated file to required size",
-        path=volpath,
-        size=size
-    ))
-
-    if pvtype == PV_TYPE_VIRTBLOCK:
-        # TODO: Multiple FS support based on volume_capability mount option
-        execute(MKFS_XFS_CMD, volpath_full)
+    # at times orchestrator will send same request if earlier request times
+    # out and truncate file if doesn't exist since if we reach here the request
+    # is a valid one
+    if not os.path.exists(volpath_full):
+        volpath_fd = os.open(volpath_full, os.O_CREAT | os.O_RDWR)
+        os.close(volpath_fd)
+        os.truncate(volpath_full, size)
         logging.debug(logf(
-            "Created Filesystem",
+            "Truncated file to required size",
             path=volpath,
-            command=MKFS_XFS_CMD
+            size=size
         ))
 
-    save_pv_metadata(hostvol_mnt, volpath, size)
+        if pvtype == PV_TYPE_VIRTBLOCK:
+            # TODO: Multiple FS support based on volume_capability mount option
+            execute(MKFS_XFS_CMD, volpath_full)
+            logging.debug(logf(
+                "Created Filesystem",
+                path=volpath,
+                command=MKFS_XFS_CMD
+            ))
+
+        save_pv_metadata(hostvol_mnt, volpath, size)
+
     return Volume(
         volname=volname,
         voltype=pvtype,
