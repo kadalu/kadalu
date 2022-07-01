@@ -1,4 +1,4 @@
-# Default values for kadalue
+# Default values for kadalu
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -8,9 +8,12 @@ operator:
   kubernetesDistro: 'kubernetes'
   verbose: 'no'
   imagesHub: 'docker.io'
+  dockerUser: 'kadalu'
 
 # Values while deploying csi-nodeplugin
 csi-nodeplugin:
   enabled: false
   kubernetesDistro: 'kubernetes'
   verbose: 'no'
+  imagesHub: 'docker.io'
+  dockerUser: 'kadalu'

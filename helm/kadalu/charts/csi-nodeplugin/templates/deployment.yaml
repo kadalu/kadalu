@@ -57,7 +57,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: docker.io/kadalu/kadalu-csi:{{- if eq .Chart.Version "0.0.0-0" }}devel{{- else}}{{.Chart.Version}}{{- end }}
+          image: {{ .Values.imagesHub }}/{{ .Values.dockerUser }}/kadalu-csi:{{- if eq .Chart.Version "0.0.0-0" }}devel{{- else}}{{.Chart.Version}}{{- end }}
           env:
             - name: NODE_ID
               valueFrom:

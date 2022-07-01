@@ -65,8 +65,7 @@ jobs:
     needs: get-info
     env:
       KUBE_VERSION: v1.22.0
-      # Current conditions in minikube.sh which are using commit message:
-      # [helm skip]: If contained in COMMIT MESSAGE, validating helm is skipped
+      # No script currently uses COMMIT_MSG
       COMMIT_MSG: ${{needs.get-info.outputs.msg}}
       FILES: ${{needs.get-info.outputs.files}}
     steps:

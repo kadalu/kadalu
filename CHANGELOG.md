@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Use helm for generating devel manifests
+
 ## [0.8.15] - 2022-06-16
 
 - Enhance PV status command to check the Status from Provisioner pod instead of
