@@ -13,46 +13,49 @@ from controllerserver import ControllerServer
 from identityserver import IdentityServer
 from kadalulib import CommandException, logf, logging_setup
 from nodeserver import NodeServer
-from volumeutils import (HOSTVOL_MOUNTDIR, get_pv_hosting_volumes,
-                         mount_glusterfs, reload_glusterfs)
+from volumeutils import Pool
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 
-def mount_storage():
+def mount_pools():
     """
-    Mount storage if any volumes exist after a pod reboot
+    Mount storage pools if any pools exist after a pod reboot
     """
     if os.environ.get("CSI_ROLE", "-") != "provisioner":
-        logging.debug("Volume need to be mounted on only provisioner pod")
+        logging.debug("Pool need to be mounted on only provisioner pod")
         return
 
-    host_volumes = get_pv_hosting_volumes({})
-    for volume in host_volumes:
-        if volume["kformat"] == "non-native":
+    pools = Pool.list()
+    for pool in pools:
+        if pool.single_pv_per_pool:
             # Need to skip mounting external non-native mounts in-order for
             # kadalu-quotad not to set quota xattrs
             continue
-        hvol = volume["name"]
-        mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
+
         try:
-            mount_glusterfs(volume, mntdir)
-            logging.info(logf("Volume is mounted successfully", hvol=hvol))
+            pool.mount()
+            logging.info(logf("Pool is mounted successfully",
+                              pool_name=pool.name))
         except CommandException:
-            logging.error(logf("Unable to mount volume", hvol=hvol))
+            logging.error(logf("Unable to mount the Pool",
+                               pool_name=pool.name))
     return
 
 
-def reconfigure_mounts(_signum, _frame):
+def reconfigure_pool_mounts(_signum, _frame):
     """
     Reconfigure the mounts by regenerating the volfiles.
     """
-    host_volumes = get_pv_hosting_volumes({})
-    for volume in host_volumes:
-        if volume["type"] == "External":
+    pools = Pool.list()
+    for pool in pools:
+        if pool.is_mode_external:
             # Need to skip remount external
             continue
-        if reload_glusterfs(volume):
-            logging.info(logf("Volume reloaded successfully", volume=volume))
+
+        if pool.reload_process():
+            logging.info(logf("Pool reloaded successfully",
+                              pool_name=pool.name))
+
 
 def main():
     """
@@ -61,10 +64,10 @@ def main():
     """
     logging_setup()
 
-    # If Provisioner pod reboots, mount volumes if they exist before reboot
-    mount_storage()
+    # If Provisioner pod reboots, mount pools if they exist before reboot
+    mount_pools()
 
-    signal.signal(signal.SIGHUP, reconfigure_mounts)
+    signal.signal(signal.SIGHUP, reconfigure_pool_mounts)
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     csi_pb2_grpc.add_ControllerServicer_to_server(ControllerServer(), server)

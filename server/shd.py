@@ -48,7 +48,7 @@ def generate_shd_volfile(client_volfile, volname, voltype):
             if data["bricks"][(i * count)].get("decommissioned", "") != "":
                 decommissioned.append(brick_name)
 
-    data['decommissioned'] = "" if decommissioned == [] else ",".join(decommissioned)
+    data['decommissioned'] = ",".join(decommissioned) if decommissioned else ""
     template_file_path = os.path.join(TEMPLATES_DIR,
                                       "%s.shd.vol.j2" % voltype)
     content = ""

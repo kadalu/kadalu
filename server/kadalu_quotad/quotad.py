@@ -32,6 +32,7 @@ except ImportError:
 #
 CONFIG_FILE = "/var/lib/glusterd/kadalu.info"
 PROJECT_MOD = 4294967296 # XFS project number is 32bit unsigned
+# noqa # pylint: disable=global-variable-not-assigned
 SIZE_LIMITS = {} # Handles quota updates
 
 def set_quota(rootdir, subdir_path, quota_value):
@@ -43,12 +44,12 @@ def set_quota(rootdir, subdir_path, quota_value):
     ino = os.lstat(subdir_path).st_ino % PROJECT_MOD
     execute("xfs_quota",
             "-x", "-c",
-            'project -s -p %s %d' % (subdir_path, ino),
+            f'project -s -p {subdir_path} {ino}',
             rootdir)
 
     execute("xfs_quota",
             "-x", "-c",
-            'limit -p bhard=%s %d' % (quota_value, ino),
+            f'limit -p bhard={quota_value} {ino}',
             rootdir)
 
 

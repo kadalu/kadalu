@@ -1,48 +1,48 @@
-{% for brick in bricks %}
-volume {{ volname }}-client-{{ brick["brick_index"] }}
+{% for brick in gvol.bricks %}
+volume {{ gvol.name }}-client-{{ brick.index }}
     type protocol/client
-    option volfile-key /{{ volname }}
+    option volfile-key /{{ gvol.name }}
     option transport.socket.read-fail-log false
-    option remote-subvolume {{ brick["brick_path"] }}
-    option remote-host {{ brick["node"] }}
+    option remote-subvolume {{ brick.path }}
+    option remote-host {{ brick.node }}
 end-volume
 
 {% endfor %}
 
-{% for i in range(dht_subvol|length) %}
-volume {{ volname }}-disperse-{{ i }}
+{% for i in range(gvol.distribute_count) %}
+volume {{ gvol.name }}-disperse-{{ i }}
     type cluster/disperse
-    option redundancy {{ disperse_redundancy }}
+    option redundancy {{ gvol.disperse_redundancy }}
     option data-self-heal on
     option granular-entry-heal on
     option iam-self-heal-daemon off
     option metadata-self-heal on
     option entry-self-heal on
     option read-hash-mode 5
-    subvolumes {% for b in range(subvol_bricks_count) %} {{ volname }}-client-{{ (i * subvol_bricks_count) + b }}{% endfor %}
+    subvolumes {% for b in range(gvol.subvol_bricks_count) %} {{ gvol.name }}-client-{{ (i * gvol.subvol_bricks_count) + b }}{% endfor %}
 end-volume
 
 {% endfor %}
 
-volume {{ volname }}-dht
+volume {{ gvol.name }}-dht
     type cluster/distribute
-    subvolumes {{ dht_subvol|join(' ') }}
+    subvolumes {{ gvol.dht_subvol | join(' ') }}
 end-volume
 
-volume {{ volname }}-utime
+volume {{ gvol.name }}-utime
     type features/utime
     option noatime on
-    subvolumes {{ volname }}-dht
+    subvolumes {{ gvol.name }}-dht
 end-volume
 
-volume {{ volname }}-write-behind
+volume {{ gvol.name }}-write-behind
     type performance/write-behind
     option flush-behind on
     option write-behind on
-    subvolumes {{ volname }}-utime
+    subvolumes {{ gvol.name }}-utime
 end-volume
 
-volume {{ volname }}
+volume {{ gvol.name }}
     type debug/io-stats
-    subvolumes {{ volname }}-write-behind
+    subvolumes {{ gvol.name }}-write-behind
 end-volume
