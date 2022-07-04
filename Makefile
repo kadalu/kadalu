@@ -37,14 +37,14 @@ endif
 helm-manifest:
 	@echo ---------------------------------------------------------------------
 	@helm template --namespace kadalu helm/kadalu \
+		--set global.kubernetesDistro=${DISTRO} \
 		--set operator.enabled=true \
-		--set operator.kubernetesDistro=${DISTRO} \
 		--set operator.imagesHub=${IMAGES_HUB} \
 		--set operator.dockerUser=${DOCKER_USER} \
 		--set .Chart.version=${KADALU_VERSION} > manifests/kadalu-operator${filename_suffix}.yaml
 	@helm template --namespace kadalu helm/kadalu \
+        --set global.kubernetesDistro=${DISTRO} \
 		--set csi-nodeplugin.enabled=true \
-		--set csi-nodeplugin.kubernetesDistro=${DISTRO} \
 		--set csi-nodeplugin.imagesHub=${IMAGES_HUB} \
 		--set csi-nodeplugin.dockerUser=${DOCKER_USER} \
 		--set .Chart.version=${KADALU_VERSION} > manifests/csi-nodeplugin${filename_suffix}.yaml

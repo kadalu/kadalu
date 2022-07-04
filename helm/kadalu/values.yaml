@@ -3,19 +3,18 @@
 # Declare variables to be passed into your templates.
 
 global:
-  kubeletDir: '/var/lib/kubelet'
+  image:
+    repository: 'docker.io/kadalu'
+    pullPolicy: 'IfNotPresent'
+  kubeletDir: ''
   kubernetesDistro: 'kubernetes'
 
 # Values while deploying operator
 operator:
   enabled: false
   verbose: 'no'
-  imagesHub: 'docker.io'
-  dockerUser: 'kadalu'
 
 # Values while deploying csi-nodeplugin
 csi-nodeplugin:
   enabled: false
   verbose: 'no'
-  imagesHub: 'docker.io'
-  dockerUser: 'kadalu'
