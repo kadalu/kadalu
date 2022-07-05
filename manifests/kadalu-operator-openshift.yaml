@@ -137,7 +137,7 @@ spec:
                     gluster_options:
                       type: string
 ---
-# Source: kadalu/charts/operator/templates/clusterrole.yaml
+# Source: kadalu/charts/operator/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -162,7 +162,7 @@ rules:
     verbs:
       - watch
 ---
-# Source: kadalu/charts/operator/templates/clusterrole.yaml
+# Source: kadalu/charts/operator/templates/rbac.yaml
 # CSI External Attacher
 # https://github.com/kubernetes-csi/external-attacher/blob/master/deploy/kubernetes/rbac.yaml
 kind: ClusterRole
@@ -183,7 +183,7 @@ rules:
     resources: ["volumeattachments/status"]
     verbs: ["patch"]
 ---
-# Source: kadalu/charts/operator/templates/clusterrole.yaml
+# Source: kadalu/charts/operator/templates/rbac.yaml
 # CSI External Provisioner
 # https://github.com/kubernetes-csi/external-provisioner/blob/master/deploy/kubernetes/rbac.yaml
 kind: ClusterRole
@@ -220,7 +220,7 @@ rules:
     resources: ["volumeattachments"]
     verbs: ["get", "list", "watch"]
 ---
-# Source: kadalu/charts/operator/templates/clusterrole.yaml
+# Source: kadalu/charts/operator/templates/rbac.yaml
 # CSI External Resizer
 # https://github.com/kubernetes-csi/external-resizer/blob/master/deploy/kubernetes/rbac.yaml
 kind: ClusterRole
@@ -244,7 +244,7 @@ rules:
     resources: ["events"]
     verbs: ["list", "watch", "create", "update", "patch"]
 ---
-# Source: kadalu/charts/operator/templates/clusterrolebinding.yaml
+# Source: kadalu/charts/operator/templates/rbac.yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -258,7 +258,7 @@ roleRef:
   name: kadalu-operator
   apiGroup: rbac.authorization.k8s.io
 ---
-# Source: kadalu/charts/operator/templates/clusterrolebinding.yaml
+# Source: kadalu/charts/operator/templates/rbac.yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -272,7 +272,7 @@ roleRef:
   name: kadalu-csi-external-attacher
   apiGroup: rbac.authorization.k8s.io
 ---
-# Source: kadalu/charts/operator/templates/clusterrolebinding.yaml
+# Source: kadalu/charts/operator/templates/rbac.yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -286,7 +286,7 @@ roleRef:
   name: kadalu-csi-external-provisioner
   apiGroup: rbac.authorization.k8s.io
 ---
-# Source: kadalu/charts/operator/templates/clusterrolebinding.yaml
+# Source: kadalu/charts/operator/templates/rbac.yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -300,7 +300,7 @@ roleRef:
   name: kadalu-csi-external-resizer
   apiGroup: rbac.authorization.k8s.io
 ---
-# Source: kadalu/charts/operator/templates/role.yaml
+# Source: kadalu/charts/operator/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -339,7 +339,7 @@ rules:
       - get
       - patch
 ---
-# Source: kadalu/charts/operator/templates/rolebinding.yaml
+# Source: kadalu/charts/operator/templates/rbac.yaml
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
