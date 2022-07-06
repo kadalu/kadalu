@@ -95,7 +95,7 @@ spec:
               mountPath: "/var/lib/kadalu"
 {%- if pvc_name == "" %}
             - name: gluster-kmods
-              mountPath: "/usr/lib/modules"
+              mountPath: "/lib/modules"
               readOnly: true
 {%- endif %}
             - name: glusterfsd-volfilesdir
