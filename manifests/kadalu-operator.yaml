@@ -135,139 +135,114 @@ spec:
                     gluster_options:
                       type: string
 ---
-# Source: kadalu/charts/operator/templates/clusterrole.yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  namespace: kadalu
-  name: pod-exec
-rules:
-- apiGroups: [""]
-  resources: ["pods", "pods/log"]
-  verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
-- apiGroups: [""]
-  resources: ["pods", "pods/exec"]
-  verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
----
-# Source: kadalu/charts/operator/templates/clusterrole.yaml
+# Source: kadalu/charts/operator/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: kadalu-operator
-  namespace: kadalu
 rules:
-  - apiGroups: [""]
-    resources:
-      - pods
-      - pods/log
-      - pods/exec
-      - services
-      - endpoints
-      - persistentvolumes
-      - persistentvolumeclaims
-      - persistentvolumeclaims/status
-      - customresourcedefinitions
-      - events
-      - configmaps
-      - secrets
-      - serviceaccounts
-      - clusterroles
-      - clusterrolebindings
-      - roles
-      - rolebindings
-    verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
   - apiGroups:
       - storage.k8s.io
+      - csi.storage.k8s.io
     resources:
+      - csidrivers
       - storageclasses
-      - volumeattachments
-      - volumeattachments/status
-    verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - update
   - apiGroups:
-      - rbac.authorization.k8s.io
-    resources:
-      - roles
-      - rolebindings
-      - clusterroles
-      - clusterrolebindings
-    verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
-  - apiGroups: ["apps"]
-    resources:
-      - deployments
-      - daemonsets
-      - replicasets
-      - statefulsets
-    verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
-  - apiGroups: ["monitoring.coreos.com"]
-    resources:
-      - servicemonitors
-    verbs: ["get", "create"]
-  - apiGroups: ["kadalu-operator.storage"]
+      - kadalu-operator.storage
     resources:
       - kadalustorages
-    verbs: ["create", "get", "list", "watch", "update", "delete"]
+    verbs:
+      - watch
+---
+# Source: kadalu/charts/operator/templates/rbac.yaml
+# CSI External Attacher
+# https://github.com/kubernetes-csi/external-attacher/blob/master/deploy/kubernetes/rbac.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kadalu-csi-external-attacher
+rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
-    verbs: ["get", "list", "watch", "update"]
-  - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["csi.storage.k8s.io"]
-    resources: ["csinodeinfos"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["csinodes"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["volumeattachments"]
-    verbs: ["get", "list", "watch", "update"]
-  - apiGroups: [""]
-    resources: ["events"]
-    verbs: ["get", "list", "watch", "create", "update", "patch"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["volumeattachments/status"]
+    verbs: ["patch"]
+---
+# Source: kadalu/charts/operator/templates/rbac.yaml
+# CSI External Provisioner
+# https://github.com/kubernetes-csi/external-provisioner/blob/master/deploy/kubernetes/rbac.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kadalu-csi-external-provisioner
+rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
-    verbs: ["get", "list", "watch", "create", "delete", "patch"]
+    verbs: ["get", "list", "watch", "create", "delete"]
   - apiGroups: [""]
     resources: ["persistentvolumeclaims"]
-    verbs: ["get", "list", "watch", "update", "patch"]
-  - apiGroups: [""]
-    resources: ["persistentvolumeclaims/status"]
-    verbs: ["get", "list", "watch", "update", "patch"]
+    verbs: ["get", "list", "watch", "update"]
   - apiGroups: ["storage.k8s.io"]
     resources: ["storageclasses"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["events"]
-    verbs: ["list", "watch", "create", "update", "patch", "delete", "get"]
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get", "list"]
-  - apiGroups: [""]
-    resources: ["endpoints"]
-    verbs: ["get", "list", "watch", "create", "update"]
-  - apiGroups: ["snapshot.storage.k8s.io"]
-    resources: ["volumesnapshotclasses"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["snapshot.storage.k8s.io"]
-    resources: ["volumesnapshotcontents"]
-    verbs: ["create", "get", "list", "watch", "update", "delete"]
+    verbs: ["list", "watch", "create", "update", "patch"]
   - apiGroups: ["snapshot.storage.k8s.io"]
     resources: ["volumesnapshots"]
-    verbs: ["get", "list", "watch", "update"]
-  - apiGroups: ["apiextensions.k8s.io"]
-    resources: ["customresourcedefinitions"]
-    verbs: ["create", "list", "watch", "delete"]
-  - apiGroups: ["csi.storage.k8s.io"]
-    resources: ["csidrivers"]
-    verbs: ["get", "create", "delete", "patch"]
+    verbs: ["get", "list"]
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshotcontents"]
+    verbs: ["get", "list"]
   - apiGroups: ["storage.k8s.io"]
-    resources: ["csidrivers"]
-    verbs: ["get", "create", "delete", "patch"]
-  - apiGroups: ["coordination.k8s.io"]
-    resources: ["leases"]
-    verbs: ["get", "watch", "list", "delete", "update", "create"]
+    resources: ["csinodes"]
+    verbs: ["get", "list", "watch"]
   - apiGroups: [""]
-    resources: ["pods/exec"]
-    verbs: ["create", "get", "list", "watch", "update", "delete", "patch"]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+  # PUBLISH_UNPUBLISH_VOLUME capability
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["volumeattachments"]
+    verbs: ["get", "list", "watch"]
 ---
-# Source: kadalu/charts/operator/templates/clusterrolebinding.yaml
+# Source: kadalu/charts/operator/templates/rbac.yaml
+# CSI External Resizer
+# https://github.com/kubernetes-csi/external-resizer/blob/master/deploy/kubernetes/rbac.yaml
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kadalu-csi-external-resizer
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims/status"]
+    verbs: ["patch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch", "create", "update", "patch"]
+---
+# Source: kadalu/charts/operator/templates/rbac.yaml
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -276,11 +251,104 @@ subjects:
   - kind: ServiceAccount
     name: kadalu-operator
     namespace: kadalu
+roleRef:
+  kind: ClusterRole
+  name: kadalu-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: kadalu/charts/operator/templates/rbac.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kadalu-csi-external-attacher
+subjects:
   - kind: ServiceAccount
-    name: pod-exec
+    name: kadalu-csi-provisioner
     namespace: kadalu
 roleRef:
   kind: ClusterRole
+  name: kadalu-csi-external-attacher
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: kadalu/charts/operator/templates/rbac.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kadalu-csi-external-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: kadalu-csi-provisioner
+    namespace: kadalu
+roleRef:
+  kind: ClusterRole
+  name: kadalu-csi-external-provisioner
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: kadalu/charts/operator/templates/rbac.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kadalu-csi-external-resizer
+subjects:
+  - kind: ServiceAccount
+    name: kadalu-csi-provisioner
+    namespace: kadalu
+roleRef:
+  kind: ClusterRole
+  name: kadalu-csi-external-resizer
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: kadalu/charts/operator/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kadalu-operator
+  namespace: kadalu
+rules:
+  - apiGroups: [""]
+    resources:
+      - configmaps
+      - persistentvolumes
+      - pods
+      - pods/exec
+      - services
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+  - apiGroups:
+      - ""
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - create
+      - update
+  - apiGroups:
+      - apps
+    resources:
+      - daemonsets
+      - statefulsets
+    verbs:
+      - create
+      - delete
+      - get
+      - patch
+---
+# Source: kadalu/charts/operator/templates/rbac.yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kadalu-operator
+  namespace: kadalu
+subjects:
+  - kind: ServiceAccount
+    name: kadalu-operator
+    namespace: kadalu
+roleRef:
+  kind: Role
   name: kadalu-operator
   apiGroup: rbac.authorization.k8s.io
 ---
