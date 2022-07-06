@@ -30,7 +30,7 @@ spec:
       serviceAccountName: kadalu-csi-provisioner
       containers:
         - name: csi-provisioner
-          image: {{ images_hub }}/raspbernetes/csi-external-provisioner:2.0.2
+          image: {{ images_hub }}/raspbernetes/csi-external-provisioner:2.2.1
           args:
             - "--csi-address=$(ADDRESS)"
             - "--timeout=3m"
@@ -43,21 +43,6 @@ spec:
               value: "{{ k8s_dist }}"
             - name: VERBOSE
               value: "{{ verbose }}"
-          volumeMounts:
-            - name: socket-dir
-              mountPath: /var/lib/csi/sockets/pluginproxy/
-        - name: csi-attacher
-          image: {{ images_hub }}/raspbernetes/csi-external-attacher:3.0.0
-          args:
-            - "--v=5"
-            - "--csi-address=$(ADDRESS)"
-          env:
-            - name: ADDRESS
-              value: /var/lib/csi/sockets/pluginproxy/csi.sock
-            - name: KADALU_VERSION
-              value: "{{ kadalu_version }}"
-            - name: K8S_DIST
-              value: "{{ k8s_dist }}"
           volumeMounts:
             - name: socket-dir
               mountPath: /var/lib/csi/sockets/pluginproxy/
@@ -109,7 +94,7 @@ spec:
             - name: varlog
               mountPath: "/var/log/gluster"
         - name: csi-resizer
-          image: {{ images_hub }}/raspbernetes/csi-external-resizer:1.0.0
+          image: {{ images_hub }}/raspbernetes/csi-external-resizer:1.2.0
           args:
             - "--csi-address=$(ADDRESS)"
             - "--timeout=3m"

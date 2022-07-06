@@ -18,13 +18,6 @@ metadata:
 kind: ServiceAccount
 apiVersion: v1
 metadata:
-  name: kadalu-csi-nodeplugin
-  namespace: kadalu
----
-# Source: kadalu/charts/operator/templates/serviceaccount.yaml
-kind: ServiceAccount
-apiVersion: v1
-metadata:
   name: kadalu-csi-provisioner
   namespace: kadalu
 ---
@@ -163,27 +156,6 @@ rules:
       - watch
 ---
 # Source: kadalu/charts/operator/templates/rbac.yaml
-# CSI External Attacher
-# https://github.com/kubernetes-csi/external-attacher/blob/master/deploy/kubernetes/rbac.yaml
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: kadalu-csi-external-attacher
-rules:
-  - apiGroups: [""]
-    resources: ["persistentvolumes"]
-    verbs: ["get", "list", "watch", "patch"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["csinodes"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["volumeattachments"]
-    verbs: ["get", "list", "watch", "patch"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["volumeattachments/status"]
-    verbs: ["patch"]
----
-# Source: kadalu/charts/operator/templates/rbac.yaml
 # CSI External Provisioner
 # https://github.com/kubernetes-csi/external-provisioner/blob/master/deploy/kubernetes/rbac.yaml
 kind: ClusterRole
@@ -214,10 +186,6 @@ rules:
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["nodes"]
-    verbs: ["get", "list", "watch"]
-  # PUBLISH_UNPUBLISH_VOLUME capability
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["volumeattachments"]
     verbs: ["get", "list", "watch"]
 ---
 # Source: kadalu/charts/operator/templates/rbac.yaml
@@ -256,20 +224,6 @@ subjects:
 roleRef:
   kind: ClusterRole
   name: kadalu-operator
-  apiGroup: rbac.authorization.k8s.io
----
-# Source: kadalu/charts/operator/templates/rbac.yaml
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: kadalu-csi-external-attacher
-subjects:
-  - kind: ServiceAccount
-    name: kadalu-csi-provisioner
-    namespace: kadalu
-roleRef:
-  kind: ClusterRole
-  name: kadalu-csi-external-attacher
   apiGroup: rbac.authorization.k8s.io
 ---
 # Source: kadalu/charts/operator/templates/rbac.yaml

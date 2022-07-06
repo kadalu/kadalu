@@ -7,8 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Use helm for generating devel manifests
+- Fix idempotency while creating block volumes
 - Harden RBAC permissions
 - Support custom kubelet dir
+- Use recommended path for kernel shared modules in server pod
+- Remove CSI Attacher Sidecar and corresponding RBAC
+- Update CSI Sidecar Images except node-driver-registrar
 
 ## [0.8.15] - 2022-06-16
 

@@ -18,9 +18,8 @@ sudo docker pull docker.io/kadalu/kadalu-operator:devel
 sudo docker pull docker.io/kadalu/kadalu-server:devel
 sudo docker pull docker.io/raspbernetes/csi-node-driver-registrar:2.0.1
 sudo docker pull docker.io/library/busybox
-sudo docker pull docker.io/raspbernetes/csi-external-provisioner:2.0.2
-sudo docker pull docker.io/raspbernetes/csi-external-attacher:3.0.0
-sudo docker pull docker.io/raspbernetes/csi-external-resizer:1.0.0
+sudo docker pull docker.io/raspbernetes/csi-external-provisioner:2.2.1
+sudo docker pull docker.io/raspbernetes/csi-external-resizer:1.2.0
 ----
 
 **Note:** Change the version of Kadalu Container images as required.
@@ -33,9 +32,8 @@ sudo docker tag docker.io/kadalu/kadalu-operator:devel my_company_images:5000/ka
 sudo docker tag docker.io/kadalu/kadalu-server:devel my_company_images:5000/kadalu/kadalu-server:devel
 sudo docker tag docker.io/raspbernetes/csi-node-driver-registrar:2.0.1 my_company_images:5000/raspbernetes/csi-node-driver-registrar:2.0.1
 sudo docker tag docker.io/library/busybox my_company_images:5000/library/busybox
-sudo docker tag docker.io/raspbernetes/csi-external-provisioner:2.0.2 my_company_images:5000/raspbernetes/csi-external-provisioner:2.0.2
-sudo docker tag docker.io/raspbernetes/csi-external-attacher:3.0.0 my_company_images:5000/raspbernetes/csi-external-attacher:3.0.0
-sudo docker tag docker.io/raspbernetes/csi-external-resizer:1.0.0 my_company_images:5000/raspbernetes/csi-external-resizer:1.0.0
+sudo docker tag docker.io/raspbernetes/csi-external-provisioner:2.2.1 my_company_images:5000/raspbernetes/csi-external-provisioner:2.2.1
+sudo docker tag docker.io/raspbernetes/csi-external-resizer:1.2.0 my_company_images:5000/raspbernetes/csi-external-resizer:1.2.0
 ----
 
 Upload the images to private repository.
@@ -46,9 +44,8 @@ sudo docker push my_company_images:5000/kadalu/kadalu-operator:devel
 sudo docker push my_company_images:5000/kadalu/kadalu-server:devel
 sudo docker push my_company_images:5000/raspbernetes/csi-node-driver-registrar:2.0.1
 sudo docker push my_company_images:5000/library/busybox
-sudo docker push my_company_images:5000/raspbernetes/csi-external-provisioner:2.0.2
-sudo docker push my_company_images:5000/raspbernetes/csi-external-attacher:3.0.0
-sudo docker push my_company_images:5000/raspbernetes/csi-external-resizer:1.0.0
+sudo docker push my_company_images:5000/raspbernetes/csi-external-provisioner:2.2.1
+sudo docker push my_company_images:5000/raspbernetes/csi-external-resizer:1.2.0
 ----
 
 == Generate Manifest files

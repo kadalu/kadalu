@@ -23,26 +23,6 @@ rules:
     verbs:
       - watch
 ---
-# CSI External Attacher
-# https://github.com/kubernetes-csi/external-attacher/blob/master/deploy/kubernetes/rbac.yaml
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: kadalu-csi-external-attacher
-rules:
-  - apiGroups: [""]
-    resources: ["persistentvolumes"]
-    verbs: ["get", "list", "watch", "patch"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["csinodes"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["volumeattachments"]
-    verbs: ["get", "list", "watch", "patch"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["volumeattachments/status"]
-    verbs: ["patch"]
----
 # CSI External Provisioner
 # https://github.com/kubernetes-csi/external-provisioner/blob/master/deploy/kubernetes/rbac.yaml
 kind: ClusterRole
@@ -73,10 +53,6 @@ rules:
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["nodes"]
-    verbs: ["get", "list", "watch"]
-  # PUBLISH_UNPUBLISH_VOLUME capability
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["volumeattachments"]
     verbs: ["get", "list", "watch"]
 ---
 # CSI External Resizer
@@ -113,19 +89,6 @@ subjects:
 roleRef:
   kind: ClusterRole
   name: kadalu-operator
-  apiGroup: rbac.authorization.k8s.io
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: kadalu-csi-external-attacher
-subjects:
-  - kind: ServiceAccount
-    name: kadalu-csi-provisioner
-    namespace: {{ .Release.Namespace }}
-roleRef:
-  kind: ClusterRole
-  name: kadalu-csi-external-attacher
   apiGroup: rbac.authorization.k8s.io
 ---
 kind: ClusterRoleBinding
