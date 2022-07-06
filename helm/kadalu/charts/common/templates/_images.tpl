@@ -4,5 +4,5 @@
 Kadalu proper image repository
 */}}
 {{- define "common.images.image" -}}
-{{- print .Values.global.image.repository }}
+{{- printf "%s/%s" .Values.global.image.registry .Values.global.image.repository }}
 {{- end -}}

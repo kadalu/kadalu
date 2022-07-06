@@ -38,9 +38,9 @@ spec:
             - name: OPERATOR_NAME
               value: "kadalu-operator"
             - name: IMAGES_HUB
-              value: {{ .Values.imagesHub | quote }}
+              value: {{ .Values.global.image.registry | quote }}
             - name: DOCKER_USER
-              value: "kadalu"
+              value: {{ .Values.global.image.repository | quote }}
             - name: KADALU_VERSION
               value: {{ include "common.version" . | quote }}
             - name: KADALU_NAMESPACE

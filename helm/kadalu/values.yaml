@@ -4,7 +4,8 @@
 
 global:
   image:
-    repository: 'docker.io/kadalu'
+    registry: 'docker.io'
+    repository: 'kadalu'
     pullPolicy: 'IfNotPresent'
   kubeletDir: ''
   kubernetesDistro: 'kubernetes'
