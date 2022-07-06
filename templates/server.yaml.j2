@@ -91,7 +91,7 @@ spec:
               readOnly: true
 {%- if pvc_name == "" %}
             - name: gluster-kmods
-              mountPath: "/usr/lib/modules"
+              mountPath: "/lib/modules"
               readOnly: true
 {%- endif %}
             - name: glusterfsd-volfilesdir
