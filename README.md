@@ -72,10 +72,10 @@ K8S_DIST=kubernetes
 curl -sL https://github.com/kadalu/kadalu/releases/latest/download/kadalu-helm-chart.tgz -o /tmp/kadalu-helm-chart.tgz
 
 # First install operator
-helm install operator --namespace kadalu --create-namespace /tmp/kadalu-helm-chart.tgz --set operator.enabled=true --set operator.kubernetesDistro=$K8S_DIST
+helm install operator --namespace kadalu --create-namespace /tmp/kadalu-helm-chart.tgz --set operator.enabled=true --set global.kubernetesDistro=$K8S_DIST
 
 # Incase of Kadalu upgrade verify pod eviction and no usage of Kadalu PVCs, for fresh installation just proceed after operator deployment
-helm install csi-nodeplugin --namespace kadalu /tmp/kadalu-helm-chart.tgz --set csi-nodeplugin.enabled=true --set csi-nodeplugin.kubernetesDistro=$K8S_DIST
+helm install csi-nodeplugin --namespace kadalu /tmp/kadalu-helm-chart.tgz --set csi-nodeplugin.enabled=true --set global.kubernetesDistro=$K8S_DIST
 ```
 
 NOTE: We are still evolving with Helm chart based development, and happy to get contributions on the same.

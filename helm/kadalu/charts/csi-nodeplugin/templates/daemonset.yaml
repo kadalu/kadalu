@@ -3,22 +3,16 @@ apiVersion: apps/v1
 metadata:
   name: kadalu-csi-nodeplugin
   namespace: {{ .Release.Namespace }}
-  labels:
-    app.kubernetes.io/part-of: kadalu
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: csi-driver
-    app.kubernetes.io/name: kadalu-csi-nodeplugin
 spec:
   selector:
-    matchLabels:
-      app.kubernetes.io/part-of: kadalu
+    matchLabels: {{- include "common.labels.standard" . | nindent 6 }}
       app.kubernetes.io/component: csi-driver
-      app.kubernetes.io/name: kadalu-csi-nodeplugin
   template:
     metadata:
-      labels:
-        app.kubernetes.io/part-of: kadalu
+      labels: {{- include "common.labels.standard" . | nindent 8 }}
         app.kubernetes.io/component: csi-driver
-        app.kubernetes.io/name: kadalu-csi-nodeplugin
       namespace: {{ .Release.Namespace }}
     spec:
       serviceAccountName: kadalu-csi-nodeplugin
@@ -37,11 +31,7 @@ spec:
             - name: ADDRESS
               value: /plugin/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              {{- if (eq .Values.kubernetesDistro "microk8s") }}
-              value: /var/snap/microk8s/common/var/lib/kubelet/plugins/kadalu/csi.sock
-              {{- else }}
-              value: /var/lib/kubelet/plugins/kadalu/csi.sock
-              {{- end }}
+              value: {{ include "common.configs.kubeletDir" . }}/plugins/kadalu/csi.sock
             - name: KUBE_NODE_NAME
               valueFrom:
                 fieldRef:
@@ -57,7 +47,7 @@ spec:
             capabilities:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
-          image: {{ .Values.imagesHub }}/{{ .Values.dockerUser }}/kadalu-csi:{{- if eq .Chart.Version "0.0.0-0" }}devel{{- else}}{{.Chart.Version}}{{- end }}
+          image: {{ include "common.images.image" . }}/kadalu-csi:{{ include "common.version" . }}
           env:
             - name: NODE_ID
               valueFrom:
@@ -66,22 +56,18 @@ spec:
             - name: CSI_ENDPOINT
               value: unix://plugin/csi.sock
             - name: KADALU_VERSION
-              value: "{{- if eq .Chart.Version "0.0.0-0" }}devel{{- else}}{{.Chart.Version}}{{- end }}"
+              value: {{ include "common.version" . | quote }}
             - name: K8S_DIST
-              value: "{{ .Values.kubernetesDistro }}"
+              value: {{ .Values.global.kubernetesDistro | quote }}
             - name: VERBOSE
-              value: "{{ .Values.verbose }}"
+              value: {{ .Values.verbose | quote }}
             - name: CSI_ROLE
               value: "nodeplugin"
           volumeMounts:
             - name: plugin-dir
               mountPath: /plugin
             - name: pods-mount-dir
-              {{- if (eq .Values.kubernetesDistro "microk8s") }}
-              mountPath: /var/snap/microk8s/common/var/lib/kubelet/pods
-              {{- else }}
-              mountPath: /var/lib/kubelet/pods
-              {{- end }}
+              mountPath: {{ include "common.configs.kubeletDir" . }}/pods
               mountPropagation: "Bidirectional"
             - name: glusterfsd-volfilesdir
               mountPath: "/var/lib/gluster"
@@ -90,11 +76,7 @@ spec:
             - name: varlog
               mountPath: /var/log/gluster
             - name: csi-dir
-              {{- if (eq .Values.kubernetesDistro "microk8s") }}
-              mountPath: /var/snap/microk8s/common/var/lib/kubelet/plugins/kubernetes.io/csi
-              {{- else }}
-              mountPath: /var/lib/kubelet/plugins/kubernetes.io/csi
-              {{- end }}
+              mountPath: {{ include "common.configs.kubeletDir" . }}/plugins/kubernetes.io/csi
               mountPropagation: "Bidirectional"
         - name: kadalu-logging
           image: docker.io/library/busybox
@@ -106,27 +88,15 @@ spec:
       volumes:
         - name: plugin-dir
           hostPath:
-            {{- if (eq .Values.kubernetesDistro "microk8s") }}
-            path: /var/snap/microk8s/common/var/lib/kubelet/plugins/kadalu
-            {{- else }}
-            path: /var/lib/kubelet/plugins/kadalu
-            {{- end }}
+            path: {{ include "common.configs.kubeletDir" . }}/plugins/kadalu
             type: DirectoryOrCreate
         - name: pods-mount-dir
           hostPath:
-            {{- if (eq .Values.kubernetesDistro "microk8s") }}
-            path: /var/snap/microk8s/common/var/lib/kubelet/pods
-            {{- else }}
-            path: /var/lib/kubelet/pods
-            {{- end }}
+            path: {{ include "common.configs.kubeletDir" . }}/pods
             type: Directory
         - name: registration-dir
           hostPath:
-            {{- if (eq .Values.kubernetesDistro "microk8s") }}
-            path: /var/snap/microk8s/common/var/lib/kubelet/plugins_registry/
-            {{- else }}
-            path: /var/lib/kubelet/plugins_registry/
-            {{- end }}
+            path: {{ include "common.configs.kubeletDir" . }}/plugins_registry/
             type: Directory
         - name: glusterfsd-volfilesdir
           configMap:
@@ -138,9 +108,5 @@ spec:
           emptyDir: {}
         - name: csi-dir
           hostPath:
-            {{- if (eq .Values.kubernetesDistro "microk8s") }}
-            path: /var/snap/microk8s/common/var/lib/kubelet/plugins/kubernetes.io/csi/
-            {{- else }}
-            path: /var/lib/kubelet/plugins/kubernetes.io/csi/
-            {{- end }}
+            path: {{ include "common.configs.kubeletDir" . }}/plugins/kubernetes.io/csi/
             type: DirectoryOrCreate
