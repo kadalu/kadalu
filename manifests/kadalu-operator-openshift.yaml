@@ -373,8 +373,8 @@ metadata:
   namespace: kadalu
   labels:
     app.kubernetes.io/part-of: kadalu
+    app.kubernetes.io/name: kadalu-operator
     app.kubernetes.io/component: operator
-    app.kubernetes.io/name: operator
 spec:
   replicas: 1
   selector:

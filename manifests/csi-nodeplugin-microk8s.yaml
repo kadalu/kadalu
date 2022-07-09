@@ -30,7 +30,7 @@ roleRef:
   name: kadalu-csi-nodeplugin
   apiGroup: rbac.authorization.k8s.io
 ---
-# Source: kadalu/charts/csi-nodeplugin/templates/deployment.yaml
+# Source: kadalu/charts/csi-nodeplugin/templates/daemonset.yaml
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
@@ -38,20 +38,20 @@ metadata:
   namespace: kadalu
   labels:
     app.kubernetes.io/part-of: kadalu
-    app.kubernetes.io/component: csi-driver
     app.kubernetes.io/name: kadalu-csi-nodeplugin
+    app.kubernetes.io/component: csi-driver
 spec:
   selector:
     matchLabels:
       app.kubernetes.io/part-of: kadalu
-      app.kubernetes.io/component: csi-driver
       app.kubernetes.io/name: kadalu-csi-nodeplugin
+      app.kubernetes.io/component: csi-driver
   template:
     metadata:
       labels:
         app.kubernetes.io/part-of: kadalu
-        app.kubernetes.io/component: csi-driver
         app.kubernetes.io/name: kadalu-csi-nodeplugin
+        app.kubernetes.io/component: csi-driver
       namespace: kadalu
     spec:
       serviceAccountName: kadalu-csi-nodeplugin

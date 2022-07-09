@@ -2,18 +2,20 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+global:
+  image:
+    registry: 'docker.io'
+    repository: 'kadalu'
+    pullPolicy: 'IfNotPresent'
+  kubeletDir: ''
+  kubernetesDistro: 'kubernetes'
+
 # Values while deploying operator
 operator:
   enabled: false
-  kubernetesDistro: 'kubernetes'
   verbose: 'no'
-  imagesHub: 'docker.io'
-  dockerUser: 'kadalu'
 
 # Values while deploying csi-nodeplugin
 csi-nodeplugin:
   enabled: false
-  kubernetesDistro: 'kubernetes'
   verbose: 'no'
-  imagesHub: 'docker.io'
-  dockerUser: 'kadalu'

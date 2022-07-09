@@ -3,10 +3,8 @@ kind: Deployment
 metadata:
   name: operator
   namespace: {{ .Release.Namespace }}
-  labels:
-    app.kubernetes.io/part-of: kadalu
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: operator
-    app.kubernetes.io/name: operator
 spec:
   replicas: 1
   selector:
@@ -26,8 +24,8 @@ spec:
           securityContext:
             capabilities: {}
             privileged: true
-          image: {{ .Values.imagesHub }}/{{ .Values.dockerUser }}/kadalu-operator:{{- if eq .Chart.Version "0.0.0-0" }}devel{{- else}}{{.Chart.Version}}{{- end }}
-          imagePullPolicy: IfNotPresent
+          image: {{ include "common.images.image" . }}/kadalu-operator:{{ include "common.version" . }}
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
           env:
             - name: WATCH_NAMESPACE
               valueFrom:
@@ -40,20 +38,16 @@ spec:
             - name: OPERATOR_NAME
               value: "kadalu-operator"
             - name: IMAGES_HUB
-              value: "{{ .Values.imagesHub }}"
+              value: {{ .Values.global.image.registry | quote }}
             - name: DOCKER_USER
-              value: "kadalu"
+              value: {{ .Values.global.image.repository | quote }}
             - name: KADALU_VERSION
-              value: "{{- if eq .Chart.Version "0.0.0-0" }}devel{{- else}}{{.Chart.Version}}{{- end }}"
+              value: {{ include "common.version" . | quote }}
             - name: KADALU_NAMESPACE
-              value: "{{ .Release.Namespace }}"
+              value: {{ .Release.Namespace | quote }}
             - name: KUBELET_DIR
-              {{- if (eq .Values.kubernetesDistro "microk8s") }}
-              value: "/var/snap/microk8s/common/var/lib/kubelet"
-              {{- else }}
-              value: "/var/lib/kubelet"
-              {{- end }}
+              value: {{ include "common.configs.kubeletDir" . | quote }}
             - name: K8S_DIST
-              value: "{{ .Values.kubernetesDistro }}"
+              value: {{ .Values.global.kubernetesDistro | quote }}
             - name: VERBOSE
-              value: "{{ .Values.verbose }}"
+              value: {{ .Values.verbose | quote }}
