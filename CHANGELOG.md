@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use helm for generating devel manifests
 - Harden RBAC permissions
 - Support custom kubelet dir
+- Container images can now be built directly from the repository without dependencies on previous build steps
 
 ## [0.8.15] - 2022-06-16
 

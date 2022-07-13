@@ -113,9 +113,6 @@ jobs:
         run: |
           python -m pip install -r requirements/ci_merge-requirements.txt
           KADALU_VERSION=${{ env.kadalu_version }} make cli-build
-      - name: Copy all requirements files to root of the repo for building images
-        run: |
-          cp -r requirements/* .
       -
         name: Build Builder Image
         uses: docker/build-push-action@v2
