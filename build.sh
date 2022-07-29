@@ -9,7 +9,7 @@ RUNTIME_CMD=${RUNTIME_CMD:-docker}
 # Use buildx for docker to simulate release script in github workflow
 # Requires Docker >=v19.03
 PLATFORM=$(uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|' | sed 's|armv7l|arm/v7|')
-build="buildx build --platform linux/$PLATFORM --load"
+build="buildx build --no-cache --platform linux/$PLATFORM --load"
 if [[ "${RUNTIME_CMD}" == "buildah" ]]; then
         build="bud"
 fi
