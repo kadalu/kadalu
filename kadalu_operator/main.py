@@ -775,10 +775,11 @@ def handle_modified(core_v1_client, obj):
 
     poolinfo = poolinfo_from_configmap(core_v1_client, obj["metadata"]["name"])
     if poolinfo is None:
-        logging.error(logf(
+        logging.warning(logf(
             "Pool config not found",
             pool_name=obj["metadata"]["name"]
         ))
+        handle_added(core_v1_client, obj)
         return
 
     if is_pool_mode_external(poolinfo["mode"]):
