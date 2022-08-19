@@ -34,14 +34,25 @@ ifneq ($(DISTRO),kubernetes)
 	filename_suffix=-$(DISTRO)
 endif
 
+define namespace
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: kadalu
+endef
+export namespace
+
 helm-manifest:
 	@echo ---------------------------------------------------------------------
+	@helm show crds helm/kadalu > manifests/kadalu-operator${filename_suffix}.yaml
+	@echo "$$namespace" >> manifests/kadalu-operator${filename_suffix}.yaml
 	@helm template --namespace kadalu helm/kadalu \
 		--set global.kubernetesDistro=${DISTRO} \
 		--set global.image.registry=${IMAGES_HUB} \
 		--set global.image.repository=${DOCKER_USER} \
 		--set operator.enabled=true \
-		--set .Chart.version=${KADALU_VERSION} > manifests/kadalu-operator${filename_suffix}.yaml
+		--set .Chart.version=${KADALU_VERSION} >> manifests/kadalu-operator${filename_suffix}.yaml
 	@helm template --namespace kadalu helm/kadalu \
         --set global.kubernetesDistro=${DISTRO} \
         --set global.image.registry=${IMAGES_HUB} \
