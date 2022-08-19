@@ -5,6 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: operator
+    app.kubernetes.io/part-of: kadalu
 spec:
   replicas: 1
   selector:
@@ -14,6 +15,7 @@ spec:
     metadata:
       labels:
         name: kadalu
+        app.kubernetes.io/part-of: kadalu
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8050"

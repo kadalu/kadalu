@@ -713,45 +713,17 @@ def get_num_pvs(storage_info_data):
     """
 
     volname = storage_info_data['volname']
-    cmd = None
-    if storage_info_data.get("type") == "External":
-        # We can't access external cluster and so query existing PVs which are
-        # using external storageclass
-        volname = "kadalu." + volname
-        jpath = ('jsonpath=\'{range .items[?(@.spec.storageClassName=="%s")]}'
-                 '{.spec.storageClassName}{"\\n"}{end}\'' % volname)
-        cmd = ["kubectl", "get", "pv", "-o", jpath]
-    else:
-        bricks = storage_info_data['bricks']
-        dbpath = "/bricks/" + volname + "/data/brick/stat.db"
-        query = ("select count(pvname) from pv_stats;")
-        cmd = [
-            "kubectl", "exec", "-i",
-            bricks[0]['node'].replace("." + volname, ""), "-c", "server",
-            "-nkadalu", "--", "sqlite3", dbpath, query
-        ]
+    volname = "kadalu." + volname
+    jpath = ('jsonpath=\'{range .items[?(@.spec.storageClassName=="%s")]}'
+                '{.spec.storageClassName}{"\\n"}{end}\'' % volname)
+    cmd = ["kubectl", "get", "pv", "-o", jpath]
 
     try:
         resp = utils_execute(cmd)
-        parts = resp.stdout.strip("'").split()
-        if storage_info_data.get("type") == "External":
-            return len(parts)
-        pv_count = int(parts[0])
-        return pv_count
+        pvs = resp.stdout.strip("'").split()
+        return len(pvs)
 
     except CommandError as msg:
-        # 1. If storage is created but no PV is carved then pv_stats table is not
-        # created in SQLITE3
-        # 2. If we fail to create 'server' pod then there'll be no 'server'
-        # container (this'll be hit if supplied 'storageClass' is invalid)
-        # 3. If 'server' pod does not have a host assigned,
-        # TODO: find out root cause, repro - use incorrect device and edit with
-        # correct device later
-        if msg.stderr.find("no such table") != -1 or msg.stderr.find(
-                "container not found") != -1 or msg.stderr.find(
-                "not have a host assigned") != -1:
-            # We are good to delete server pods
-            return 0
         logging.error(
             logf("Failed to get size details of the "
                  "storage \"%s\"" % volname,

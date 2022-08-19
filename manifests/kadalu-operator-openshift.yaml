@@ -161,6 +161,13 @@ rules:
       - kadalustorages
     verbs:
       - watch
+  - apiGroups:
+      - ""
+    resources:
+      - persistentvolumes
+    verbs:
+      - get
+      - list
 ---
 # Source: kadalu/charts/operator/templates/rbac.yaml
 # CSI External Attacher
@@ -364,6 +371,7 @@ metadata:
     app.kubernetes.io/part-of: kadalu
     app.kubernetes.io/name: kadalu-operator
     app.kubernetes.io/component: operator
+    app.kubernetes.io/part-of: kadalu
 spec:
   replicas: 1
   selector:
@@ -373,6 +381,7 @@ spec:
     metadata:
       labels:
         name: kadalu
+        app.kubernetes.io/part-of: kadalu
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8050"

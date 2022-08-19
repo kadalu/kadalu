@@ -31,7 +31,8 @@ class Metrics:
 def get_pod_data():
     """ Get pod and container info of all Pods in kadalu namespace """
 
-    cmd = ["kubectl", "get", "pods", "-nkadalu", "-ojson"]
+    cmd = ["kubectl", "get", "pods", "-l", "app.kubernetes.io/part-of=kadalu",
+            "-nkadalu", "-ojson"]
 
     try:
         resp = execute(cmd)
@@ -113,13 +114,14 @@ def get_storage_config_data():
                 key = key.rstrip(".info")
                 value = json.loads(value)
 
+                list_of_storages.append(key)
+                storage_type_data[key] = value["type"]
+
                 # TODO: Add metrics for external storage type
                 if value["type"] == "External":
                     continue
 
-                list_of_storages.append(key)
                 brick_data[key] = value["bricks"]
-                storage_type_data[key] = value["type"]
 
         storage_config_data["list_of_storages"] = list_of_storages
         storage_config_data["brick_data"] = brick_data
@@ -182,8 +184,10 @@ def set_default_values(metrics):
             "pvc": []
         }
 
-        storage_pool.update({"bricks": brick_data[storage]})
-        for brick in storage_pool.get("bricks"):
+        if brick_data.get(storage):
+            storage_pool.update({"bricks": brick_data[storage]})
+
+        for brick in storage_pool.get("bricks", []):
             brick.update({
                 "pod_phase": "unknown",
                 "memory_usage_in_bytes": -1,
