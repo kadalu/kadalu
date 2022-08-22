@@ -13,6 +13,7 @@ FROM python:3.10-slim-bullseye as prod
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
+    apt-get install -y --no-install-recommends procps && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
