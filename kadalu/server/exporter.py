@@ -3,7 +3,8 @@ import os
 
 import uvicorn
 from fastapi import FastAPI
-from kadalulib import logf, logging_setup
+
+from kadalu.common.utils import logf, logging_setup
 
 metrics_app = FastAPI()
 

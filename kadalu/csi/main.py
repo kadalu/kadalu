@@ -7,13 +7,14 @@ import signal
 import time
 from concurrent import futures
 
-import csi_pb2_grpc
 import grpc
-from controllerserver import ControllerServer
-from identityserver import IdentityServer
-from kadalulib import CommandException, logf, logging_setup
-from nodeserver import NodeServer
-from volumeutils import Pool
+
+from kadalu.csi import csi_pb2_grpc
+from kadalu.csi.controllerserver import ControllerServer
+from kadalu.csi.identityserver import IdentityServer
+from kadalu.common.utils import CommandException, logf, logging_setup
+from kadalu.csi.nodeserver import NodeServer
+from kadalu.csi.volumeutils import Pool
 
 _ONE_DAY_IN_SECONDS = 60 * 60 * 24
 

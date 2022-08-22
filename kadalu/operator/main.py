@@ -13,14 +13,13 @@ import uuid
 
 import urllib3
 from jinja2 import Template
-from kadalulib import CommandException
-from kadalulib import execute as lib_execute
-from kadalulib import (is_host_reachable, logf, logging_setup,
-                       send_analytics_tracker)
 from kubernetes import client, config, watch
 from urllib3.exceptions import NewConnectionError, ProtocolError
-from utils import CommandError
-from utils import execute as utils_execute
+
+from kadalu.common.utils import CommandException
+from kadalu.common.utils import execute
+from kadalu.common.utils import (is_host_reachable, logf, logging_setup,
+                                 send_analytics_tracker)
 
 LATEST_CRD_VERSION = 2
 NAMESPACE = os.environ.get("KADALU_NAMESPACE", "kadalu")
@@ -477,7 +476,7 @@ def deploy_server_pods(poolinfo, tolerations):
 
         filename = os.path.join(MANIFESTS_DIR, "server.yaml")
         template(filename, **template_args)
-        lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
+        execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed Server pod",
                           pool_name=poolinfo["name"],
                           manifest=filename,
@@ -495,7 +494,7 @@ def handle_external_storage_addition(poolinfo, tolerations):
 
     filepath = os.path.join(MANIFESTS_DIR, filename)
     template(filepath, **poolinfo)
-    lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filepath)
+    execute(KUBECTL_CMD, APPLY_CMD, "-f", filepath)
     logging.info(logf("Deployed External StorageClass",
                       pool_name=poolinfo["name"], manifest=filepath))
 
@@ -510,15 +509,15 @@ def get_server_pod_status(pool_name):
     cmd = ["kubectl", "get", "pods", "-nkadalu", "-ojson"]
 
     try:
-        resp = utils_execute(cmd)
-    except CommandError as err:
+        resp = execute(*cmd)
+    except CommandException as err:
         logging.error(logf(
             "Failed to execute the command",
             command=cmd,
             error=err
         ))
 
-    data = json.loads(resp.stdout)
+    data = json.loads(resp[0])
     pod_status = {}
     prefix = serverpod_name_pool_prefix(pool_name)
 
@@ -578,8 +577,8 @@ def backup_kadalu_storage_config_to_configmap():
     # Create a Snapshot
     cmd = ["kadalu", "config-snapshot", "create", "latest", "--overwrite"]
     try:
-        utils_execute(cmd)
-    except CommandError as err:
+        execute(*cmd)
+    except CommandException as err:
         logging.error(logf(
             "Failed to take Config Snapshot of Kadalu Storage.",
             error=err
@@ -589,8 +588,8 @@ def backup_kadalu_storage_config_to_configmap():
     # Create Archive (Change workdir to /var/lib/kadalu/config-snapshots)
     cmd = ["tar", "cvzf", "latest.tar.gz", "latest"]
     try:
-        utils_execute(cmd, cwd="/var/lib/kadalu/config-snapshots")
-    except CommandError as err:
+        execute(*cmd, cwd="/var/lib/kadalu/config-snapshots")
+    except CommandException as err:
         logging.error(logf(
             "Failed to archive of Kadalu Storage Config Snapshot.",
             error=err
@@ -602,8 +601,8 @@ def backup_kadalu_storage_config_to_configmap():
     cmd = ["kubectl", "create", "configmap", "kadalu-mgr",
            "--from-file=/var/lib/kadalu/config-snapshots/latest.tar.gz"]
     try:
-        utils_execute(cmd)
-    except CommandError as err:
+        execute(*cmd)
+    except CommandException as err:
         logging.error(logf(
             "Failed to add Kadalu Storage Config backup to Configmap.",
             error=err
@@ -635,7 +634,7 @@ def deploy_pool_service(poolinfo):
     """Deploy Services required for the Pool."""
     filename = os.path.join(MANIFESTS_DIR, "services.yaml")
     template(filename, namespace=NAMESPACE, pool_name=poolinfo["name"])
-    lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
+    execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
     logging.info(
         logf("Deployed Service",
              pool_name=poolinfo["name"], manifest=filename))
@@ -672,10 +671,10 @@ def kadalu_volume_create(poolinfo):
     ]
 
     try:
-        utils_execute(cmd)
+        execute(*cmd)
         logging.info(logf("Created a Kadalu Volume", command=" ".join(cmd)))
         return True
-    except CommandError as err:
+    except CommandException as err:
         logging.error(logf(
             "Failed to create kadalu volume",
             error=err,
@@ -822,7 +821,7 @@ def handle_modified(core_v1_client, obj):
 
     filename = os.path.join(MANIFESTS_DIR, "services.yaml")
     template(filename, namespace=NAMESPACE, pool_name=poolinfo["name"])
-    lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
+    execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
     logging.info(logf("Deployed Service", volname=poolinfo["name"],
                       manifest=filename))
 
@@ -869,7 +868,7 @@ def handle_deleted(core_v1_client, obj):
             delete_server_pods(poolinfo)
             filename = os.path.join(MANIFESTS_DIR, "services.yaml")
             template(filename, namespace=NAMESPACE, volname=poolinfo["name"])
-            lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
+            execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
             logging.info(
                 logf("Deleted Service", pool_name=poolinfo["name"],
                      manifest=filename))
@@ -904,14 +903,14 @@ def get_num_pvs(storage_info_data):
         ]
 
     try:
-        resp = utils_execute(cmd)
-        parts = resp.stdout.strip("'").split()
+        resp = execute(*cmd)
+        parts = resp[0].strip("'").split()
         if is_pool_mode_external(storage_info_data.get("mode")):
             return len(parts)
         pv_count = int(parts[0])
         return pv_count
 
-    except CommandError as msg:
+    except CommandException as msg:
         # 1. If storage is created but no PV is carved then pv_stats table is not
         # created in SQLITE3
         # 2. If we fail to create 'server' pod then there'll be no 'server'
@@ -976,7 +975,7 @@ def delete_server_pods(poolinfo):
 
         filename = os.path.join(MANIFESTS_DIR, "server.yaml")
         template(filename, **template_args)
-        lib_execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
+        execute(KUBECTL_CMD, DELETE_CMD, "-f", filename)
         logging.info(logf(
             "Deleted Server pod",
             pool_name=poolinfo["name"],
@@ -1014,7 +1013,7 @@ def delete_storage_class(pool_name, _):
     """
 
     sc_name = "kadalu." + pool_name
-    lib_execute(KUBECTL_CMD, DELETE_CMD, "sc", sc_name)
+    execute(KUBECTL_CMD, DELETE_CMD, "sc", sc_name)
     logging.info(logf(
         "Deleted Storage class",
         pool_name=pool_name
@@ -1029,12 +1028,12 @@ def csi_driver_object_api_version():
     cmd = ["kubectl", "get", "csidriver", "kadalu", "-ojson"]
 
     try:
-        resp = utils_execute(cmd)
-        csi_driver_data = json.loads(resp.stdout)
+        resp = execute(*cmd)
+        csi_driver_data = json.loads(resp[0])
         version = csi_driver_data["apiVersion"]
         return version[version.rfind("/")+1:]
 
-    except CommandError as err:
+    except CommandException as err:
         logging.error(logf(
             "Failed to get version of csi driver object",
             error=err
@@ -1107,7 +1106,7 @@ def deploy_csi_pods(core_v1_client):
         csi_driver_version = csi_driver_object_api_version()
         if csi_driver_version is not None and \
            csi_driver_version != "v1":
-            lib_execute(KUBECTL_CMD, DELETE_CMD, "csidriver", "kadalu")
+            execute(KUBECTL_CMD, DELETE_CMD, "csidriver", "kadalu")
             logging.info(logf(
                 "Deleted existing CSI Driver object",
                 csi_driver_version=csi_driver_version
@@ -1115,13 +1114,13 @@ def deploy_csi_pods(core_v1_client):
 
         filename = os.path.join(MANIFESTS_DIR, "csi-driver-object-v1.yaml")
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-        lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
+        execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
 
     elif api_instance.major > "1" or api_instance.major == "1" and \
        api_instance.minor >= "14":
         filename = os.path.join(MANIFESTS_DIR, "csi-driver-object.yaml")
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION)
-        lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
+        execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
 
     filename = os.path.join(MANIFESTS_DIR, "csi.yaml")
     docker_user = os.environ.get("DOCKER_USER", "kadalu")
@@ -1130,7 +1129,7 @@ def deploy_csi_pods(core_v1_client):
              images_hub=IMAGES_HUB,
              kubelet_dir=KUBELET_DIR, verbose=VERBOSE,)
 
-    lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
+    execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
     logging.info(logf("Deployed CSI Pods", manifest=filename))
 
 
@@ -1164,7 +1163,7 @@ def deploy_config_map(core_v1_client):
              uid=uid)
 
     if not upgrade:
-        lib_execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
+        execute(KUBECTL_CMD, CREATE_CMD, "-f", filename)
     logging.info(logf("ConfigMap Deployed", manifest=filename, uid=uid, upgrade=upgrade))
     return uid, upgrade
 
@@ -1192,7 +1191,7 @@ def deploy_storage_class(poolinfo):
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
                  pool_name=poolinfo["name"],
                  kadalu_format=poolinfo["kadalu_format"])
-        lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
+        execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
 
 
@@ -1202,7 +1201,7 @@ def add_tolerations(resource, name, tolerations):
         return
     patch = {"spec": {"template": {"spec": {"tolerations": tolerations}}}}
     try:
-        lib_execute(KUBECTL_CMD, PATCH_CMD, resource, name, "-p", json.dumps(patch), "--type=merge")
+        execute(KUBECTL_CMD, PATCH_CMD, resource, name, "-p", json.dumps(patch), "--type=merge")
     except CommandException as err:
         errmsg = f"Unable to patch {resource}/{name} with tolerations \
         {str(tolerations)}"
@@ -1216,8 +1215,8 @@ def create_and_login_kadalu_storage_user(username, password):
     """Create Kadalu Storage user and login"""
     cmd = ["kadalu","user", "create", username, f"--password={password}"]
     try:
-        utils_execute(cmd)
-    except CommandError as err:
+        execute(*cmd)
+    except CommandException as err:
         # Do not exit on this error. If User creation failed with
         # already exists error then the next command will succeed.
         # Any other error here will also cause error for the next command.
@@ -1225,8 +1224,8 @@ def create_and_login_kadalu_storage_user(username, password):
 
     cmd = ["kadalu", "user", "login", "admin", "--password=kadalu"]
     try:
-        utils_execute(cmd)
-    except CommandError as err:
+        execute(*cmd)
+    except CommandException as err:
         logging.error(logf("Failed to login user", error=err))
         sys.exit(-1)
 

@@ -4,8 +4,8 @@ import shutil
 import argparse
 
 from errno import ENOTCONN
-from volumeutils import PV
-from kadalulib import retry_errors
+from kadalu.csi.volumeutils import PV
+from kadalu.common.utils import retry_errors
 
 
 def get_archived_pvs(pool_name, pv_name):

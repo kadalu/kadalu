@@ -1,0 +1,26 @@
+ARG base_version="latest"
+
+FROM kadalu/base:${base_version} as base
+
+RUN apt-get update -yq && \
+    apt-get install -y --no-install-recommends attr xfsprogs libtirpc3 sqlite3 liburcu6 curl && \
+    apt-get -y clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /kadalu/templates /kadalu/volfiles
+RUN mkdir -p /var/run/gluster /var/log/glusterfs
+
+ARG version="(unknown)"
+# Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')
+ARG builddate="(unknown)"
+
+LABEL build-date="${builddate}"
+LABEL io.k8s.description="KaDalu container (Storage Unit)"
+LABEL name="kadalu-server"
+LABEL Summary="KaDalu Server"
+LABEL vcs-type="git"
+LABEL vcs-url="https://github.com/kadalu/kadalu"
+LABEL vendor="kadalu"
+LABEL version="${version}"
+
+ENTRYPOINT ["python3", "/usr/bin/kadalu-server"]

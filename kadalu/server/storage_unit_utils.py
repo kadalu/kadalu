@@ -6,7 +6,8 @@ import os
 import sys
 
 import xattr
-from kadalulib import CommandException, execute, logf
+
+from kadalu.common.utils import CommandException, execute, logf
 
 # noqa # pylint: disable=I1101
 MKFS_XFS_CMD = "/sbin/mkfs.xfs"

@@ -9,13 +9,14 @@ import json
 import logging
 import os
 
-import metrics as storage_metrics
 import requests
 import uvicorn
 from fastapi import FastAPI
-from kadalulib import logf, logging_setup
 from prometheus_client import make_asgi_app
-from utils import CommandError, execute
+
+import kadalu.operator.metrics as storage_metrics
+from kadalu.common.utils import logf, logging_setup
+from kadalu.operator.utils import CommandError, execute
 
 metrics_app = FastAPI()
 
