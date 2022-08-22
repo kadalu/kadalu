@@ -6,18 +6,20 @@ Prepares, Validates and then starts the Moana Agent Process
 
 import os
 
-from storage_unit_utils import (
+from kadalu.server.storage_unit_utils import (
     create_and_mount_storage_unit,
     create_storage_unit_dir,
     verify_storage_unit_dir_xattr_support
 )
-from kadalulib import Monitor, Proc, logging_setup
+from kadalu.common.utils import Monitor, Proc, logging_setup
 
 
 def start_server_process():
     """
     Start Moana Agent Process and Exporter Service
     """
+    logging_setup()
+
     storage_unit_device = os.environ.get("STORAGE_UNIT_DEVICE", None)
     storage_unit_path = os.environ["STORAGE_UNIT_PATH"]
     if storage_unit_device is not None and storage_unit_device != "":
@@ -39,5 +41,4 @@ def start_server_process():
 
 
 if __name__ == "__main__":
-    logging_setup()
     start_server_process()

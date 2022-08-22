@@ -5,11 +5,12 @@ import logging
 import os
 import time
 
-import csi_pb2
-import csi_pb2_grpc
 import grpc
-from kadalulib import logf
-from volumeutils import PersistentVolume, PvException
+
+from kadalu.csi import csi_pb2
+from kadalu.csi import csi_pb2_grpc
+from kadalu.common.utils import logf
+from kadalu.csi.volumeutils import PersistentVolume, PvException
 
 
 # noqa # pylint: disable=too-many-locals

@@ -55,7 +55,6 @@ function build_container()
                  "${build_args[@]}" \
                  --network host \
                  -f "$DOCKERFILE" \
-                 --target prod \
                  . || exit 1
 }
 
@@ -80,14 +79,14 @@ fi
 echo "Building base builder image - This may take a while"
 
 $RUNTIME_CMD $build \
-	     -t "${DOCKER_USER}/builder:latest" "${build_args[@]}" \
-	     --network host -f extras/Dockerfile.builder .
+	     -t "${DOCKER_USER}/base:latest" "${build_args[@]}" \
+	     --network host -f container_images/Dockerfile.base.moana .
 
 echo "Building kadalu-server with version tag as ${VERSION}";
-build_container "kadalu-server" "server/Dockerfile" ${KADALU_VERSION}
+build_container "kadalu-server" "container_images/Dockerfile.server.moana" ${KADALU_VERSION}
 
 echo "Building kadalu-csi with version tag as ${VERSION}";
-build_container "kadalu-csi" "csi/Dockerfile" ${KADALU_VERSION}
+build_container "kadalu-csi" "container_images/Dockerfile.csi.moana" ${KADALU_VERSION}
 
 echo "Building kadalu-operator with version tag as ${VERSION}";
-build_container "kadalu-operator" "kadalu_operator/Dockerfile" ${KADALU_VERSION}
+build_container "kadalu-operator" "container_images/Dockerfile.operator.moana" ${KADALU_VERSION}

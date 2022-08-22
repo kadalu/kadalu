@@ -1,10 +1,11 @@
 import os
-import sys
 
-from kadalulib import Monitor, Proc, logging_setup
+from kadalu.common.utils import Monitor, Proc, logging_setup
 
 
 def main():
+    logging_setup()
+
     curr_dir = os.path.dirname(__file__)
 
     mon = Monitor()
@@ -20,5 +21,4 @@ def main():
 
 
 if __name__ == "__main__":
-    logging_setup()
     main()

@@ -13,13 +13,16 @@ import time
 from errno import ENOTCONN
 from pathlib import Path
 
-import csi_pb2
 import xxhash
 from jinja2 import Template
-from kadalulib import (PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
-                       CommandException, SizeAccounting, execute,
-                       is_gluster_mount_proc_running, logf, makedirs,
-                       reachable_host, retry_errors)
+
+from kadalu.csi import csi_pb2
+from kadalu.common.utils import (
+    PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
+    CommandException, SizeAccounting, execute,
+    is_gluster_mount_proc_running, logf, makedirs,
+    reachable_host, retry_errors
+)
 
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/bin/mount"

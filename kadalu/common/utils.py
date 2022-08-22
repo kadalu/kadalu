@@ -138,7 +138,7 @@ def get_volume_path(voltype, volhash, volname):
     return f"{voltype}/{volhash[0:2]}/{volhash[2:4]}/{volname}"
 
 
-def execute(*cmd):
+def execute(*cmd, cwd=None):
     """
     Execute command. Returns output and error.
     Raises CommandException on error
@@ -146,6 +146,7 @@ def execute(*cmd):
     with subprocess.Popen(cmd,
                           stderr=subprocess.PIPE,
                           stdout=subprocess.PIPE,
+                          cwd=cwd,
                           universal_newlines=True) as proc:
         out, err = proc.communicate()
         if proc.returncode != 0:

@@ -1,0 +1,34 @@
+ARG base_version="latest"
+
+FROM kadalu/base:${base_version} as base
+
+RUN python3 -m pip install --no-cache-dir googleapis-common-protos==1.53.0 grpcio==1.38.1
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update -yq && \
+    apt-get install -y --no-install-recommends sqlite3 xfsprogs attr libtirpc3 bash inotify-tools ssh liburcu6 curl && \
+    apt-get -y clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /kadalu/volfiles /kadalu/templates
+RUN mkdir -p /var/log/glusterfs /var/run/gluster
+
+COPY templates/Replica1.client.vol.j2 /kadalu/templates/
+COPY templates/Replica2.client.vol.j2 /kadalu/templates/
+COPY templates/Replica3.client.vol.j2 /kadalu/templates/
+COPY templates/Disperse.client.vol.j2 /kadalu/templates/
+
+ARG version="(unknown)"
+# Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')
+ARG builddate="(unknown)"
+
+LABEL build-date="${builddate}"
+LABEL io.k8s.description="KaDalu CSI driver"
+LABEL name="kadalu-csi"
+LABEL Summary="KaDalu CSI driver"
+LABEL vcs-type="git"
+LABEL vcs-url="https://github.com/kadalu/kadalu"
+LABEL vendor="kadalu"
+LABEL version="${version}"
+
+ENTRYPOINT ["python3", "/usr/bin/kadalu-csi"]

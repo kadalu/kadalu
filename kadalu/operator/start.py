@@ -4,9 +4,10 @@ import base64
 import sys
 import logging
 
-from kadalulib import Monitor, Proc, logging_setup, logf
-from utils import CommandError
-from utils import execute as utils_execute
+from kadalu.common.utils import (
+    Monitor, Proc, logging_setup, logf, execute,
+    CommandException
+)
 
 
 def restore_kadalu_storage_config_from_configmap():
@@ -17,9 +18,9 @@ def restore_kadalu_storage_config_from_configmap():
 
     cmd = ["kubectl", "get", "configmap", "kadalu-mgr", "--output=json"]
     try:
-        resp = utils_execute(cmd)
-    except CommandError as err:
-        if "not found" in err.stderr:
+        resp = execute(*cmd)
+    except CommandException as err:
+        if "not found" in err.err:
             # No backups found in Configmap so fresh setup.
             return
 
@@ -33,15 +34,15 @@ def restore_kadalu_storage_config_from_configmap():
 
     os.makedirs(os.path.dirname(filepath), mode = 0o700, exist_ok = True)
 
-    data = json.loads(resp.stdout)
+    data = json.loads(resp[0])
     with open(filepath, "wb") as cm_file:
         cm_file.write(base64.b64decode(data["binaryData"]["latest.tar.gz"]))
 
     # Extract Archive (Change workdir to /var/lib/kadalu/config-snapshots)
     cmd = ["tar", "xvzf", "latest.tar.gz", "latest"]
     try:
-        utils_execute(cmd, cwd="/var/lib/kadalu/config-snapshots")
-    except CommandError as err:
+        execute(*cmd, cwd="/var/lib/kadalu/config-snapshots")
+    except CommandException as err:
         logging.error(logf(
             "Failed to extract Kadalu Storage Configurations backup",
             command=cmd,
@@ -51,8 +52,8 @@ def restore_kadalu_storage_config_from_configmap():
 
     cmd = ["kadalu", "config-snapshot", "restore", "latest"]
     try:
-        utils_execute(cmd)
-    except CommandError as err:
+        execute(*cmd)
+    except CommandException as err:
         logging.error(logf(
             "Failed to restore Kadalu Storage Configurations.",
             command=cmd,
@@ -68,6 +69,8 @@ def restore_kadalu_storage_config_from_configmap():
 
 # pylint: disable=missing-function-docstring
 def main():
+    logging_setup()
+
     curr_dir = os.path.dirname(__file__)
 
     # Restore if previously created Kadalu Storage
@@ -85,5 +88,4 @@ def main():
 
 
 if __name__ == "__main__":
-    logging_setup()
     main()
