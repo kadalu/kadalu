@@ -27,6 +27,17 @@ spec:
         app.kubernetes.io/component: csi-driver
         app.kubernetes.io/name: kadalu-csi-provisioner
     spec:
+{%- if tolerations %}
+      tolerations:
+  {%- for toleration in tolerations %}
+        - key: {{ toleration.get("key") }}
+          operator: {{ toleration.get("operator") }}
+          {%- if toleration.get("value") %}
+          value: {{ toleration.get("value") }}
+          {%- endif %}
+          effect: {{ toleration.get("effect") }}
+  {%- endfor %}
+{%- endif %}
       serviceAccountName: kadalu-csi-provisioner
       containers:
         - name: csi-provisioner

@@ -17,6 +17,11 @@ metadata:
  # This will be used as name of PV Hosting Volume
   name: storage1
 spec:
+  tolerations:
+  - key: "key1"
+    operator: "Equal"
+    value: "value1"
+    effect: "NoSchedule"
   type: Replica1
   storage:
     - node: kube1
@@ -31,6 +36,10 @@ For now,
 
 The above 3 fields will be common for config files for all different modes.
 
+=== Tolerations
+
+* For `.spec.tolerations` refer link:https://github.com/kubernetes-client/python/blob/da6076/kubernetes/docs/V1Toleration.md[Toleration Spec]
+* These tolerations will get added to `server` pods and typical use-case includes usage of tainted nodes from which kadalu storage is created
 
 == Native mode
 

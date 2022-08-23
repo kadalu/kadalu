@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Harden RBAC permissions
 - Support custom kubelet dir
 - Container images can now be built directly from the repository without dependencies on previous build steps
+- Enable and correctly handle tolerations supplied in KadaluStorage CR
 
 ## [0.8.15] - 2022-06-16
 

@@ -12,7 +12,6 @@ import uuid
 
 import urllib3
 from jinja2 import Template
-from kadalulib import CommandException
 from kadalulib import execute as lib_execute
 from kadalulib import (is_host_reachable, logf, logging_setup,
                        send_analytics_tracker)
@@ -449,6 +448,7 @@ def deploy_server_pods(obj):
         template_args["brick_node_id"] = storage["node_id"]
         template_args["k8s_dist"] = K8S_DIST
         template_args["verbose"] = VERBOSE
+        template_args["tolerations"] = tolerations
 
         filename = os.path.join(MANIFESTS_DIR, "server.yaml")
         template(filename, **template_args)
@@ -457,8 +457,6 @@ def deploy_server_pods(obj):
                           volname=volname,
                           manifest=filename,
                           node=storage.get("node", "")))
-        add_tolerations("statefulsets", serverpod_name, tolerations)
-    add_tolerations("daemonset", NODE_PLUGIN, tolerations)
 
 
 def handle_external_storage_addition(core_v1_client, obj):
@@ -466,7 +464,6 @@ def handle_external_storage_addition(core_v1_client, obj):
     volname = obj["metadata"]["name"]
     details = obj["spec"]["details"]
     pv_reclaim_policy = obj["spec"].get("pvReclaimPolicy", "delete")
-    tolerations = obj["spec"].get("tolerations")
 
     hosts = []
     ghost = details.get("gluster_host", None)
@@ -502,7 +499,6 @@ def handle_external_storage_addition(core_v1_client, obj):
     template(filename, **data)
     lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
     logging.info(logf("Deployed External StorageClass", volname=volname, manifest=filename))
-    add_tolerations("daemonset", NODE_PLUGIN, tolerations)
 
 
 def handle_added(core_v1_client, obj):
@@ -1028,22 +1024,6 @@ def deploy_storage_class(obj):
                  kadalu_format=obj["spec"].get("kadalu_format", "native"))
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
-
-def add_tolerations(resource, name, tolerations):
-    """Adds tolerations to kubernetes resource/name object"""
-    if tolerations is None:
-        return
-    patch = {"spec": {"template": {"spec": {"tolerations": tolerations}}}}
-    try:
-        lib_execute(KUBECTL_CMD, PATCH_CMD, resource, name, "-p", json.dumps(patch), "--type=merge")
-    except CommandException as err:
-        errmsg = f"Unable to patch {resource}/{name} with tolerations \
-        {str(tolerations)}"
-        logging.error(logf(errmsg, error=err))
-    logging.info(logf("Added tolerations", resource=resource, name=name,
-        tolerations=str(tolerations)))
-    return
-
 
 def main():
     """Main"""
