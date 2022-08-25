@@ -1,0 +1,118 @@
+name: "On Pull Request"
+
+on:
+  pull_request:
+    branches:
+      - moana
+    paths-ignore:
+      - 'doc/**'
+      - 'extras/**'
+      - '!extras/Dockerfile.builder'
+      - '**.md'
+
+# Skip based on commit msg is inbuilt into Github Runner
+# Visit: https://github.blog/changelog/2021-02-08-github-actions-skip-pull-request-and-push-workflows-with-skip-ci/
+
+jobs:
+  # Primarily used to save info required for any jobs/steps
+  get-info:
+    name: Save required info
+    runs-on: ubuntu-latest
+    outputs:
+      files: ${{ steps.files.outputs.out }}
+      msg: ${{ steps.msg.outputs.out }}
+    steps:
+      - id: files
+        run: |
+          URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files"
+          FILES=$(curl -s -X GET -G $URL | jq -r '.[] | .filename')
+          echo ::set-output name=out::$FILES
+      - id: msg
+        run: |
+          URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/commits"
+          MSG=$(curl -s -X GET -G $URL | jq -r '.[] | .commit.message')
+          echo ::set-output name=out::$MSG
+
+  # pylint:
+  #   name: Run pylint
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - name: Set up Python
+  #     uses: actions/setup-python@v1
+  #     with:
+  #       python-version: '3.10'
+
+  #   - uses: actions/cache@v2
+  #     with:
+  #       path: ${{ env.pythonLocation }}
+  #       key: ${{ env.pythonLocation }}-${{ hashFiles('requirements/ci_submit-requirements.txt') }}-${{ hashFiles('requirements/ci_merge-requirements.txt') }}
+
+  #   - name: Install dependencies pylint
+  #     run: |
+  #         python -m pip install --upgrade --upgrade-strategy eager -r requirements/ci_submit-requirements.txt -r requirements/ci_merge-requirements.txt -e ./requirements
+
+  #   - name: Run pylint
+  #     run: make pylint
+
+  run-on-minikube:
+    name: kube 1.22.0
+    runs-on: ubuntu-latest
+    needs: get-info
+    env:
+      KUBE_VERSION: v1.20.0
+      # No script currently uses COMMIT_MSG
+      COMMIT_MSG: ${{needs.get-info.outputs.msg}}
+      FILES: ${{needs.get-info.outputs.files}}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Docker Dependencies
+      run: sudo apt-get install -y conntrack ruby socat
+    # CLI Tests
+    - name: Install Binnacle and build kubectl-kadalu
+      run: |
+        curl -L https://github.com/kadalu/binnacle/releases/latest/download/binnacle -o binnacle
+        chmod +x ./binnacle
+        sudo mv ./binnacle /usr/local/bin/binnacle
+        binnacle --version
+        make cli-build
+    - name: kubectl-kadalu Tests
+      run: binnacle -v cli/tests/storage_add.t
+    - name: Build Container images
+      run: binnacle -v tests_v2/container_images.t
+    - name: Build locally
+      id: build_local
+      run: |
+        # Conditionally build test containers if PR includes tests/**/Dockerfile
+        CONTAINERS_FOR=''
+        if grep -e '\btests.*Dockerfile\b' <<< "$FILES"; then
+          CONTAINERS_FOR=TESTING
+        fi
+        # In build script, only test containers will be built if this variable is set
+        if [[ "$CONTAINERS_FOR" == "TESTING" ]]; then
+          CONTAINERS_FOR=TESTING make test-containers
+        fi
+        echo Completed building containers
+    - name: Kubernetes (Minikube) setup
+      run: sudo binnacle -v tests_v2/k8s_setup.t
+    - name: Generate Manifests
+      run: VERBOSE="yes" make gen-manifest
+    - name: Operator and CSI install tests
+      run: sudo binnacle -v tests_v2/operator_csi_install.t
+    # - name: Run tests
+    #   run: tests/travis-test.sh $KUBE_VERSION
+    # - name: Cleanup
+    #   run: tests/cleanup.sh $KUBE_VERSION
+
+    # CLI Tests (run conditionally)
+    # - name: Setup Minikube (CLI Test)
+    #   run: |
+    #     sudo sysctl fs.protected_regular=0
+    #     tests/setup.sh $KUBE_VERSION
+    #   if: "contains(needs.get-info.outputs.files, 'cli')"
+    # - name: Run tests (CLI Test)
+    #   run: tests/travis-test.sh $KUBE_VERSION cli
+    #   if: "contains(needs.get-info.outputs.files, 'cli')"
+    # - name: Cleanup (CLI Test)
+    #   run: tests/cleanup.sh $KUBE_VERSION
+    #   if: "contains(needs.get-info.outputs.files, 'cli')"
