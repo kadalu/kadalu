@@ -76,12 +76,6 @@ if [[ "$CONTAINERS_FOR" == "TESTING" ]]; then
   exit 0
 fi
 
-echo "Building base builder image - This may take a while"
-
-$RUNTIME_CMD $build \
-	     -t "${DOCKER_USER}/base:latest" "${build_args[@]}" \
-	     --network host -f container_images/Dockerfile.base.moana .
-
 echo "Building kadalu-server with version tag as ${VERSION}";
 build_container "kadalu-server" "container_images/Dockerfile.server.moana" ${KADALU_VERSION}
 

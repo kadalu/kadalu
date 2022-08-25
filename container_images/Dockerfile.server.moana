@@ -1,14 +1,29 @@
+FROM ubuntu:20.04
+
 ARG base_version="latest"
+ENV APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=DontWarn
+ENV DEBIAN_FRONTEND=noninteractive
 
-FROM kadalu/base:${base_version} as base
-
-RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends attr xfsprogs libtirpc3 sqlite3 liburcu6 curl && \
-    apt-get -y clean && \
-    rm -rf /var/lib/apt/lists/*
+COPY kadalu /root/kadalu
+COPY setup.py /root/
+COPY scripts /usr/libexec/kadalu
 
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
 RUN mkdir -p /var/run/gluster /var/log/glusterfs
+RUN chmod +x /usr/libexec/kadalu/*.sh
+
+RUN apt-get update -yq && \
+    apt-get install -y --no-install-recommends curl ca-certificates gnupg attr xfsprogs libtirpc3 sqlite3 liburcu6 python3-setuptools python3-pip python3-dev build-essential && \
+    curl -sL --compressed "https://kadalu.tech/pkgs/1/ubuntu/20.04/KEY.gpg" -o /tmp/kadalu_apt.gpg && \
+    apt-key add /tmp/kadalu_apt.gpg && \
+    curl -sL --compressed -o /etc/apt/sources.list.d/kadalu_storage.list "https://kadalu.tech/pkgs/1/ubuntu/20.04/sources.list" && \
+    apt-get update -yq && \
+    apt-get install -y --no-install-recommends kadalu-storage && \
+    cd /root/ && python3 setup.py install && \
+    apt-get purge -y build-essential && \
+    apt autoremove -y && \
+    apt-get -y clean && \
+    rm -rf /var/lib/apt/lists/*
 
 ARG version="(unknown)"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')
@@ -23,4 +38,4 @@ LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="kadalu"
 LABEL version="${version}"
 
-ENTRYPOINT ["python3", "/usr/bin/kadalu-server"]
+ENTRYPOINT ["/usr/local/bin/kadalu-server"]

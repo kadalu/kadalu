@@ -5,9 +5,9 @@ from setuptools import setup
 setup(
     name="kadalu",
     version="0.8.4",
-    packages=["kadalu"],
+    packages=["kadalu", "kadalu.operator", "kadalu.csi", "kadalu.server", "kadalu.common"],
     include_package_data=True,
-    install_requires=[],
+    install_requires=["xxhash", "jinja2", "pyxattr", "uvicorn", "fastapi"],
     entry_points={
         "console_scripts": [
             "kadalu-operator = kadalu.operator.start:main",

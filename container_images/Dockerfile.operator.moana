@@ -1,25 +1,34 @@
+FROM ubuntu:20.04
+
 ARG base_version="latest"
 
-FROM kadalu/base:${base_version} as base
-
+ENV APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=DontWarn
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends curl tar && \
-    apt-get -y clean && \
-    rm -rf /var/lib/apt/lists/*
 
+COPY kadalu /root/kadalu
+COPY setup.py /root/
+COPY scripts /usr/libexec/kadalu
+COPY templates             /kadalu/templates
+COPY cli/build/kubectl-kadalu               /usr/bin/kubectl-kadalu
+
+RUN chmod +x /usr/libexec/kadalu/*.sh
 RUN mkdir -p /kadalu/manifests
 
-COPY templates/services.yaml.j2             /kadalu/templates/services.yaml.j2
-COPY templates/server.yaml.j2               /kadalu/templates/server.yaml.j2
-COPY templates/csi.yaml.j2                  /kadalu/templates/csi.yaml.j2
-COPY templates/csi-driver-object.yaml.j2    /kadalu/templates/csi-driver-object.yaml.j2
-COPY templates/csi-driver-object-v1.yaml.j2    /kadalu/templates/csi-driver-object-v1.yaml.j2
-COPY templates/configmap.yaml.j2               /kadalu/templates/configmap.yaml.j2
-COPY templates/storageclass-kadalu.custom.yaml.j2    /kadalu/templates/storageclass-kadalu.custom.yaml.j2
-COPY templates/external-storageclass-gluster.yaml.j2         /kadalu/templates/external-storageclass-gluster.yaml.j2
-COPY templates/external-storageclass-kadalu.yaml.j2         /kadalu/templates/external-storageclass-kadalu.yaml.j2
-COPY cli/build/kubectl-kadalu               /usr/bin/kubectl-kadalu
+RUN apt-get update -yq && \
+    apt-get install -y --no-install-recommends curl ca-certificates gnupg tar python3-setuptools python3-pip python3-dev build-essential && \
+    curl -sL --compressed "https://kadalu.tech/pkgs/1/ubuntu/20.04/KEY.gpg" -o /tmp/kadalu_apt.gpg && \
+    apt-key add /tmp/kadalu_apt.gpg && \
+    curl -sL --compressed -o /etc/apt/sources.list.d/kadalu_storage.list "https://kadalu.tech/pkgs/1/ubuntu/20.04/sources.list" && \
+    apt-get update -yq && \
+    apt-get install -y --no-install-recommends kadalu-storage && \
+    pip install kubernetes==11.0.0 prometheus-client==0.11.0 && \
+    cd /root/ && python3 setup.py install && \
+    curl -L https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/`uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|' | sed 's|armv7l|arm|'`/kubectl -o /usr/bin/kubectl && \
+    chmod +x /usr/bin/kubectl && \
+    apt-get purge -y build-essential && \
+    apt autoremove -y && \
+    apt-get -y clean && \
+    rm -rf /var/lib/apt/lists/*
 
 ARG version="(unknown)"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')
@@ -34,4 +43,4 @@ LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="kadalu"
 LABEL version="${version}"
 
-ENTRYPOINT ["python3", "/usr/bin/kadalu-operator"]
+ENTRYPOINT ["/usr/local/bin/kadalu-operator"]
