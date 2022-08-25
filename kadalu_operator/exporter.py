@@ -31,7 +31,8 @@ class Metrics:
 def get_pod_data():
     """ Get pod and container info of all Pods in kadalu namespace """
 
-    cmd = ["kubectl", "get", "pods", "-nkadalu", "-ojson"]
+    cmd = ["kubectl", "get", "pods", "-l", "app.kubernetes.io/part-of=kadalu",
+            "-nkadalu", "-ojson"]
 
     try:
         resp = execute(cmd)
@@ -100,33 +101,6 @@ def get_storage_config_data():
     storage_config_data = {}
     try:
         resp = execute(cmd)
-        config_data = json.loads(resp.stdout)
-
-        data = config_data['data']
-
-        list_of_storages = []
-        brick_data = {}
-        storage_type_data = {}
-
-        for key, value in data.items():
-            if key.endswith('info'):
-                key = key.rstrip(".info")
-                value = json.loads(value)
-
-                # TODO: Add metrics for external storage type
-                if value["type"] == "External":
-                    continue
-
-                list_of_storages.append(key)
-                brick_data[key] = value["bricks"]
-                storage_type_data[key] = value["type"]
-
-        storage_config_data["list_of_storages"] = list_of_storages
-        storage_config_data["brick_data"] = brick_data
-        storage_config_data["storage_type_data"] = storage_type_data
-
-        return storage_config_data
-
     except CommandError as err:
         logging.error(logf(
             "Failed to get brick data from configmap",
@@ -134,6 +108,33 @@ def get_storage_config_data():
         ))
         return None
 
+    config_data = json.loads(resp.stdout)
+
+    data = config_data['data']
+
+    list_of_storages = []
+    brick_data = {}
+    storage_type_data = {}
+
+    for key, value in data.items():
+        if key.endswith('info'):
+            key = key.rstrip(".info")
+            value = json.loads(value)
+
+            list_of_storages.append(key)
+            storage_type_data[key] = value["type"]
+
+            # There'll be no metrics wrt Pool for external type
+            if value["type"] == "External":
+                continue
+
+            brick_data[key] = value["bricks"]
+
+    storage_config_data["list_of_storages"] = list_of_storages
+    storage_config_data["brick_data"] = brick_data
+    storage_config_data["storage_type_data"] = storage_type_data
+
+    return storage_config_data
 
 def set_default_values(metrics):
     """
@@ -164,15 +165,15 @@ def set_default_values(metrics):
             })
 
     storage_config_data = get_storage_config_data()
-    list_of_storages = storage_config_data["list_of_storages"]
+    pools = storage_config_data["list_of_storages"]
     storage_type_data = storage_config_data["storage_type_data"]
     brick_data = storage_config_data["brick_data"]
 
-    for storage in list_of_storages:
+    for pool in pools:
 
         storage_pool = {
-            "name": storage,
-            "type": storage_type_data[storage],
+            "name": pool,
+            "type": storage_type_data[pool],
             "total_capacity_bytes": -1,
             "free_capacity_bytes": -1,
             "used_capacity_bytes": -1,
@@ -182,8 +183,9 @@ def set_default_values(metrics):
             "pvc": []
         }
 
-        storage_pool.update({"bricks": brick_data[storage]})
-        for brick in storage_pool.get("bricks"):
+        storage_pool.update({"bricks": brick_data.get(pool, "")})
+
+        for brick in storage_pool.get("bricks", []):
             brick.update({
                 "pod_phase": "unknown",
                 "memory_usage_in_bytes": -1,
@@ -279,7 +281,7 @@ def collect_all_metrics():
     set_default_values(metrics)
     set_operator_data(metrics)
 
-    pod_data = get_pod_data()
+    pod_data =get_pod_data()
     for pod_name, pod_details in pod_data.items():
 
         # skip GET request to operator
@@ -386,7 +388,7 @@ def collect_and_set_prometheus_metrics():
             storage_metrics.free_pvc_inodes.labels(
                 pvc["pvc_name"]).set(pvc["free_pvc_inodes"])
 
-        for brick in storage["bricks"]:
+        for brick in storage.get("bricks", []):
             storage_metrics.memory_usage.labels(
                 brick["node"].rstrip("."+storage["name"])).set(brick["memory_usage_in_bytes"])
             storage_metrics.cpu_usage.labels(

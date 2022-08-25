@@ -41,10 +41,9 @@ def metrics():
     }
 
     if os.environ.get("CSI_ROLE", "-") == "nodeplugin":
-        pod_name_path = '/etc/hostname'
-        with open(pod_name_path, 'r') as pod_fd:
-            pod_name = pod_fd.read().strip()
-            data["pod"].update({"pod_name": pod_name})
+        # pool & pvc details can be read from provisioner
+        # avoid sending redundant data from nodeplugins
+        return data
 
     # Handle condition for no storage & PVC,
     # sometimes storage name is not shown at /mnt until server is mounted.
