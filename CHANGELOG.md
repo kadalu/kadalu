@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Update Python modules dependencies for all components
+
 ## [0.8.16] - 2022-09-01
 
 - Use helm for generating devel manifests

@@ -385,7 +385,6 @@ class Monitor:
         """When SIGTERM/SIGINT received"""
         self.terminating = True
 
-    # noqa # pylint: disable=no-self-use
     def monitor_proc(self, state, terminating):
         """Monitor single process"""
         if not state.enabled:

@@ -137,6 +137,9 @@ function get_pvc_and_check() {
     kubectl delete $p --force
   done
 
+  # Display metrics output
+  display_metrics
+
   # delete PVCs
   for p in $(kubectl get pvc -o name -l type=${label}); do
     name=$(kubectl get $p -ojsonpath={'.spec.volumeName'})
@@ -456,9 +459,6 @@ case "${1:-}" in
 
     # Test Storage-Options
     # verify_storage_options
-
-    # Display metrics output
-    display_metrics
 
     # check for test failure
     check_test_fail
