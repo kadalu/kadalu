@@ -47,7 +47,7 @@ def validate(args):
 
     if storage_info_data is None:
         print("Aborting.....")
-        print("Invalid name. No such storage '%s' in Kadalu configmap." % args.name)
+        print(f"Invalid name. No such storage '{args.name}' in Kadalu configmap.")
         sys.exit(1)
 
 
@@ -64,7 +64,7 @@ def get_configmap_data(args):
 
         volname = args.name
         data = config_data['data']
-        storage_name = "%s.info" % volname
+        storage_name = f"{volname}.info"
         storage_info_data = data[storage_name]
 
         # Return data in 'dict' format

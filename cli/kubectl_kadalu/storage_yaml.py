@@ -65,16 +65,16 @@ def to_storage_yaml(data):
 
     if data["spec"].get("disperse", None) is not None:
         yaml += "  disperse:\n"
-        yaml += "    data: %d\n" % data["spec"]["disperse"]["data"]
-        yaml += "    redundancy: %d\n" % data["spec"]["disperse"]["redundancy"]
+        yaml += f'    data: {data["spec"]["disperse"]["data"]}\n'
+        yaml += f'    redundancy: {data["spec"]["disperse"]["redundancy"]}\n'
 
     if data["spec"].get("pvReclaimPolicy", None) is not None:
-        yaml +=  "  pvReclaimPolicy: %s\n" % data["spec"]["pvReclaimPolicy"]
+        yaml +=  f'  pvReclaimPolicy: {data["spec"]["pvReclaimPolicy"]}\n'
 
     if data["spec"].get("volume_id", None) is not None:
-        yaml +=  "  volume_id: %s\n" % data["spec"]["volume_id"]
+        yaml +=  f'  volume_id: {data["spec"]["volume_id"]}\n'
 
     if data["spec"].get("kadalu_format", None) is not None:
-        yaml +=  "  kadalu_format: %s\n" % data["spec"]["kadalu_format"]
+        yaml +=  f'  kadalu_format: {data["spec"]["kadalu_format"]}\n'
 
     return yaml

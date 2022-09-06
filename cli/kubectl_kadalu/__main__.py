@@ -81,13 +81,13 @@ def get_kadalu_version_in_pod(pod):
 
 def show_version():
     """Show version information"""
-    print("kubectl-kadalu plugin: %s" % VERSION)
+    print(f"kubectl-kadalu plugin: {VERSION}")
     pods = get_all_kadalu_pods()
     if pods:
         print("kadalu pod(s) versions")
         for pod in pods:
             version = get_kadalu_version_in_pod(pod)
-            print("%s: %s" %(pod, version))
+            print(f"{pod}: {version}")
 
 
 def version_set_args(name, parser):
@@ -107,7 +107,7 @@ def main():
             mod.validate(args)
             mod.run(args)
         except ModuleNotFoundError:
-            print('Invalid sub-command "%s"' % args.mode, file=sys.stderr)
+            print(f'Invalid sub-command "{args.mode}"', file=sys.stderr)
             sys.exit(1)
     except KeyboardInterrupt:
         return

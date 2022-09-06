@@ -3,6 +3,7 @@ KaDalu Operator: Once started, deploys required CSI drivers,
 bootstraps the ConfigMap and waits for the CRD update to create
 Server pods
 """
+# pylint: disable=too-many-lines
 import json
 import logging
 import os
@@ -16,9 +17,15 @@ from jinja2 import Template
 from kubernetes import client, config, watch
 from urllib3.exceptions import NewConnectionError, ProtocolError
 
-from kadalu.common.utils import CommandException
+from kadalu.common.utils import (
+    CommandException,
+    POOL_MODE_NATIVE,
+    POOL_MODE_EXTERNAL_GLUSTER,
+    POOL_MODE_EXTERNAL_KADALU,
+    POOL_MODE_NATIVE_NO_MGR
+)
 from kadalu.common.utils import execute
-from kadalu.common.utils import (is_host_reachable, logf, logging_setup,
+from kadalu.common.utils import (logf, logging_setup,
                                  send_analytics_tracker)
 
 LATEST_CRD_VERSION = 2
@@ -62,7 +69,7 @@ NODE_PLUGIN = "kadalu-csi-nodeplugin"
 def template(filename, **kwargs):
     """Substitute the template with provided fields"""
     content = ""
-    with open(filename + ".j2") as template_file:
+    with open(filename + ".j2", encoding="utf-8") as template_file:
         content = template_file.read()
 
     if kwargs.get("render", False):
@@ -126,13 +133,15 @@ def validate_ext_mode_details(obj):
         logging.error(logf("Incomplete Pool details provided."))
         return False
 
-    logging.debug(logf("External Storage %s successfully validated" % \
-                       obj["metadata"].get("name", "<unknown>")))
+    logging.debug(logf("External Storage is successfully validated",
+                       name=obj["metadata"].get("name", "<unknown>")))
     return True
 
 
 # pylint: disable=too-many-return-statements
 # pylint: disable=too-many-branches
+# pylint: disable=too-many-statements
+# pylint: disable=too-many-locals
 def validate_pool_request(obj):
     """Validate the Pool request for Replica options, number of Storage Units etc"""
     if not obj.get("spec", None):
@@ -234,8 +243,8 @@ def validate_pool_request(obj):
                                "config is not valid"))
             return False
 
-    logging.debug(logf("Storage %s successfully validated" % \
-                       obj["metadata"].get("name", "<unknown>")))
+    logging.debug(logf("Storage successfully validated",
+                       name=obj["metadata"].get("name", "<unknown>")))
     return True
 
 
@@ -652,13 +661,13 @@ def pool_exists(core_v1_client, pool_name):
 def kadalu_volume_create(poolinfo):
     """Handle Kadalu Storage Volume create"""
     if is_pool_mode_external(poolinfo["mode"]):
-        return
+        return False
 
     # TODO: Add intelligence to reach unreachable pods again
     if not wait_till_pod_start(poolinfo["name"]):
         logging.info(logf("Server pods were not properly deployed"))
         # TODO: Revert Storage Class, Server Pods etc
-        return
+        return False
 
     cmd = [
         "kadalu", "volume", "create",
@@ -798,10 +807,10 @@ def handle_modified(core_v1_client, obj):
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
 
-    if not configmap_data.data.get(f"{pool_name}.info", None):
+    if not configmap_data.data.get(f'{poolinfo["name"]}.info', None):
         logging.warning(logf(
             "Pool config not found",
-            pool_name=pool_name
+            pool_name=poolinfo["name"]
         ))
         # Volume doesn't exist yet, so create it
         handle_added(core_v1_client, obj)
@@ -890,6 +899,7 @@ def get_num_pvs(storage_info_data):
         # We can't access external cluster and so query existing PVs which are
         # using external storageclass
         pool_name = "kadalu." + pool_name
+        # pylint: disable=consider-using-f-string
         jpath = ('jsonpath=\'{range .items[?(@.spec.storageClassName=="%s")]}'
                  '{.spec.storageClassName}{"\\n"}{end}\'' % pool_name)
         cmd = ["kubectl", "get", "pv", "-o", jpath]
@@ -919,14 +929,14 @@ def get_num_pvs(storage_info_data):
         # 3. If 'server' pod does not have a host assigned,
         # TODO: find out root cause, repro - use incorrect device and edit with
         # correct device later
-        if msg.stderr.find("no such table") != -1 or msg.stderr.find(
-                "container not found") != -1 or msg.stderr.find(
+        if msg.err.find("no such table") != -1 or msg.err.find(
+                "container not found") != -1 or msg.err.find(
                 "not have a host assigned") != -1:
             # We are good to delete server pods
             return 0
         logging.error(
             logf("Failed to get size details of the "
-                 "storage \"%s\"" % pool_name,
+                 "storage", name=pool_name,
                  error=msg))
         # Return error as its -1
         return -1
@@ -996,7 +1006,7 @@ def delete_config_map(core_v1_client, obj):
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
 
-    poolinfo_file = "%s.info" % pool_name
+    poolinfo_file = f"{pool_name}.info"
     configmap_data.data[poolinfo_file] = None
 
     core_v1_client.patch_namespaced_config_map(

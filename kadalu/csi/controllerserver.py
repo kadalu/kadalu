@@ -223,6 +223,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         """Returns list of all PVCs with sizes existing in Kadalu Storage"""
 
         logging.debug(logf("ListVolumes request received", request=request))
+        # pylint: disable=global-statement
         global GEN
         # Need to check for no hostvol creation only once
         if GEN is None:
@@ -313,7 +314,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         """
         Controller plugin RPC call implementation of EXPAND_VOLUME
         """
-
+        # pylint: disable=too-many-return-statements
         start_time = time.time()
         logging.debug(logf(
             "Expand Volume request",

@@ -1,10 +1,12 @@
+"""Utility Script to remove Archived PVs"""
+
 import sys
 import os
 import shutil
 import argparse
 
 from errno import ENOTCONN
-from kadalu.csi.volumeutils import PV
+from kadalu.csi.volumeutils import PersistentVolume
 from kadalu.common.utils import retry_errors
 
 
@@ -13,7 +15,7 @@ def get_archived_pvs(pool_name, pv_name):
 
     archived_pvs = []
     try:
-        for pvol in PV.list(pool_name=pool_name):
+        for pvol in PersistentVolume.list(pool_name):
             if pvol is not None:
                 # With --pvc arg
                 if pv_name is not None and pv_name == pvol.name:
@@ -26,18 +28,18 @@ def get_archived_pvs(pool_name, pv_name):
 
         # Return -1 if no matched specified pvc
         if pv_name is not None:
-            sys.stderr.write("Specified PV %s is not found" % pv_name)
+            sys.stderr.write(f"Specified PV {pv_name} is not found")
             return -1
 
         # This return is for without --pvc.
         return archived_pvs
 
     except FileNotFoundError:
-        sys.stderr.write("Storage pool %s is not found" % pool_name)
+        sys.stderr.write(f"Storage pool {pool_name} is not found")
         return -1
 
 
-def delete_archived_pvs(pool_name, archived_pvs):
+def delete_archived_pvs(archived_pvs):
     """ Delete all archived pvs in archived_pvs """
 
     for pvol in archived_pvs:
@@ -74,11 +76,11 @@ def main():
         sys.exit()
 
     if archived_pvs:
-        sys.stdout.write("Found archived PVs at storage pool %s\n" % args.pool_name)
-        delete_archived_pvs(args.pool_name, archived_pvs)
-        sys.stdout.write("Completed deletion of archived pv(s) of storage-pool %s\n" %args.pool_name)
+        sys.stdout.write(f"Found archived PVs at storage pool {args.pool_name}\n")
+        delete_archived_pvs(archived_pvs)
+        sys.stdout.write(f"Completed deletion of archived pv(s) of storage-pool {args.pool_name}\n")
     else:
-        sys.stderr.write("No archived PVCs found at storage-pool %s" % args.pool_name)
+        sys.stderr.write(f"No archived PVCs found at storage-pool {args.pool_name}")
 
 
 if __name__ == "__main__":

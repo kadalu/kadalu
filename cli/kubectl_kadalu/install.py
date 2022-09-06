@@ -70,22 +70,22 @@ def run(args):
     if args.version and args.version == "devel":
         file_url = "https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests"
     elif args.version:
-        file_url = "https://github.com/kadalu/kadalu/releases/download/%s" % args.version
+        file_url = f"https://github.com/kadalu/kadalu/releases/download/{args.version}"
 
     if args.type and args.type != "kubernetes":
-        insttype = "-%s" % args.type
+        insttype = f"-{args.type}"
 
     operator_file = args.local_yaml
     if not operator_file:
-        operator_file = "%s/kadalu-operator%s.yaml" % (file_url, insttype)
+        operator_file = f"{file_url}/kadalu-operator{insttype}.yaml"
 
     csi_file = args.local_csi_yaml
     if not csi_file:
-        csi_file = "%s/csi-nodeplugin%s.yaml" % (file_url, insttype)
+        csi_file = f"{file_url}/csi-nodeplugin{insttype}.yaml"
 
     try:
         cmd = utils.kubectl_cmd(args) + ["apply", "-f", operator_file]
-        print("Executing '%s'" % " ".join(cmd))
+        print(f'Executing \'{" ".join(cmd)}\'')
         if args.dry_run:
             return
 
@@ -95,7 +95,7 @@ def run(args):
         print()
 
         cmd = utils.kubectl_cmd(args) + ["apply", "-f", csi_file]
-        print("Executing '%s'" % " ".join(cmd))
+        print('Executing \'{" ".join(cmd)}\'')
         if args.dry_run:
             return
 

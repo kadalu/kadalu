@@ -1,3 +1,5 @@
+"""CSI Metrics"""
+
 import logging
 import os
 
@@ -15,6 +17,7 @@ def metrics():
     Gathers storage and pvcs metrics.
     Starts process by exposing the data collected in port 8050 at '/_api/metrics'.
     """
+    # pylint: disable=too-many-locals
 
     data = {
         "pod": {},
@@ -28,12 +31,12 @@ def metrics():
 
     memory_usage_file_path = '/sys/fs/cgroup/memory/memory.usage_in_bytes'
     if os.path.exists(memory_usage_file_path):
-        with open(memory_usage_file_path, 'r') as memory_fd:
+        with open(memory_usage_file_path, 'r', encoding="utf-8") as memory_fd:
             memory_usage_in_bytes = int(memory_fd.read().strip())
 
     cpu_usage_file_path = '/sys/fs/cgroup/cpu/cpuacct.usage'
     if os.path.exists(cpu_usage_file_path):
-        with open(cpu_usage_file_path, 'r') as cpu_fd:
+        with open(cpu_usage_file_path, 'r', encoding="utf-8") as cpu_fd:
             cpu_usage_in_nanoseconds = int(cpu_fd.read().strip())
 
     data["pod"] = {
@@ -43,7 +46,7 @@ def metrics():
 
     if os.environ.get("CSI_ROLE", "-") == "nodeplugin":
         pod_name_path = '/etc/hostname'
-        with open(pod_name_path, 'r') as pod_fd:
+        with open(pod_name_path, 'r', encoding="utf-8") as pod_fd:
             pod_name = pod_fd.read().strip()
             data["pod"].update({"pod_name": pod_name})
 

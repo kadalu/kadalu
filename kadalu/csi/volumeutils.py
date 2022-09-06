@@ -1,6 +1,7 @@
 """
 Utility functions for Volume management
 """
+# pylint: disable=too-many-lines
 
 import json
 import logging
@@ -21,7 +22,10 @@ from kadalu.common.utils import (
     PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
     CommandException, SizeAccounting, execute,
     is_gluster_mount_proc_running, logf, makedirs,
-    reachable_host, retry_errors
+    reachable_host, retry_errors,
+    POOL_MODE_NATIVE,
+    POOL_MODE_EXTERNAL_GLUSTER,
+    POOL_MODE_EXTERNAL_KADALU
 )
 
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
@@ -390,7 +394,7 @@ class PersistentVolume:
     def set_quota(self):
         """Set Quota if PV type is sub directory"""
         if self.type != PV_TYPE_SUBVOL:
-            return
+            return None
 
         if self.use_gluster_quota:
             return self._set_gluster_quota()
@@ -411,7 +415,7 @@ class PersistentVolume:
             metadata_dir=os.path.dirname(self.infopath)
         ))
 
-        with open(self.infopath, "w") as info_file:
+        with open(self.infopath, "w", encoding="utf-8") as info_file:
             info_file.write(json.dumps({
                 "size": self.size,
                 "path_prefix": os.path.dirname(self.path)
@@ -513,7 +517,7 @@ class PersistentVolume:
                     continue
 
                 data = {}
-                with open(infopath) as info_file:
+                with open(infopath, encoding="utf-8") as info_file:
                     data = json.load(info_file)
 
                 pvol.type = PV_TYPE_SUBVOL
@@ -648,7 +652,7 @@ class PersistentVolume:
                 pv_path=self.path,
                 pv_type=self.type
             ))
-            return
+            return None
 
         if self.pool.pv_reclaim_policy == "archive":
             return self.archive()
@@ -686,7 +690,7 @@ class PersistentVolume:
         ))
 
         try:
-            with open(self.infopath) as info_file:
+            with open(self.infopath, encoding="utf-8") as info_file:
                 data = json.load(info_file)
                 # We assume there would be a create before delete, but while
                 # developing thats not true. There can be a delete request for
@@ -719,7 +723,7 @@ class PersistentVolume:
             pool_name=self.pool.name
         ))
 
-        return
+        return None
 
     def mount_and_select_pool(self, pools):
         """
@@ -732,6 +736,11 @@ class PersistentVolume:
                 self.pool = pool
                 return
 
+    @classmethod
+    def list(cls, _pool_name):
+        """Returns the list of PVs"""
+        # TODO: Implement this
+        return []
 
 pool_filters = []
 
@@ -903,6 +912,8 @@ class Pool:
         self.mode = ""
         self.disperse_data = 0
         self.disperse_redundancy = 0
+        self.kadalu_pool_name = ""
+        self.kadalu_volume_name = ""
         self.gluster_volname = None
         self.gluster_hosts = []
         self.options = ""
@@ -933,12 +944,9 @@ class Pool:
                 count = self.disperse_data + self.disperse_redundancy
 
             self.subvol_storage_units_count = count
+            type_name = "disperse" if self.type == "Disperse" else "replica"
             for i in range(0, int(len(self.storage_units) / count)):
-                storage_unit_name = "%s-%s-%d" % (
-                    self.name,
-                    "disperse" if self.type == "Disperse" else "replica",
-                    i
-                )
+                storage_unit_name = f"{self.name}-{type_name}-{i}"
                 self.dht_subvol.append(storage_unit_name)
                 if self.storage_units[(i * count)].decommissioned != "":
                     decommissioned.append(storage_unit_name)
@@ -951,7 +959,7 @@ class Pool:
         Parsed Poolinfo from the info JSON file created
         by the Operator during Storage add.
         """
-        with open(os.path.join(POOLINFO_DIR, name + ".info")) as info_file:
+        with open(os.path.join(POOLINFO_DIR, name + ".info"), encoding="utf-8") as info_file:
             data = json.load(info_file)
 
         pinfo = Pool()
@@ -993,13 +1001,18 @@ class Pool:
         return pinfo
 
     @property
+    def is_mode_external(self):
+        """If the pool is external Gluster Volume or Kadalu Volume"""
+        return self.is_mode_external_gluster or self.is_mode_external_kadalu
+
+    @property
     def is_mode_external_gluster(self):
-        """If the Pool is externally managed or not"""
+        """If the Pool is external Gluster Volume or not"""
         return self.mode == POOL_MODE_EXTERNAL_GLUSTER
 
     @property
     def is_mode_external_kadalu(self):
-        """If the Pool is externally managed or not"""
+        """If the Pool is external Kadalu Volume or not"""
         return self.mode == POOL_MODE_EXTERNAL_KADALU
 
     @property
@@ -1399,7 +1412,7 @@ class Pool:
         if self.is_mode_external_kadalu:
             return self._mount_external_kadalu(
                 suffix, extra_options, extra_mount_options)
-        
+
         if self.is_mode_native_v2:
             return self._mount_native_v2(
                 suffix, extra_options, extra_mount_options, is_client)
@@ -1545,7 +1558,7 @@ class Pool:
             f"{self.name}.client.vol"
         )
         content = ""
-        with open(template_file_path) as template_file:
+        with open(template_file_path, encoding="utf-8") as template_file:
             content = template_file.read()
 
         Template(content).stream(gvol=self).dump(client_volfile)
@@ -1629,7 +1642,7 @@ class Volfile:
 
         element = None
         elements = []
-        with open(volfile) as volf:
+        with open(volfile, encoding="utf-8") as volf:
             for line in volf:
                 line = line.strip()
                 if line.startswith("volume "):
@@ -1668,7 +1681,7 @@ class Volfile:
         if volfile is not None:
             filepath = volfile
 
-        with open(f"{filepath}.tmp", "w") as volf:
+        with open(f"{filepath}.tmp", "w", encoding="utf-8") as volf:
             for element in self.elements:
                 volf.write(f"volume {element.name}\n")
                 volf.write(f"    type {element.type}\n")
@@ -1710,7 +1723,7 @@ def set_quota_deem_statfs(gluster_hosts, gluster_volname):
     if gluster_host is None:
         errmsg = "All hosts are not reachable"
         logging.error(logf(errmsg))
-        return errmsg
+        raise Exception(errmsg)
 
     use_gluster_quota = False
     if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
@@ -1747,6 +1760,8 @@ def set_quota_deem_statfs(gluster_hosts, gluster_volname):
         raise err
 
 
+# pylint: disable=inconsistent-return-statements
+
 # Methods starting with 'yield_*' upon not a single entry raise StopIteration
 # (via return "reason") and upon no entry for a specific scenario yields
 # None. Caller should handle None gracefully based on the context the info is
@@ -1756,6 +1771,7 @@ def set_quota_deem_statfs(gluster_hosts, gluster_volname):
 # Handle gracefully
 def yield_pool_mount():
     """Yields mount directory where pool is mounted"""
+
     pools = Pool.list()
     info_exist = False
     for pool in pools:
@@ -1772,6 +1788,7 @@ def yield_pool_mount():
             # After mounting a hostvol, start looking for PVC from '/mnt/<pool>/info'
             info_exist = True
             yield info_path
+
     if not info_exist:
         # A generator should yield "something", to signal "StopIteration" if
         # there's no info file on any pool, there should be empty yield
@@ -1797,7 +1814,7 @@ def yield_pvc_from_mntdir(mntdir):
             # Base case we are interested in, the filename ending with '.json'
             # is 'PVC' name and contains it's size
             file_path = os.path.join(mntdir, name)
-            with open(file_path) as handle:
+            with open(file_path, encoding="utf-8") as handle:
                 data = json.loads(handle.read().strip())
             logging.debug(
                 logf("Found a PVC at", path=file_path, size=data.get("size")))
@@ -1808,7 +1825,7 @@ def yield_pvc_from_mntdir(mntdir):
             yield None
 
 
-def yield_pvc_from_hostvol():
+def yield_pvc_from_pool():
     """Yields a single PVC sequentially from all the hostvolumes"""
     pvc_exist = False
     for mntdir in yield_pool_mount():

@@ -43,7 +43,7 @@ def validate(args):
     """Validate optional arguments"""
 
     if args.container and not args.podname:
-        print("Specify pod name for the container '%s'." % args.container)
+        print(f"Specify pod name for the container '{args.container}'.")
         sys.exit(1)
 
     if args.allcontainers and not args.podname:
@@ -81,7 +81,7 @@ def run(args):
                 "logs", "-nkadalu", pod, container
             ]
             log_resp = utils.execute(log_cmd)
-            print("----- (Kadalu Namespace) %s -----" % pod)
+            print(f"----- (Kadalu Namespace) {pod} -----")
             print(log_resp.stdout)
             print()
 

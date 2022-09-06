@@ -21,7 +21,7 @@ class CmdResponse(object):
 class CommandError(Exception):
     """ Class for handling exceptions """
     def __init__(self, returncode, err):
-        super().__init__(u"error %d %s" % (returncode, err))
+        super().__init__(f"error {returncode} {err}")
         self.returncode = returncode
         self.stderr = err
 
@@ -66,7 +66,7 @@ def command_error(cmd, msg):
 
 def kubectl_cmd_help(cmd):
     """Print error and exit if kubectl not found"""
-    print("Failed to execute the command: \"%s\"" % cmd, file=sys.stderr)
+    print(f"Failed to execute the command: \"{cmd}\"", file=sys.stderr)
     print("Use `--kubectl-cmd` option if kubectl is installed "
           "in custom path", file=sys.stderr)
     sys.exit(1)

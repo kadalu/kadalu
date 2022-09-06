@@ -33,7 +33,7 @@ def validate(args):
 
     if storage_info_data is None:
         print("Aborting.....")
-        print("Invalid name. No such storage '%s' in Kadalu configmap." % args.name)
+        print(f"Invalid name. No such storage '{args.name}' in Kadalu configmap.")
         sys.exit()
 
 
@@ -52,7 +52,7 @@ def get_configmap_data(args):
 
         volname = args.name
         data = config_data['data']
-        storage_name = "%s.info" % volname
+        storage_name = f"{volname}.info"
         storage_info_data = data[storage_name]
 
         # Return data in 'dict' format
@@ -73,11 +73,11 @@ def request_pv_delete(args):
     cmd = utils.kubectl_cmd(args) + [
          "exec", "-it", "kadalu-csi-provisioner-0", "-c", "kadalu-provisioner", "-nkadalu",
          "--", "bash",
-         "-c", "cd /kadalu; python3 remove_archived_pv.py %s" %(args.name)
+         "-c", f"cd /kadalu; python3 remove_archived_pv.py {args.name}"
     ]
 
     if args.pvc:
-        cmd[-1] = cmd[-1] + " --pvc=%s" %(args.pvc)
+        cmd[-1] = cmd[-1] + f" --pvc={args.pvc}"
 
     try:
         resp = utils.execute(cmd)
@@ -86,8 +86,8 @@ def request_pv_delete(args):
 
     except utils.CommandError as err:
         print("Failed to request deletion of archived pvc of the "
-                "storage \"%s\"" % args.name,
-                file=sys.stderr)
+              f"storage \"{args.name}\"",
+              file=sys.stderr)
         print(err, file=sys.stderr)
         print()
         return None
