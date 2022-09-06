@@ -50,10 +50,10 @@ Exemple for a generic Kubernetes Cluster in single command ligne:
 == Apply kadalu CSI-Nodeplugin
 
 1. Download the relevant Kadalu CSI-Nodeplugin file definition according to your Kubernetes Cluster:
- - Generic Kubernetes: https://github.com/kadalu/kadalu/releases/download/latest/csi-nodeplugin.yaml[csi-nodeplugin.yaml]
- - MicroK8s: https://github.com/kadalu/kadalu/releases/download/latest/csi-nodeplugin-microk8s.yaml[csi-nodeplugin-microk8s.yaml]
- - RKE: https://github.com/kadalu/kadalu/releases/download/latest/csi-nodeplugin-rke.yaml[csi-nodeplugin-rke.yaml]
- - OpenShift: https://github.com/kadalu/kadalu/releases/download/latest/csi-nodeplugin-openshift.yaml[csi-nodeplugin-openshift.yaml]
+ - Generic Kubernetes: https://github.com/kadalu/kadalu/releases/latest/download/csi-nodeplugin.yaml[csi-nodeplugin.yaml]
+ - MicroK8s: https://github.com/kadalu/kadalu/releases/latest/download/csi-nodeplugin-microk8s.yaml[csi-nodeplugin-microk8s.yaml]
+ - RKE: https://github.com/kadalu/kadalu/releases/latest/download/csi-nodeplugin-rke.yaml[csi-nodeplugin-rke.yaml]
+ - OpenShift: https://github.com/kadalu/kadalu/releases/latest/download/csi-nodeplugin-openshift.yaml[csi-nodeplugin-openshift.yaml]
 2. Apply the file definition to the Kubernetes Cluster.
 
 [source,console]
@@ -61,7 +61,7 @@ Exemple for a generic Kubernetes Cluster in single command ligne:
 kubectl apply -f csi-nodeplugin.yaml
 ----
 
-Exemple for a generic Kubernetes Cluster in single command ligne:
+Exemple for a generic Kubernetes Cluster in single command line:
 
 [source,console]
 ----
