@@ -33,27 +33,26 @@ jobs:
           MSG=$(curl -s -X GET -G $URL | jq -r '.[] | .commit.message')
           echo ::set-output name=out::$MSG
 
-  # pylint:
-  #   name: Run pylint
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - uses: actions/checkout@v2
-  #   - name: Set up Python
-  #     uses: actions/setup-python@v1
-  #     with:
-  #       python-version: '3.10'
+  pylint:
+    name: Run pylint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.10'
 
-  #   - uses: actions/cache@v2
-  #     with:
-  #       path: ${{ env.pythonLocation }}
-  #       key: ${{ env.pythonLocation }}-${{ hashFiles('requirements/ci_submit-requirements.txt') }}-${{ hashFiles('requirements/ci_merge-requirements.txt') }}
+    - uses: actions/cache@v2
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ env.pythonLocation }}-pylint-deps
 
-  #   - name: Install dependencies pylint
-  #     run: |
-  #         python -m pip install --upgrade --upgrade-strategy eager -r requirements/ci_submit-requirements.txt -r requirements/ci_merge-requirements.txt -e ./requirements
-
-  #   - name: Run pylint
-  #     run: make pylint
+    - name: Install dependencies pylint
+      run: |
+          python -m pip install --upgrade --upgrade-strategy eager pylint xxhash pyxattr grpcio pytest jinja2 uvicorn fastapi prometheus_client kubernetes
+    - name: Run pylint
+      run: make pylint
 
   run-on-minikube:
     name: kube 1.22.0

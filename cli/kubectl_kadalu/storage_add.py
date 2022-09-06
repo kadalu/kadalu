@@ -212,7 +212,7 @@ def validate(args):
             sys.exit(1)
 
     if num_storages % subvol_size != 0:
-        print("Number of storages not matching for type=%s" % args.type,
+        print(f"Number of storages not matching for type={args.type}",
               file=sys.stderr)
         sys.exit(1)
 
@@ -255,7 +255,7 @@ def get_kube_nodes(args):
         for nodedata in data["items"]:
             nodes.append(nodedata["metadata"]["name"])
 
-        print("The following nodes are available:\n  %s" % ", ".join(nodes))
+        print(f'The following nodes are available:\n  {", ".join(nodes)}')
         print()
         return nodes
     except utils.CommandError as err:

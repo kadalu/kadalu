@@ -95,13 +95,13 @@ def human_readable_size(size):
         "Ki": 1024
     }
     if size < 1024:
-        return "%d" % int(size)
+        return f"{int(size)}"
 
     for ele in symbols:
         if size >= symbol_values[ele]:
-            return "%d %s" % (int(size / symbol_values[ele]), ele)
+            return f"{int(size / symbol_values[ele])} {ele}"
 
-    return "%d" % int(size)
+    return f"{int(size)}"
 
 
 def detailed_output(storages, args):
@@ -111,34 +111,32 @@ def detailed_output(storages, args):
             continue
 
         print("---")
-        print("Name: %s" % storage.storage_name)
-        print("ID  : %s" % storage.storage_id)
-        print("Type: %s" % storage.storage_type)
+        print(f"Name: {storage.storage_name}")
+        print(f"ID  : {storage.storage_id}")
+        print(f"Type: {storage.storage_type}")
         if args.status:
             used_percent = 0
             if storage.total_size_bytes > 0:
                 used_percent = int(
                     storage.used_size_bytes*100/storage.total_size_bytes
                 )
-            print("Number of PVs     : %d" % storage.pv_count)
-            print("Utilization: %s/%s (%d%%)" % (
-                human_readable_size(storage.used_size_bytes),
-                human_readable_size(storage.total_size_bytes),
-                used_percent
-            ))
-            print("Min PV Size: %s" % human_readable_size(storage.min_pv_size))
-            print("Avg PV Size: %s" % human_readable_size(storage.avg_pv_size))
-            print("Max PV Size: %s" % human_readable_size(storage.max_pv_size))
+            print(f"Number of PVs     : {storage.pv_count}")
+            print(
+                f"Utilization: {human_readable_size(storage.used_size_bytes)}"
+                f"/{human_readable_size(storage.total_size_bytes)} ({used_percent}%)")
+            print(f"Min PV Size: {human_readable_size(storage.min_pv_size)}")
+            print(f"Avg PV Size: {human_readable_size(storage.avg_pv_size)}")
+            print(f"Max PV Size: {human_readable_size(storage.max_pv_size)}")
 
         for idx, storage_unit in enumerate(storage.storage_units):
-            print("Storage Unit %d:" % (idx + 1))
-            print("  Kube hostname: %s" % storage_unit.kube_host)
+            print(f"Storage Unit {idx + 1}:")
+            print(f"  Kube hostname: {storage_unit.kube_host}")
             if storage_unit.device != "":
-                print("  Device: %s" % storage_unit.device)
+                print(f"  Device: {storage_unit.device}")
             if storage_unit.path != "":
-                print("  Path: %s" % storage_unit.path)
+                print(f"  Path: {storage_unit.path}")
             if storage_unit.pvc != "":
-                print("  PVC: %s" % storage_unit.pvc)
+                print(f"  PVC: {storage_unit.pvc}")
 
             print()
 
@@ -147,6 +145,7 @@ def summary_output(storages, args):
     """Print the Summary"""
     if storages:
         print()
+        # pylint: disable=consider-using-f-string
         if args.status:
             print("%-15s  %-10s  %-20s  %10s  %15s  %15s  %15s" % (
                 "Name", "Type", "Utilization", "Pvs Count",
@@ -159,6 +158,7 @@ def summary_output(storages, args):
         if args.name is not None and args.name == storage.storage_name:
             continue
 
+        # pylint: disable=consider-using-f-string
         row = "%-15s  " % storage.storage_name
         row += "%-10s  " % storage.storage_type
         if args.status:
@@ -217,7 +217,7 @@ def fetch_status(storages, args):
 
         except utils.CommandError as err:
             print("Failed to get size details of the "
-                  "storage \"%s\"" % storage.storage_name,
+                  f"storage \"{storage.storage_name}\"",
                   file=sys.stderr)
             print(err, file=sys.stderr)
             print()

@@ -31,6 +31,11 @@ PV_TYPE_VIRTBLOCK = "virtblock"
 PV_TYPE_SUBVOL = "subvol"
 PV_TYPE_RAWBLOCK = "rawblock"
 
+POOL_MODE_NATIVE = "Native"
+POOL_MODE_EXTERNAL_GLUSTER = "ExternalGluster"
+POOL_MODE_EXTERNAL_KADALU = "ExternalKadalu"
+POOL_MODE_NATIVE_NO_MGR = "NativeNoMgr"
+
 KADALU_VERSION = os.environ.get("KADALU_VERSION", "latest")
 POOL_MOUNTDIR = "/mnt"
 POOLINFO_DIR = "/var/lib/gluster"

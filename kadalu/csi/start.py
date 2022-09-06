@@ -1,9 +1,12 @@
+"""Kadalu CSI"""
+
 import os
 
 from kadalu.common.utils import Monitor, Proc, logging_setup
 
 
 def main():
+    """Startup function"""
     logging_setup()
 
     curr_dir = os.path.dirname(__file__)

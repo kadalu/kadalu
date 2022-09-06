@@ -16,10 +16,11 @@ from prometheus_client import make_asgi_app
 
 import kadalu.operator.metrics as storage_metrics
 from kadalu.common.utils import logf, logging_setup
-from kadalu.operator.utils import CommandError, execute
+from kadalu.common.utils import CommandException, execute
 
 metrics_app = FastAPI()
 
+# pylint: disable=too-few-public-methods
 class Metrics:
     """ Metrics class with Kadalu Components """
     def __init__(self):
@@ -31,19 +32,20 @@ class Metrics:
 
 def get_pod_data():
     """ Get pod and container info of all Pods in kadalu namespace """
+    # pylint: disable=too-many-locals
 
     cmd = ["kubectl", "get", "pods", "-nkadalu", "-ojson"]
 
     try:
-        resp = execute(cmd)
-    except CommandError as err:
+        _ret, out, _err = execute(cmd)
+    except CommandException as err:
         logging.error(logf(
             "Failed to execute the command",
             command=cmd,
             error=err
         ))
 
-    data = json.loads(resp.stdout)
+    data = json.loads(out)
     pod_data = {}
 
     for item in data["items"]:
@@ -100,8 +102,8 @@ def get_storage_config_data():
 
     storage_config_data = {}
     try:
-        resp = execute(cmd)
-        config_data = json.loads(resp.stdout)
+        _ret, out, _err = execute(cmd)
+        config_data = json.loads(out)
 
         data = config_data['data']
 
@@ -128,7 +130,7 @@ def get_storage_config_data():
 
         return storage_config_data
 
-    except CommandError as err:
+    except CommandException as err:
         logging.error(logf(
             "Failed to get brick data from configmap",
             error=err
@@ -153,7 +155,7 @@ def set_default_values(metrics):
     })
 
     pod_data = get_pod_data()
-    for pod_name in pod_data.keys():
+    for pod_name in pod_data:
         if "nodeplugin" in pod_name:
             metrics.nodeplugins.append({
                 "pod_name": pod_name,
@@ -206,12 +208,12 @@ def set_operator_data(metrics):
 
     memory_usage_file_path = '/sys/fs/cgroup/memory/memory.usage_in_bytes'
     if os.path.exists(memory_usage_file_path):
-        with open(memory_usage_file_path, 'r') as memory_fd:
+        with open(memory_usage_file_path, 'r', encoding="utf-8") as memory_fd:
             memory_usage_in_bytes = int(memory_fd.read().strip())
 
     cpu_usage_file_path = '/sys/fs/cgroup/cpu/cpuacct.usage'
     if os.path.exists(cpu_usage_file_path):
-        with open(cpu_usage_file_path, 'r') as cpu_fd:
+        with open(cpu_usage_file_path, 'r', encoding="utf-8") as cpu_fd:
             cpu_usage_in_nanoseconds = int(cpu_fd.read().strip())
 
     metrics.operator = {
