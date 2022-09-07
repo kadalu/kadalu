@@ -94,29 +94,27 @@ gen-manifest:
 	@echo
 	@DISTRO=rke $(MAKE) -s helm-manifest
 
-# W0511: TODO Statements
-# W1514: Using 'open' with default encoding (in our usage it shouldn't matter)
 pylint:
 	@cp lib/kadalulib.py csi/
 	@cp lib/kadalulib.py server/
 	@cp lib/kadalulib.py kadalu_operator/
 	@cp cli/kubectl_kadalu/utils.py kadalu_operator/
 	@cp server/kadalu_quotad/quotad.py server/kadalu_quotad/glusterutils.py server/
-	@pylint --disable=W0511 -s n lib/kadalulib.py
-	@pylint --disable=W0511,W1514 -s n server/glusterfsd.py
-	@pylint --disable W0511,W0603,W1514 -s n server/quotad.py
+	@pylint --disable=W0511,C0209 -s n lib/kadalulib.py
+	@pylint --disable=W0511,W1514,C0209,W0621 -s n server/glusterfsd.py
+	@pylint --disable W0511,W0603,W1514,C0209,W0602 -s n server/quotad.py
 	@pylint --disable=W0511 -s n server/server.py
-	@pylint --disable=W0511,W1514 -s n server/shd.py
+	@pylint --disable=W0511,W1514,C0209 -s n server/shd.py
 	@pylint --disable=W0603,W1514 -s n server/glusterutils.py
-	@pylint --disable=W0511,R0911,W0603,W1514 -s n csi/controllerserver.py
+	@pylint --disable=W0511,R0911,W0603,W1514,C0209 -s n csi/controllerserver.py
 	@pylint --disable=W0511 -s n csi/identityserver.py
 	@pylint --disable=W0511,R1732 -s n csi/main.py
 	@pylint --disable=W0511 -s n csi/nodeserver.py
-	@pylint --disable=W0511,C0302,W1514,R1710 -s n csi/volumeutils.py
-	@pylint --disable=W0511,C0302,W1514 -s n kadalu_operator/main.py
-	@pylint --disable=W0511,R0903,R0914,C0201,E0401 -s n kadalu_operator/exporter.py
-	@pylint --disable=W0511,R0914,E0401,C0114 -s n csi/exporter.py
-	@pylint --disable=W0511,E0401,C0114 -s n server/exporter.py
+	@pylint --disable=W0511,C0302,W1514,R1710,C0209,W0621 -s n csi/volumeutils.py
+	@pylint --disable=W0511,C0302,W1514,C0209 -s n kadalu_operator/main.py
+	@pylint --disable=W0511,R0903,R0914,C0201,E0401,C0209,W1514 -s n kadalu_operator/exporter.py
+	@pylint --disable=W0511,R0914,E0401,C0114,C0209,W1514 -s n csi/exporter.py
+	@pylint --disable=W0511,E0401,C0114,C0209,W1514 -s n server/exporter.py
 	@rm csi/kadalulib.py
 	@rm server/kadalulib.py
 	@rm kadalu_operator/kadalulib.py
@@ -157,17 +155,16 @@ helm-chart:
 	@echo "Creating tgz archive of helm chart(Version: ${KADALU_VERSION}).."
 	cd helm; grep -rln '0.0.0-0' | grep Chart | xargs -I file sed -i -e "s/0.0.0-0/${KADALU_VERSION}/" file; tar -czf kadalu-helm-chart.tgz kadalu
 
+# Pass PIP_ARGS="-U" for upgrading module deps, compatible with pip-compile v6.8.0
 gen-requirements:
 	@echo "Generating requirements file for all kadalu components and CI"
-	@cp -f requirements/setup.py requirements/setup.cfg .
-	pip-compile --extra=builder -o requirements/builder-requirements.txt --allow-unsafe
-	pip-compile --extra=operator -o requirements/operator-requirements.txt
-	pip-compile --extra=csi -o requirements/csi-requirements.txt
-	pip-compile --extra=server -o requirements/server-requirements.txt
-	pip-compile --extra=ci_submit -o requirements/ci_submit-requirements.txt
-	pip-compile --extra=ci_merge -o requirements/ci_merge-requirements.txt --allow-unsafe
-	@rm setup.py setup.cfg -f
-
+	@cd requirements; \
+	pip-compile $(PIP_ARGS) --extra=builder -o builder-requirements.txt --allow-unsafe; \
+	pip-compile $(PIP_ARGS) --extra=operator -o operator-requirements.txt; \
+	pip-compile $(PIP_ARGS) --extra=csi -o csi-requirements.txt; \
+	pip-compile $(PIP_ARGS) --extra=server -o server-requirements.txt; \
+	pip-compile $(PIP_ARGS) --extra=ci_submit -o ci_submit-requirements.txt; \
+	pip-compile $(PIP_ARGS) --extra=ci_merge -o ci_merge-requirements.txt --allow-unsafe
 
 ifeq ($(TWINE_PASSWORD),)
 pypi-upload: pypi-build

@@ -968,7 +968,7 @@ def generate_client_volfile(volname):
             if data.get("bricks", [])[(i * count)].get("decommissioned", "") != "":
                 decommissioned.append(brick_name)
 
-    data["decommissioned"] = "" if decommissioned == [] else ",".join(decommissioned)
+    data["decommissioned"] = ",".join(decommissioned)
     template_file_path = os.path.join(
         TEMPLATES_DIR,
         "%s.client.vol.j2" % data["type"]
