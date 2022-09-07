@@ -23,7 +23,7 @@ function _log_msgs() {
   kubectl get kds --all-namespaces
   kubectl get sc --all-namespaces
   kubectl get pvc --all-namespaces
-  for p in $(kubectl -n kadalu get pods -o name); do
+  for p in $(kubectl -n kadalu get pods -o name --field-selector=status.phase==Running); do
     echo "====================== Start $p ======================"
     kubectl logs -nkadalu --all-containers=true --tail=$lines $p
     kubectl -nkadalu describe $p

@@ -32,7 +32,7 @@ def get_pod_data():
     """ Get pod and container info of all Pods in kadalu namespace """
 
     cmd = ["kubectl", "get", "pods", "-l", "app.kubernetes.io/part-of=kadalu",
-            "-nkadalu", "-ojson"]
+            "--field-selector=status.phase==Running", "-nkadalu", "-ojson"]
 
     try:
         resp = execute(cmd)
