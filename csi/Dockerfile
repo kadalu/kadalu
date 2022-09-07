@@ -6,7 +6,9 @@ ENV PATH="/kadalu/bin:/opt/bin:/opt/sbin:$PATH"
 
 COPY requirements/csi-requirements.txt /tmp/
 
-RUN python3 -m pip install -r /tmp/csi-requirements.txt --no-cache-dir && \
+RUN python3 -m pip install $(grep -vE '^(grpcio|\s*#)' /tmp/csi-requirements.txt) --no-cache-dir && \
+    python3 -m pip download --only-binary :all: --dest /tmp/ --no-cache $(grep -oE '^grpcio==.*$' /tmp/csi-requirements.txt) && \
+    python3 -m pip install /tmp/*.whl --force-reinstall && \
     grep -Po '^[\w\.-]*(?=)' /tmp/csi-requirements.txt | xargs -I pkg python3 -m pip show pkg | grep -P '^(Name|Version|Location)'
 
 FROM python:3.10-slim-bullseye as prod
