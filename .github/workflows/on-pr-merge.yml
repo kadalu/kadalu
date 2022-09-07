@@ -18,19 +18,15 @@ jobs:
   devel-tag-push:
     runs-on: ubuntu-latest
     steps:
-      -
-        name: Check out Code
+      - name: Check out Code
         uses: actions/checkout@v2
         with:
           fetch-depth: 2
-      -
-        name: Set up QEMU
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
-      -
-        name: Set up Docker Buildx
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-      -
-        name: Login to DockerHub
+      - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_USER }}
@@ -50,14 +46,27 @@ jobs:
           python -m pip install --upgrade --upgrade-strategy eager -r requirements/ci_merge-requirements.txt -e ./requirements
           KADALU_VERSION=devel make cli-build
 
+      - name: Check to build and push base image or not
+        id: build_base
+        run: |
+          # same conditions as mentioned in submit workflow
+          FILES=$(git show --pretty="" --name-only)
+          build_base='no'
+          if grep -e 'CHANGELOG.md' <<< "$b" && [ $(wc -w <<< "$b") == 1 ]; then
+            build_base='yes'
+          elif grep -e 'extras/Dockerfile.builder' <<< "$FILES"; then
+            build_base='yes'
+          fi
+          echo ::set-output name=out::$build_base
       - name: Builder Image
+        if: "contains(steps.build_base.outputs.build_base, 'yes')"
         uses: docker/build-push-action@v2
         timeout-minutes: 120
         with:
           context: .
           file: extras/Dockerfile.builder
           platforms: linux/amd64
-          push: false
+          push: true
           load: true
           tags: |
             docker.io/kadalu/builder:latest
@@ -66,8 +75,7 @@ jobs:
             builddate=`date +%Y-%m-%d-%H:%M`
           secrets: |
             KADALU_VERSION=${{ github.sha }}
-      -
-        name: Build CSI Image and push
+      - name: Build CSI Image and push
         uses: docker/build-push-action@v2
         timeout-minutes: 120
         with:
@@ -84,8 +92,7 @@ jobs:
             builddate=`date +%Y-%m-%d-%H:%M`
           secrets: |
             KADALU_VERSION=${{ github.sha }}
-      -
-        name: Build Operator Image and push
+      - name: Build Operator Image and push
         uses: docker/build-push-action@v2
         timeout-minutes: 20
         with:
@@ -102,8 +109,7 @@ jobs:
             builddate=`date +%Y-%m-%d-%H:%M`
           secrets: |
             KADALU_VERSION=${{ github.sha }}
-      -
-        name: Build Storage Server Image and push
+      - name: Build Storage Server Image and push
         uses: docker/build-push-action@v2
         timeout-minutes: 20
         with:
@@ -122,8 +128,7 @@ jobs:
             KADALU_VERSION=${{ github.sha }}
 
       # What follows are basically building and pushing of tests images conditionally
-      -
-        name: Check for Dockerfile changes in tests folder
+      - name: Check for Dockerfile changes in tests folder
         id: build_test
         run: |
           build_test='no'
@@ -133,8 +138,7 @@ jobs:
             build_test='yes'
           fi
           echo ::set-output name=build_test::$build_test
-      -
-        name: Build test-io image used in CI
+      - name: Build test-io image used in CI
         if: "contains(steps.build_test.outputs.build_test, 'yes')"
         uses: docker/build-push-action@v2
         timeout-minutes: 10
@@ -152,8 +156,7 @@ jobs:
             builddate=`date +%Y-%m-%d-%H:%M`
           secrets: |
             KADALU_VERSION=${{ github.sha }}
-      -
-        name: Build test-csi image used in CI
+      - name: Build test-csi image used in CI
         if: "contains(steps.build_test.outputs.build_test, 'yes')"
         uses: docker/build-push-action@v2
         timeout-minutes: 10
