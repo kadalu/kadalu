@@ -48,6 +48,9 @@ helm-manifest:
 	@echo ---------------------------------------------------------------------
 	@# Since we are using sub charts we can't percolate the version with ease
 	@# and so using 'sed' to replace the tag
+ifneq ($(KADALU_VERSION), devel)
+	@cd helm; grep -rln '0.0.0-0' | grep Chart.yaml | xargs -I file sed -i 's/0.0.0-0/${KADALU_VERSION}/g' file;
+endif
 	@helm show crds helm/kadalu > manifests/kadalu-operator${filename_suffix}.yaml
 	@echo "$$namespace" >> manifests/kadalu-operator${filename_suffix}.yaml
 	@helm template --namespace kadalu helm/kadalu \
@@ -55,13 +58,11 @@ helm-manifest:
 		--set global.image.registry=${IMAGES_HUB} \
 		--set global.image.repository=${DOCKER_USER} \
 		--set operator.enabled=true >> manifests/kadalu-operator${filename_suffix}.yaml
-	@sed -i 's,devel,${KADALU_VERSION},g' manifests/kadalu-operator${filename_suffix}.yaml
 	@helm template --namespace kadalu helm/kadalu \
         --set global.kubernetesDistro=${DISTRO} \
         --set global.image.registry=${IMAGES_HUB} \
 		--set global.image.repository=${DOCKER_USER} \
 		--set csi-nodeplugin.enabled=true > manifests/csi-nodeplugin${filename_suffix}.yaml
-	@sed -i 's,devel,${KADALU_VERSION},g' manifests/csi-nodeplugin${filename_suffix}.yaml
 
 	@echo "kubectl apply -f manifests/kadalu-operator${filename_suffix}.yaml"
 	@echo "kubectl apply -f manifests/csi-nodeplugin${filename_suffix}.yaml"

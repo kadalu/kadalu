@@ -8,6 +8,7 @@ version: 0.0.0-0
 dependencies:
   - name: common
     repository: file://charts/common
+    version: ^0.1.0
   - name: operator
     repository: file://charts/operator
     condition: operator.enabled
