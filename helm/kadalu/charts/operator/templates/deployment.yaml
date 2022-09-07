@@ -5,7 +5,6 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
     app.kubernetes.io/component: operator
-    app.kubernetes.io/part-of: kadalu
 spec:
   replicas: 1
   selector:
