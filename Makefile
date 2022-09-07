@@ -45,20 +45,22 @@ export namespace
 
 helm-manifest:
 	@echo ---------------------------------------------------------------------
+	@# Since we are using sub charts we can't percolate the version with ease
+	@# and so using 'sed' to replace the tag
 	@helm show crds helm/kadalu > manifests/kadalu-operator${filename_suffix}.yaml
 	@echo "$$namespace" >> manifests/kadalu-operator${filename_suffix}.yaml
 	@helm template --namespace kadalu helm/kadalu \
 		--set global.kubernetesDistro=${DISTRO} \
 		--set global.image.registry=${IMAGES_HUB} \
 		--set global.image.repository=${DOCKER_USER} \
-		--set operator.enabled=true \
-		--set .Chart.version=${KADALU_VERSION} >> manifests/kadalu-operator${filename_suffix}.yaml
+		--set operator.enabled=true >> manifests/kadalu-operator${filename_suffix}.yaml
+	@sed -i 's,devel,${KADALU_VERSION},g' manifests/kadalu-operator${filename_suffix}.yaml
 	@helm template --namespace kadalu helm/kadalu \
         --set global.kubernetesDistro=${DISTRO} \
         --set global.image.registry=${IMAGES_HUB} \
 		--set global.image.repository=${DOCKER_USER} \
-		--set csi-nodeplugin.enabled=true \
-		--set .Chart.version=${KADALU_VERSION} > manifests/csi-nodeplugin${filename_suffix}.yaml
+		--set csi-nodeplugin.enabled=true > manifests/csi-nodeplugin${filename_suffix}.yaml
+	@sed -i 's,devel,${KADALU_VERSION},g' manifests/csi-nodeplugin${filename_suffix}.yaml
 
 	@echo "kubectl apply -f manifests/kadalu-operator${filename_suffix}.yaml"
 	@echo "kubectl apply -f manifests/csi-nodeplugin${filename_suffix}.yaml"
@@ -125,9 +127,9 @@ pylint:
 	@rm server/glusterutils.py
 	@cd cli && make gen-version pylint pytest --keep-going
 
-ifeq ($(KADALU_VERSION), latest)
+ifeq ($(KADALU_VERSION), devel)
 prepare-release-manifests:
-	@echo "KADALU_VERSION can't be latest for release"
+	@echo "KADALU_VERSION can't be devel for release"
 else
 prepare-release-manifests:
 	@IMAGES_HUB=${IMAGES_HUB} DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} \
@@ -135,9 +137,9 @@ prepare-release-manifests:
 	@echo "Generated manifest file. Version: ${KADALU_VERSION}"
 endif
 
-ifeq ($(KADALU_VERSION), latest)
+ifeq ($(KADALU_VERSION), devel)
 prepare-release: prepare-release-manifests
-	@echo "KADALU_VERSION can't be latest for release"
+	@echo "KADALU_VERSION can't be devel for release"
 else
 prepare-release: prepare-release-manifests
 	@echo "Building containers(Version: ${KADALU_VERSION}).."
@@ -178,7 +180,7 @@ pypi-upload: pypi-build
 
 endif
 
-ifeq ($(KADALU_VERSION), latest)
+ifeq ($(KADALU_VERSION), devel)
 release: prepare-release
 else
 release: prepare-release pypi-upload cli-build helm-chart
