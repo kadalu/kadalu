@@ -5,6 +5,7 @@ DOCKER_USER?=kadalu
 KADALU_VERSION?=devel
 KADALU_LATEST?=latest
 DISTRO?=kubernetes
+BUILD_BASE?=yes
 
 help:
 	@echo "    make build-grpc        - To generate grpc Python Code"
@@ -23,7 +24,7 @@ build-grpc:
 	python3 -m grpc_tools.protoc -I./csi/protos --python_out=csi --grpc_python_out=csi ./csi/protos/csi.proto
 
 build-containers: cli-build
-	DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} bash build.sh
+	DOCKER_USER=${DOCKER_USER} KADALU_VERSION=${KADALU_VERSION} BUILD_BASE=${BUILD_BASE} bash build.sh
 
 # test-containers will be called on setting an environment variable 'CONTAINERS_FOR' as part of CI
 test-containers:

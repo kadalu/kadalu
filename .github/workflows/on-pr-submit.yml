@@ -21,6 +21,7 @@ jobs:
     outputs:
       files: ${{ steps.files.outputs.out }}
       msg: ${{ steps.msg.outputs.out }}
+      build_base: ${{ steps.build_base.outputs.out }}
     steps:
       - id: files
         run: |
@@ -32,6 +33,20 @@ jobs:
           URL="https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/commits"
           MSG=$(curl -s -X GET -G $URL | jq -r '.[] | .commit.message')
           echo ::set-output name=out::$MSG
+      - id: build_base
+        env:
+          FILES: ${{ steps.files.outputs.out }}
+        run: |
+          BUILD_BASE="no"
+          # build base image if one of below conditions is met
+          # 1. if we have only CHANGELOG.md update (basically getting ready for a release)
+          if grep -e 'CHANGELOG.md' <<< "$b" && [ $(wc -w <<< "$b") == 1 ]; then
+            BUILD_BASE="yes"
+          # 2. if builder dockerfile is edited
+          elif grep -e 'extras/Dockerfile.builder' <<< "$FILES"; then
+            BUILD_BASE="yes"
+          fi
+          echo ::set-output name=out::$BUILD_BASE
 
   pylint:
     name: Run pylint
@@ -64,6 +79,7 @@ jobs:
       # No script currently uses COMMIT_MSG
       COMMIT_MSG: ${{needs.get-info.outputs.msg}}
       FILES: ${{needs.get-info.outputs.files}}
+      BUILD_BASE: ${{needs.get-info.outputs.build_base}}
     steps:
     - uses: actions/checkout@v2
     - name: Install Docker Dependencies
@@ -82,7 +98,7 @@ jobs:
     - name: Build locally
       id: build_local
       run: |
-        make build-containers;
+        BUILD_BASE="$BUILD_BASE" make build-containers;
 
         # Conditionally build test containers if PR includes tests/**/Dockerfile
         CONTAINERS_FOR=''

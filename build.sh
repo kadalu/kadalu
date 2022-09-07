@@ -4,6 +4,7 @@ set -e -o pipefail
 
 DOCKER_USER="${DOCKER_USER:-kadalu}"
 KADALU_VERSION="${KADALU_VERSION}"
+BUILD_BASE=${BUILD_BASE:-yes}
 
 RUNTIME_CMD=${RUNTIME_CMD:-docker}
 # Use buildx for docker to simulate release script in github workflow
@@ -79,9 +80,14 @@ fi
 
 echo "Building base builder image - This may take a while"
 
-$RUNTIME_CMD $build \
-	     -t "${DOCKER_USER}/builder:latest" "${build_args[@]}" \
-	     --network host -f extras/Dockerfile.builder .
+if [ ${BUILD_BASE} == "yes" ]; then
+  $RUNTIME_CMD $build \
+        -t "${DOCKER_USER}/builder:latest" "${build_args[@]}" \
+        --network host -f extras/Dockerfile.builder .
+else
+  # pull the base image if we don't want to build it
+  $RUNTIME_CMD pull "${DOCKER_USER}/builder:latest"
+fi
 
 echo "Building kadalu-server with version tag as ${VERSION}";
 build_container "kadalu-server" "server/Dockerfile" ${KADALU_VERSION}
