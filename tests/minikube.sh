@@ -5,7 +5,13 @@
 # Based on ideas from https://github.com/rook/rook/blob/master/tests/scripts/minikube.sh
 fail=0
 
-ARCH=$(uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|')
+VM_DRIVER=${VM_DRIVER:-"none"}
+
+DISK="sda1"
+if [[ "${VM_DRIVER}" == "kvm2" ]]; then
+  # use vda1 instead of sda1 when running with the libvirt driver
+  DISK="vda1"
+fi
 
 function check_test_fail() {
   if [ $fail -eq 1 ]; then
@@ -72,7 +78,6 @@ function wait_for_kadalu_pods() {
   }
   echo Kadalu Server pods are in Ready state
 
-  check_test_fail
 }
 
 function get_pvc_and_check() {
@@ -145,7 +150,8 @@ function get_pvc_and_check() {
     name=$(kubectl get $p -ojsonpath={'.spec.volumeName'})
     # check for presence of PVC as previous PVC deletion shouldn't delete current PVC
     local json_file=$(kubectl exec -i sts/kadalu-csi-provisioner -c kadalu-provisioner -nkadalu -- /usr/bin/find /mnt/$pool_name/info/ -mindepth 4 -maxdepth 4 -name "*$name.json" -printf '.' | wc -c)
-    local pvc_dir=$(kubectl exec -i sts/kadalu-csi-provisioner -c kadalu-provisioner -nkadalu -- /usr/bin/find /mnt/$pool_name/ -mindepth 4 -maxdepth 4 -name "*$name" -not -path "/mnt/$pool_name/.glusterfs/*" -not -path "/mnt/$pool_name/info/*" -printf '.' | wc -c
+    local pvc_dir=$(
+      kubectl exec -i sts/kadalu-csi-provisioner -c kadalu-provisioner -nkadalu -- /usr/bin/find /mnt/$pool_name/ -mindepth 4 -maxdepth 4 -name "*$name" -not -path "/mnt/$pool_name/.glusterfs/*" -not -path "/mnt/$pool_name/info/*" -printf '.' | wc -c
     )
     if [[ $json_file -ne 1 || $pvc_dir -ne 1 ]]; then
       fail=1 && echo Not able to verify existence of PVC $name
@@ -179,56 +185,6 @@ function wait_for_ssh() {
   done
   echo ERROR: ssh did not come up >&2
   exit 1
-}
-
-function copy_image_to_cluster() {
-  local build_image=$1
-  local final_image=$2
-  if [ -z "$(docker images -q "${build_image}")" ]; then
-    docker pull "${build_image}"
-  fi
-  if [[ "${VM_DRIVER}" == "none" ]]; then
-    docker tag "${build_image}" "${final_image}"
-    return
-  fi
-  docker save "${build_image}" |
-    (eval "$(minikube docker-env --shell bash)" &&
-      docker load && docker tag "${build_image}" "${final_image}")
-}
-
-# install minikube
-function install_minikube() {
-  if type minikube >/dev/null 2>&1; then
-    local version
-    version=$(minikube version)
-    read -ra version <<<"${version}"
-    version=${version[2]}
-    if [[ "${version}" != "${MINIKUBE_VERSION}" ]]; then
-      echo "installed minikube version ${version} is not matching requested version ${MINIKUBE_VERSION}"
-      #exit 1
-    fi
-    echo "minikube already installed with ${version}"
-    return 0
-  fi
-
-  echo "Installing minikube. Version: ${MINIKUBE_VERSION}"
-  curl -Lo minikube https://storage.googleapis.com/minikube/releases/"${MINIKUBE_VERSION}"/minikube-linux-${ARCH} && chmod +x minikube && mv minikube /usr/local/bin/
-}
-
-function install_kubectl() {
-  if type kubectl >/dev/null 2>&1; then
-    local version
-    version=$(kubectl version --client | grep "${KUBE_VERSION}")
-    if [[ "x${version}" != "x" ]]; then
-      echo "kubectl already installed with ${KUBE_VERSION}"
-      return 0
-    fi
-    echo "installed kubectl version ${version} is not matching requested version ${KUBE_VERSION}"
-    # exit 1
-  fi
-  # Download kubectl, which is a requirement for using minikube.
-  echo "Installing kubectl. Version: ${KUBE_VERSION}"
-  curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/"${KUBE_VERSION}"/bin/linux/${ARCH}/kubectl && chmod +x kubectl && mv kubectl /usr/local/bin/
 }
 
 function run_io() {
@@ -272,7 +228,7 @@ function run_sanity() {
 
   exp_pass=33
 
-  # Set expand vol size to 10MB
+  # Test with original and expand volsize of 10MiB
   kubectl exec sanity-app -i -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination -csi.testvolumesize 10485760 -csi.testvolumeexpandsize 10485760' | tee /tmp/sanity-result.txt
 
   # Make sure no more failures than above stats
@@ -366,43 +322,26 @@ function modify_pool() {
   kubectl apply -f /tmp/kadalu-storage.yaml
 }
 
-# configure minikube
-MINIKUBE_VERSION=${MINIKUBE_VERSION:-"v1.15.1"}
-KUBE_VERSION=${KUBE_VERSION:-"v1.20.0"}
-COMMIT_MSG=${COMMIT_MSG:-""}
-MEMORY=${MEMORY:-"3000"}
-VM_DRIVER=${VM_DRIVER:-"none"}
-# configure image repo
-KADALU_IMAGE_REPO=${KADALU_IMAGE_REPO:-"docker.io/kadalu"}
-K8S_IMAGE_REPO=${K8S_IMAGE_REPO:-"quay.io/k8scsi"}
-
-# feature-gates for kube
-K8S_FEATURE_GATES=${K8S_FEATURE_GATES:-"BlockVolume=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true,CSIDriverRegistry=true"}
-
-DISK="sda1"
-if [[ "${VM_DRIVER}" == "kvm2" ]]; then
-  # use vda1 instead of sda1 when running with the libvirt driver
-  DISK="vda1"
-fi
-
 case "${1:-}" in
   up)
     echo "here"
-    install_minikube || echo "failure"
+
     # if driver  is 'none' install kubectl with KUBE_VERSION
     if [[ "${VM_DRIVER}" == "none" ]]; then
       mkdir -p "$HOME"/.kube "$HOME"/.minikube
-      install_kubectl || echo "failure to install kubectl"
     fi
 
     echo "starting minikube with kubeadm bootstrapper"
-    minikube start --memory="${MEMORY}" -b kubeadm --kubernetes-version="${KUBE_VERSION}" --vm-driver="${VM_DRIVER}" --feature-gates="${K8S_FEATURE_GATES}"
+    minikube start \
+      --kubernetes-version="${KUBE_VERSION}" \
+      --vm-driver="${VM_DRIVER}"
 
     # environment
     if [[ "${VM_DRIVER}" != "none" ]]; then
       wait_for_ssh
       # shellcheck disable=SC2086
       minikube ssh "sudo mkdir -p /mnt/${DISK};sudo rm -rf /mnt/${DISK}/*; sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9}; sudo mkdir -p /mnt/${DISK}/{dir3.2,dir3.2_modified,pvc}"
+      minikube ssh "sudo ls -lR /mnt/${DISK}/"
     else
       sudo mkdir -p /mnt/${DISK}
       sudo rm -rf /mnt/${DISK}/*
@@ -412,21 +351,17 @@ case "${1:-}" in
       sudo mkdir -p /mnt/${DISK}/pvc
     fi
 
-    # Dump Cluster Info
+    echo "@versions@ installed in the github runner"
+    command -v ruby && ruby --version
+    command -v minikube && minikube version --components
+    command -v kubectl && kubectl version
+    command -v helm && helm version --short
+
     kubectl cluster-info
     ;;
   down)
     minikube stop
     ;;
-  copy-image)
-    echo "copying the kadalu-operator image"
-    copy_image_to_cluster kadalu/kadalu-operator:${KADALU_VERSION} "${KADALU_IMAGE_REPO}"/kadalu-operator:${KADALU_VERSION}
-    ;;
-  ssh)
-    echo "connecting to minikube"
-    minikube ssh
-    ;;
-
   kadalu_operator)
 
     # list docker images
@@ -437,9 +372,17 @@ case "${1:-}" in
 
     # validates all kadalu resource pods are up or not
     wait_for_kadalu_pods
+    check_test_fail
 
     ;;
-
+  cli_tests)
+    output=$(kubectl get nodes -o=name)
+    HOSTNAME=$(basename $output)
+    echo "Hostname is ${HOSTNAME}"
+    bash tests/kubectl_kadalu_tests.sh "$DISK" "${HOSTNAME}"
+    wait_for_kadalu_pods
+    check_test_fail
+    ;;
   test_kadalu)
 
     # deploy and validate app pods on storage pools and expand PVCs created as part of 'kadalu_operator' case
@@ -450,6 +393,7 @@ case "${1:-}" in
 
     # validates all kadalu resource pods are up or not after modifying pools
     wait_for_kadalu_pods 400
+    check_test_fail
 
     # Run minimal IO test
     run_io
@@ -467,16 +411,6 @@ case "${1:-}" in
     _log_msgs
 
     ;;
-
-  cli_tests)
-    output=$(kubectl get nodes -o=name)
-    # output will be in format 'node/hostname'. We need 'hostname'
-    HOSTNAME=$(basename $output)
-    echo "Hostname is ${HOSTNAME}"
-    bash tests/kubectl_kadalu_tests.sh "$DISK" "${HOSTNAME}"
-    wait_for_kadalu_pods
-    ;;
-
   clean)
     minikube delete
     ;;
@@ -486,8 +420,6 @@ Available Commands:
   up               Starts a local kubernetes cluster and prepare disks for gluster
   down             Stops a running local kubernetes cluster
   clean            Deletes a local kubernetes cluster
-  ssh              Log into or run a command on a minikube machine with SSH
-  copy-image       copy kadalu-operator docker image
   kadalu_operator  start kadalu operator
   test_kadalu      test kadalu storage
 " >&2
