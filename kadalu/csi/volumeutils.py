@@ -912,11 +912,9 @@ class Pool:
         self.mode = ""
         self.disperse_data = 0
         self.disperse_redundancy = 0
-        self.kadalu_pool_name = ""
-        self.kadalu_volume_name = ""
-        self.gluster_volname = None
-        self.gluster_hosts = []
-        self.options = ""
+        self.external_volume_name = ""
+        self.external_volume_hosts = []
+        self.options = []
         self.mount_options = ""
         self.single_pv_per_pool = False
         self.supported_pvtype = "all"
@@ -970,8 +968,8 @@ class Pool:
         pinfo.type = "" if data["type"].lower() == "external" else data["type"]
         pinfo.mode = "external" if data["type"].lower() == "external" else "native"
         pinfo.mgr_url = data.get("mgr_url", None)
-        pinfo.gluster_volname = data.get("gluster_volname", None)
-        pinfo.gluster_hosts = data.get("gluster_hosts", [])
+        pinfo.external_volume_name = data.get("gluster_volname", None)
+        pinfo.external_volume_hosts = data.get("gluster_hosts", [])
         pinfo.mount_options = data.get("gluster_options", "")
         pinfo.mount_options = data.get("mount_options", pinfo.mount_options)
         pinfo.options = data.get("options", {})
@@ -981,6 +979,8 @@ class Pool:
         pinfo.single_pv_per_pool = data.get("kadalu_format", "native") != "native"
         pinfo.disperse_data = data.get("disperse", {}).get("data", 0)
         pinfo.disperse_redundancy = data.get("disperse", {}).get("redundancy", 0)
+        pinfo.external_volume_hosts = data.get("kadalu_hosts",
+                                               pinfo.external_volume_hosts)
 
         for storage_unit_data in data.get("bricks", []):
             storage_unit = StorageUnit()
@@ -1016,7 +1016,7 @@ class Pool:
         return self.mode == POOL_MODE_EXTERNAL_KADALU
 
     @property
-    def is_mode_native_v2(self):
+    def is_mode_native(self):
         """If the Pool is externally managed or not"""
         return self.mode == POOL_MODE_NATIVE
 
@@ -1055,10 +1055,10 @@ class Pool:
         # use only pool name as mount path else use pool name and
         # gluster volume name.
         # /<mnt-dir>/<pool-name>_<gluster_volname>
-        if self.is_mode_external and self.name != self.gluster_volname:
+        if self.is_mode_external and self.name != self.external_volume_name:
             return os.path.join(
                 POOL_MOUNTDIR,
-                f"{self.name}_{self.gluster_volname}"
+                f"{self.name}_{self.external_volume_name}"
             )
 
         # /<mnt-dir>/<volname>
@@ -1090,10 +1090,10 @@ class Pool:
             GLUSTERFS_CMD,
             "--process-name", "fuse",
             "-l", log_file,
-            "--volfile-id", self.gluster_volname,
+            "--volfile-id", self.external_volume_name,
         ]
 
-        for host in self.gluster_hosts.split(','):
+        for host in self.external_volume_hosts.split(','):
             cmd.extend(["--volfile-server", host])
 
         pool_mount_opts_str = self.mount_options
@@ -1109,7 +1109,7 @@ class Pool:
                 "Use Gluster CLI to set the Volume "
                 "options of External Gluster Volume",
                 pool_name=self.name,
-                gluster_volume_name=self.gluster_volname
+                gluster_volume_name=self.external_volume_name
             ))
 
         if pool_mount_opts_str != "":
@@ -1126,7 +1126,7 @@ class Pool:
         command = cmd + g_ops + [mountpoint]
         try:
             execute(*command)
-            set_quota_deem_statfs(self.gluster_hosts, self.gluster_volname)
+            set_quota_deem_statfs(self.external_volume_hosts, self.external_volume_name)
         except CommandException as excep:
             if  excep.err.find("invalid option") != -1:
                 logging.info(logf(
@@ -1173,10 +1173,15 @@ class Pool:
         cmd = [
             MOUNT_CMD,
             "-t", "kadalu",
-            f"{self.mgr_url}:/{self.kadalu_pool_name}/{self.kadalu_volume_name}",
+            f"/{self.external_volume_name}",
         ]
 
+        # Add Volfile Servers to the list
         pool_mount_opts_str = self.mount_options
+        if pool_mount_opts_str != "":
+            pool_mount_opts_str += ","
+        pool_mount_opts_str += f"volfile-servers={' '.join(self.external_volume_hosts)}"
+
         if extra_mount_options != "":
             if pool_mount_opts_str != "":
                 pool_mount_opts_str += ","
@@ -1189,7 +1194,7 @@ class Pool:
                 "Use Gluster CLI to set the Volume "
                 "options of External Gluster Volume",
                 pool_name=self.name,
-                kadalu_volume_name=self.kadalu_volume_name
+                kadalu_volume_name=self.external_volume_name
             ))
 
         if pool_mount_opts_str != "":
@@ -1236,113 +1241,14 @@ class Pool:
             f"{self.name}{suffix}.client.vol"
         )
 
-    # noqa # pylint: disable=too-many-locals
-    def _mount_native_v1(self, suffix="", extra_options="",
-                         extra_mount_options="", is_client=False):
-        """
-        Mount GlusterFS in native(Kadalu) way.
-        Mount options are not used with native mounts. Use Volume Options
-        to customize the Pool Mount.
-        """
-
-        # If any option is provided then that means a seperate
-        # mount is required compared to earlier mounts of the same Gluster
-        # Volume(Kadalu). Add suffix to the mount path
-        # to make it a different mount.
-        mountpoint = self.mountpoint
-        if suffix != "":
-            mountpoint += suffix
-
-        # Generate the Client Volfile, later if Options
-        # are provided then modify the Volfile with all the
-        # Options included.
-        self.generate_client_volfile()
-
-        pool_opts_str = self.options
-        if extra_options != "":
-            if pool_opts_str != "":
-                pool_opts_str += ","
-            pool_opts_str += f"{extra_options}"
-
-        if extra_mount_options != "":
-            logging.info(logf(
-                "Mount options are not supported.",
-                pool_name=self.name
-            ))
-
-        # Update the options and get the updated path of Client Volfile file
-        self.update_options_to_client_volfile(pool_opts_str, suffix)
-
-        # Ignore if already glusterfs process running for that volume
-        if is_gluster_mount_proc_running(self.name, mountpoint):
-            self.reload_process()
-            logging.debug(logf(
-                "Already mounted",
-                mount=mountpoint
-            ))
-            return mountpoint
-
-        # Ignore if already mounted
-        if is_gluster_mount_proc_running(self.name, mountpoint):
-            self.reload_process()
-            logging.debug(logf(
-                "Already mounted (2nd try)",
-                mount=mountpoint
-            ))
-            return mountpoint
-
-        if not os.path.exists(mountpoint):
-            makedirs(mountpoint)
-
-        with mount_lock:
-            # Fix the log, so we can check it out later
-            # log_file = "/var/log/gluster/%s.log" % mountpoint.replace("/", "-")
-            log_file = "/var/log/gluster/gluster.log"
-            cmd = [
-                GLUSTERFS_CMD,
-                "--process-name", "fuse",
-                "-l", log_file,
-                "--volfile-id", self.name,
-                "--fs-display-name", f"kadalu:{self.name}",
-                "-f", self.client_volfile_path(suffix=suffix),
-                mountpoint
-            ]
-
-            ## required for 'simple-quota'
-            if not is_client:
-                cmd.extend(["--client-pid", "-14"])
-
-            try:
-                (_, err, pid) = execute(*cmd)
-                register_pool_mount(mountpoint, self.name, suffix,
-                                    pool_opts_str, "", pid)
-            except CommandException as err:
-                logging.error(logf(
-                    "error to execute command",
-                    pool_name=self.name,
-                    cmd=cmd,
-                    error=format(err)
-                ))
-                raise err
-
         return mountpoint
 
     # noqa # pylint: disable=too-many-locals
-    def _mount_native_v2(self, suffix="", _extra_options="",
-                         _extra_mount_options="", is_client=False):
+    def _mount_native(self, suffix="", _extra_options="",
+                      _extra_mount_options="", is_client=False):
         """
         Mount Kadalu Storage Volume.
         """
-
-        # Login to Kadalu Storage
-        # TODO: Persist API Key to mount the Volume, instead of
-        # login to Kadalu Storage everytime.
-        cmd = ["kadalu", "user", "login", "admin", "--password=kadalu"]
-        try:
-            execute(*cmd)
-        except CommandException as err:
-            logging.error(logf("Failed to login user", error=err))
-            raise
 
         # If any option is provided then that means a seperate
         # mount is required compared to earlier mounts of the same Gluster
@@ -1375,17 +1281,23 @@ class Pool:
         if not os.path.exists(mountpoint):
             makedirs(mountpoint)
 
+        volfile_servers = set()
+        for storage_unit in self.storage_units:
+            volfile_servers.add(f"{storage_unit.node}:24007")
+
+        mount_options = f"volfile-servers={' '.join(volfile_servers)}"
+        ## required for 'simple-quota'
+        if not is_client:
+            mount_options += ",client-pid=-14"
+
         with mount_lock:
             cmd = [
                 MOUNT_CMD,
                 "-t", "kadalu",
-                f"{self.mgr_url}:/kadalu/{self.name}",
+                "-o", mount_options,
+                f"/kadalu/{self.name}",
                 mountpoint
             ]
-
-            ## required for 'simple-quota'
-            if not is_client:
-                cmd.extend(["-o", "client-pid=-14"])
 
             try:
                 (_, err, pid) = execute(*cmd)
@@ -1413,11 +1325,7 @@ class Pool:
             return self._mount_external_kadalu(
                 suffix, extra_options, extra_mount_options)
 
-        if self.is_mode_native_v2:
-            return self._mount_native_v2(
-                suffix, extra_options, extra_mount_options, is_client)
-
-        return self._mount_native_v1(
+        return self._mount_native(
             suffix, extra_options, extra_mount_options, is_client)
 
     @classmethod
