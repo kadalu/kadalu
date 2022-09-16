@@ -7,7 +7,8 @@ import uvicorn
 from fastapi import FastAPI
 
 from kadalu.common.utils import logf, logging_setup
-from kadalu.csi.volumeutils import POOL_MOUNTDIR, yield_pvc_from_mntdir
+from kadalu.common.pool_utils import POOL_MOUNTDIR
+from kadalu.csi.volumeutils import yield_pvc_from_mntdir
 
 metrics_app = FastAPI()
 

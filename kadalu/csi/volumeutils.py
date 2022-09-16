@@ -8,44 +8,28 @@ import logging
 import os
 import re
 import shutil
-import tempfile
-import threading
 import time
 from errno import ENOTCONN
 from pathlib import Path
 
 import xxhash
-from jinja2 import Template
 
 from kadalu.csi import csi_pb2
 from kadalu.common.utils import (
     PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
-    CommandException, SizeAccounting, execute,
-    is_gluster_mount_proc_running, logf, makedirs,
-    reachable_host, retry_errors,
-    POOL_MODE_NATIVE,
-    POOL_MODE_EXTERNAL_GLUSTER,
-    POOL_MODE_EXTERNAL_KADALU
+    CommandException, execute,
+    logf, makedirs,
+    reachable_host, retry_errors
 )
+from kadalu.common.pool_utils import Pool, check_mount_availability
 
-GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/bin/mount"
 UNMOUNT_CMD = "/bin/umount"
 MKFS_XFS_CMD = "/sbin/mkfs.xfs"
 XFS_GROWFS_CMD = "/sbin/xfs_growfs"
-RESERVED_SIZE_PERCENTAGE = 10
-POOL_MOUNTDIR = "/mnt"
-VOLFILES_DIR = "/kadalu/volfiles"
-TEMPLATES_DIR = "/kadalu/templates"
 POOLINFO_DIR = "/var/lib/gluster"
 SECRET_PRIVATE_KEY = "/etc/secret-volume/ssh-privatekey"
 
-# This variable contains in-memory map of all glusterfs processes (hash of volfile and pid)
-# Used while sending SIGHUP during any modifcation to storage config
-POOL_DATA = {}
-
-statfile_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
-mount_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 SINGLE_NODE_WRITER = getattr(csi_pb2.VolumeCapability.AccessMode,
                              "SINGLE_NODE_WRITER")
 
@@ -93,14 +77,6 @@ def pv_path(pvtype, pvname):
 def pv_abspath(mountpoint, pvpath, mount_suffix=""):
     """Absolute Path of the PV including Pool mount path"""
     return f"{mountpoint}{mount_suffix}/{pvpath}"
-
-
-def check_mount_availability(mountpoint):
-    """
-    Check for mount availability, Retry for
-    ENOTCONN errors(Timeout 130 seconds)
-    """
-    return retry_errors(os.statvfs, [mountpoint], [ENOTCONN])
 
 
 class PvException(Exception):
@@ -866,740 +842,72 @@ def filter_external_pool(pool, filters):
     return pool
 
 
-# noqa # pylint: disable=too-many-arguments
-def register_pool_mount(mountpoint, pool_name, mount_suffix, opts,
-                        mount_opts, pid):
-    """
-    Register the Pool mounts globally. This info is
-    used while reloading the mounts
-    """
-    if POOL_DATA.get(pool_name, None) is None:
-        POOL_DATA[pool_name] = {}
-
-    POOL_DATA[pool_name][mountpoint] = {
-        "name": pool_name,
-        "options": opts,
-        "mount_options": mount_opts,
-        "mount_suffix": mount_suffix,
-        "pid": pid
-    }
-
-
-# noqa # pylint: disable=too-few-public-methods
-class StorageUnit:
-    """Storage Unit Object"""
-    def __init__(self):
-        self.path = ""
-        self.kube_hostname = ""
-        self.node = ""
-        self.node_id = ""
-        self.host_path = ""
-        self.device = ""
-        self.pvc_name = ""
-        self.device_dir = ""
-        self.decommissioned = ""
-        self.index = 0
-
-
-class Pool:
-    """Pool Object"""
-    def __init__(self, **kwargs):
-        self.name = kwargs.get("name", "")
-        self.id = ""  # noqa # pylint: disable=invalid-name
-        self.pv_reclaim_policy = "delete"
-        self.storage_units = []
-        self.type = ""
-        self.mode = ""
-        self.disperse_data = 0
-        self.disperse_redundancy = 0
-        self.external_volume_name = ""
-        self.external_volume_hosts = []
-        self.options = []
-        self.mount_options = ""
-        self.single_pv_per_pool = False
-        self.supported_pvtype = "all"
-        self.dht_subvol = []
-        self.distribute_count = 1
-        self.subvol_storage_units_count = 1
-        self.decommissioned = ""
-        self.mgr_url = None
-
-    def set_dependent_fields(self):
-        """Set dependent fields of the Pool"""
-        decommissioned = []
-        if self.type == "Replica1":
-            for storage_unit in self.storage_units:
-                storage_unit_name = f"{self.name}-client-{storage_unit.index}"
-                self.dht_subvol.append(storage_unit_name)
-                if storage_unit.decommissioned != "":
-                    decommissioned.append(storage_unit_name)
-        else:
-            count = 3
-            if self.type == "Replica2":
-                count = 2
-
-            if self.type == "Disperse":
-                count = self.disperse_data + self.disperse_redundancy
-
-            self.subvol_storage_units_count = count
-            type_name = "disperse" if self.type == "Disperse" else "replica"
-            for i in range(0, int(len(self.storage_units) / count)):
-                storage_unit_name = f"{self.name}-{type_name}-{i}"
-                self.dht_subvol.append(storage_unit_name)
-                if self.storage_units[(i * count)].decommissioned != "":
-                    decommissioned.append(storage_unit_name)
-
-        self.decommissioned = ",".join(decommissioned)
-
-    @classmethod
-    def by_name(cls, name):
-        """
-        Parsed Poolinfo from the info JSON file created
-        by the Operator during Storage add.
-        """
-        with open(os.path.join(POOLINFO_DIR, name + ".info"), encoding="utf-8") as info_file:
-            data = json.load(info_file)
-
-        pinfo = Pool()
-        pinfo.name = data["volname"]
-        pinfo.id = data["volume_id"]
-        pinfo.pv_reclaim_policy = data["pvReclaimPolicy"]
-        pinfo.storage_units = []
-        pinfo.type = "" if data["type"].lower() == "external" else data["type"]
-        pinfo.mode = "external" if data["type"].lower() == "external" else "native"
-        pinfo.mgr_url = data.get("mgr_url", None)
-        pinfo.external_volume_name = data.get("gluster_volname", None)
-        pinfo.external_volume_hosts = data.get("gluster_hosts", [])
-        pinfo.mount_options = data.get("gluster_options", "")
-        pinfo.mount_options = data.get("mount_options", pinfo.mount_options)
-        pinfo.options = data.get("options", {})
-        pinfo.options = ",".join(
-            [f"{key}={value}" for key, value in pinfo.options.items()]
-        )
-        pinfo.single_pv_per_pool = data.get("kadalu_format", "native") != "native"
-        pinfo.disperse_data = data.get("disperse", {}).get("data", 0)
-        pinfo.disperse_redundancy = data.get("disperse", {}).get("redundancy", 0)
-        pinfo.external_volume_hosts = data.get("kadalu_hosts",
-                                               pinfo.external_volume_hosts)
-
-        for storage_unit_data in data.get("bricks", []):
-            storage_unit = StorageUnit()
-            storage_unit.path = storage_unit_data["brick_path"]
-            storage_unit.kube_hostname = storage_unit_data["kube_hostname"]
-            storage_unit.node = storage_unit_data["node"]
-            storage_unit.node_id = storage_unit_data["node_id"]
-            storage_unit.host_path = storage_unit_data["host_brick_path"]
-            storage_unit.device = storage_unit_data["brick_device"]
-            storage_unit.pvc_name = storage_unit_data["pvc_name"]
-            storage_unit.device_dir = storage_unit_data["brick_device_dir"]
-            storage_unit.decommissioned = storage_unit_data["decommissioned"]
-            storage_unit.index = storage_unit_data["brick_index"]
-
-            pinfo.storage_units.append(storage_unit)
-
-        pinfo.set_dependent_fields()
-        return pinfo
-
-    @property
-    def is_mode_external(self):
-        """If the pool is external Gluster Volume or Kadalu Volume"""
-        return self.is_mode_external_gluster or self.is_mode_external_kadalu
-
-    @property
-    def is_mode_external_gluster(self):
-        """If the Pool is external Gluster Volume or not"""
-        return self.mode == POOL_MODE_EXTERNAL_GLUSTER
-
-    @property
-    def is_mode_external_kadalu(self):
-        """If the Pool is external Kadalu Volume or not"""
-        return self.mode == POOL_MODE_EXTERNAL_KADALU
-
-    @property
-    def is_mode_native(self):
-        """If the Pool is externally managed or not"""
-        return self.mode == POOL_MODE_NATIVE
-
-    def is_size_available(self, size):
-        """
-        Check if the requested size is available in the Pool
-        to create or expand the PV.
-        """
-        with statfile_lock:
-            # Stat done before `os.path.exists` to prevent ignoring
-            # file not exists even in case of ENOTCONN
-            mntdir_stat = check_mount_availability(self.mountpoint)
-            with SizeAccounting(self.name, self.mountpoint) as acc:
-                acc.update_summary(mntdir_stat.f_bavail * mntdir_stat.f_bsize)
-                pv_stats = acc.get_stats()
-                reserved_size = pv_stats["free_size_bytes"] * RESERVED_SIZE_PERCENTAGE/100
-
-            if size < (pv_stats["free_size_bytes"] - reserved_size):
-                return True
-
-            return False
-
-    @property
-    def mountpoint(self):
-        """
-        Predictable mountpoint of the Pool.
-
-        All natively managed Pools are mounted as /mnt/<pool-name>
-
-        Externally managed Pools (External Gluster Volumes) can have
-        pool name different than Gluster volume name. This is supported
-        because External Gluster Volume name can have the same name as
-        one of the internally managed Pool name.
-        """
-        # If Pool name and external Gluster Volume name is same then
-        # use only pool name as mount path else use pool name and
-        # gluster volume name.
-        # /<mnt-dir>/<pool-name>_<gluster_volname>
-        if self.is_mode_external and self.name != self.external_volume_name:
-            return os.path.join(
-                POOL_MOUNTDIR,
-                f"{self.name}_{self.external_volume_name}"
-            )
-
-        # /<mnt-dir>/<volname>
-        return os.path.join(POOL_MOUNTDIR, f"{self.name}")
-
-    def _mount_external_gluster(self, suffix="", extra_options="",
-                                extra_mount_options=""):
-        """
-        Mount External Gluster Volume.
-        Only Mount options are used with External Gluster Volume
-        mount. Other Volume options are not supported yet. Mount Options
-        provided during the Storage add will be merged with the Mount
-        Options provided with Storage Class.
-        """
-
-        # If any mount option is provided then that means a seperate
-        # mount is required compared to earlier mounts of the same Gluster
-        # Volume. Add suffix to the mount path to make it a different mount.
-        mountpoint = self.mountpoint
-        if suffix != "":
-            mountpoint += suffix
-
-        if not os.path.exists(mountpoint):
-            makedirs(mountpoint)
-
-        log_file = "/var/log/gluster/gluster.log"
-
-        cmd = [
-            GLUSTERFS_CMD,
-            "--process-name", "fuse",
-            "-l", log_file,
-            "--volfile-id", self.external_volume_name,
-        ]
-
-        for host in self.external_volume_hosts.split(','):
-            cmd.extend(["--volfile-server", host])
-
-        pool_mount_opts_str = self.mount_options
-        if extra_mount_options != "":
-            if pool_mount_opts_str != "":
-                pool_mount_opts_str += ","
-            pool_mount_opts_str += f"{extra_mount_options}"
-        g_ops = []
-
-        if extra_options != "":
-            logging.info(logf(
-                "Only mount options are supported. "
-                "Use Gluster CLI to set the Volume "
-                "options of External Gluster Volume",
-                pool_name=self.name,
-                gluster_volume_name=self.external_volume_name
-            ))
-
-        if pool_mount_opts_str != "":
-            for option in pool_mount_opts_str.split(","):
-                g_ops.append(f"--{option}")
-
-        logging.debug(logf(
-            "glusterfs command",
-            cmd=cmd,
-            opts=g_ops,
-            mountpoint=mountpoint,
-        ))
-
-        command = cmd + g_ops + [mountpoint]
-        try:
-            execute(*command)
-            set_quota_deem_statfs(self.external_volume_hosts, self.external_volume_name)
-        except CommandException as excep:
-            if  excep.err.find("invalid option") != -1:
-                logging.info(logf(
-                    "proceeding without supplied incorrect mount options",
-                    options=g_ops,
-                    ))
-                command = cmd + [mountpoint]
-                try:
-                    execute(*command)
-                except CommandException as excep1:
-                    logging.info(logf(
-                        "mount command failed",
-                        cmd=command,
-                        error=excep1,
-                    ))
-                return
-            logging.info(logf(
-                "mount command failed",
-                cmd=command,
-                error=excep,
-            ))
-        return
-
-    def _mount_external_kadalu(self, suffix="", extra_options="",
-                               extra_mount_options=""):
-        """
-        Mount External Kadalu Volume.
-        Only Mount options are used with External Kadalu Volume
-        mount. Other Volume options are not supported yet. Mount Options
-        provided during the Storage add will be merged with the Mount
-        Options provided with Storage Class.
-        """
-
-        # If any mount option is provided then that means a seperate
-        # mount is required compared to earlier mounts of the same Gluster
-        # Volume. Add suffix to the mount path to make it a different mount.
-        mountpoint = self.mountpoint
-        if suffix != "":
-            mountpoint += suffix
-
-        if not os.path.exists(mountpoint):
-            makedirs(mountpoint)
-
-        cmd = [
-            MOUNT_CMD,
-            "-t", "kadalu",
-            f"/{self.external_volume_name}",
-        ]
-
-        # Add Volfile Servers to the list
-        pool_mount_opts_str = self.mount_options
-        if pool_mount_opts_str != "":
-            pool_mount_opts_str += ","
-        pool_mount_opts_str += f"volfile-servers={' '.join(self.external_volume_hosts)}"
-
-        if extra_mount_options != "":
-            if pool_mount_opts_str != "":
-                pool_mount_opts_str += ","
-            pool_mount_opts_str += f"{extra_mount_options}"
-        k_ops = []
-
-        if extra_options != "":
-            logging.info(logf(
-                "Only mount options are supported. "
-                "Use Gluster CLI to set the Volume "
-                "options of External Gluster Volume",
-                pool_name=self.name,
-                kadalu_volume_name=self.external_volume_name
-            ))
-
-        if pool_mount_opts_str != "":
-            for option in pool_mount_opts_str.split(","):
-                k_ops.append(f"--{option}")
-
-        logging.debug(logf(
-            "glusterfs command",
-            cmd=cmd,
-            opts=k_ops,
-            mountpoint=mountpoint,
-        ))
-
-        command = cmd + k_ops + [mountpoint]
-        try:
-            execute(*command)
-        except CommandException as excep:
-            if  excep.err.find("invalid option") != -1:
-                logging.info(logf(
-                    "proceeding without supplied incorrect mount options",
-                    options=k_ops,
-                    ))
-                command = cmd + [mountpoint]
-                try:
-                    execute(*command)
-                except CommandException as excep1:
-                    logging.info(logf(
-                        "mount command failed",
-                        cmd=command,
-                        error=excep1,
-                    ))
-                return
-            logging.info(logf(
-                "mount command failed",
-                cmd=command,
-                error=excep,
-            ))
-        return
-
-    def client_volfile_path(self, suffix=""):
-        """Client Volfile Path"""
-        return os.path.join(
-            VOLFILES_DIR,
-            f"{self.name}{suffix}.client.vol"
-        )
-
-        return mountpoint
-
-    # noqa # pylint: disable=too-many-locals
-    def _mount_native(self, suffix="", _extra_options="",
-                      _extra_mount_options="", is_client=False):
-        """
-        Mount Kadalu Storage Volume.
-        """
-
-        # If any option is provided then that means a seperate
-        # mount is required compared to earlier mounts of the same Gluster
-        # Volume(Kadalu). Add suffix to the mount path
-        # to make it a different mount.
-        mountpoint = self.mountpoint
-        if suffix != "":
-            mountpoint += suffix
-
-        # TODO: Use Options and Mount Options
-
-        # Ignore if already glusterfs process running for that volume
-        if is_gluster_mount_proc_running(self.name, mountpoint):
-            self.reload_process()
-            logging.debug(logf(
-                "Already mounted",
-                mount=mountpoint
-            ))
-            return mountpoint
-
-        # Ignore if already mounted
-        if is_gluster_mount_proc_running(self.name, mountpoint):
-            self.reload_process()
-            logging.debug(logf(
-                "Already mounted (2nd try)",
-                mount=mountpoint
-            ))
-            return mountpoint
-
-        if not os.path.exists(mountpoint):
-            makedirs(mountpoint)
-
-        volfile_servers = set()
-        for storage_unit in self.storage_units:
-            volfile_servers.add(f"{storage_unit.node}:24007")
-
-        mount_options = f"volfile-servers={' '.join(volfile_servers)}"
-        ## required for 'simple-quota'
-        if not is_client:
-            mount_options += ",client-pid=-14"
-
-        with mount_lock:
-            cmd = [
-                MOUNT_CMD,
-                "-t", "kadalu",
-                "-o", mount_options,
-                f"/kadalu/{self.name}",
-                mountpoint
-            ]
-
-            try:
-                (_, err, pid) = execute(*cmd)
-                register_pool_mount(mountpoint, self.name, suffix,
-                                    "", "", pid)
-            except CommandException as err:
-                logging.error(logf(
-                    "error to execute command",
-                    pool_name=self.name,
-                    cmd=cmd,
-                    error=format(err)
-                ))
-                raise err
-
-        return mountpoint
-
-    def mount(self, suffix="", extra_options="",
-              extra_mount_options="", is_client=False):
-        """Mount the Storage Pool"""
-        if self.is_mode_external_gluster:
-            return self._mount_external_gluster(
-                suffix, extra_options, extra_mount_options)
-
-        if self.is_mode_external_kadalu:
-            return self._mount_external_kadalu(
-                suffix, extra_options, extra_mount_options)
-
-        return self._mount_native(
-            suffix, extra_options, extra_mount_options, is_client)
-
-    @classmethod
-    def apply_pool_filter(cls, pool_name, filters):
-        """Apply Pool filters if applicable and return Pool/None"""
-        # If no filter is provided
-        if filters is None:
-            return Pool.by_name(pool_name)
-
-        # Apply name filter separately than other filters available
-        # to avoid opening the Info file and JSON Serialize
-        filtered = filter_pool_name(Pool(name=pool_name), filters)
+def get_pool_from_mounted_configmap(name):
+    """Poolinfo from Configmap"""
+    with open(f"{POOLINFO_DIR}/{name}.info", encoding="utf-8") as info_file:
+        return Pool.from_json(json.load(info_file))
+
+
+def apply_pool_filter(pool_name, filters):
+    """Apply Pool filters if applicable and return Pool/None"""
+    # If no filter is provided
+    if filters is None:
+        return get_pool_from_mounted_configmap(pool_name)
+
+    # Apply name filter separately than other filters available
+    # to avoid opening the Info file and JSON Serialize
+    filtered = filter_pool_name(Pool(name=pool_name), filters)
+    if filtered is None:
+        logging.debug(
+            logf("Pool doesn't match the filter",
+                 _pool_name=pool_name,
+                 **filters))
+        return None
+
+    pool = get_pool_from_mounted_configmap(pool_name)
+
+    filtered_data = True
+    for filter_func in pool_filters:
+        filtered = filter_func(pool, filters)
+        # Node affinity is not matching for this Volume,
+        # Try other volumes
         if filtered is None:
+            filtered_data = False
             logging.debug(
                 logf("Pool doesn't match the filter",
-                     _pool_name=pool_name,
+                     _pool_name=pool.name,
                      **filters))
-            return None
+            break
 
-        pool = Pool.by_name(pool_name)
+    if not filtered_data:
+        return None
 
-        filtered_data = True
-        for filter_func in pool_filters:
-            filtered = filter_func(pool, filters)
-            # Node affinity is not matching for this Volume,
-            # Try other volumes
-            if filtered is None:
-                filtered_data = False
-                logging.debug(
-                    logf("Pool doesn't match the filter",
-                         _pool_name=pool.name,
-                         **filters))
-                break
-
-        if not filtered_data:
-            return None
-
-        return pool
-
-    @classmethod
-    def list(cls, filters=None, iteration=40):
-        """List of Storage Pools. Apply filters when provided."""
-        pools = []
-        total_pools = 0
-
-        for filename in os.listdir(POOLINFO_DIR):
-            if not filename.endswith(".info"):
-                continue
-
-            total_pools += 1
-            pool_name = filename.replace(".info", "")
-
-            pool = cls.apply_pool_filter(pool_name, filters)
-            if pool is not None:
-                pools.append(pool)
-
-        # If pool info file is not yet available, ConfigMap may not be ready
-        # or synced. Wait for some time and try again
-        # Lets just give maximum 2 minutes for the config map to come up!
-        if total_pools == 0 and iteration > 0:
-            time.sleep(3)
-            iteration -= 1
-            return Pool.list(filters, iteration)
-
-        return pools
-
-    def update_free_size(self, pvname, sizechange):
-        """Update the free size in respective host volume's stats.db file"""
-
-        # Check for mount availability before updating the free size
-        check_mount_availability(self.mountpoint)
-
-        with statfile_lock:
-            with SizeAccounting(self.name, self.mountpoint) as acc:
-                # Reclaim space
-                if sizechange > 0:
-                    acc.remove_pv_record(pvname)
-                else:
-                    acc.update_pv_record(pvname, -sizechange)
-
-    def unmount(self, suffix=""):
-        """Unmount the Storage Pool"""
-        if suffix != "":
-            mountpoint = self.mountpoint + suffix
-
-        if is_gluster_mount_proc_running(self.name, mountpoint):
-            execute(UNMOUNT_CMD, "-l", mountpoint)
-
-    def reload_process(self):
-        """Mount Glusterfs Volume"""
-        if self.is_mode_external:
-            return False
-
-        if not POOL_DATA.get(self.name, None):
-            return False
-
-        # Ignore if already glusterfs process running for that volume
-        with mount_lock:
-            if not self.generate_client_volfile():
-                return False
-
-            # Fetch data of all mounts of the Pool and
-            # Update the Volume options to Volfile if provided.
-            mounts_data = POOL_DATA[self.name]
-            for _mountpoint, mdata in mounts_data.items():
-                self.update_options_to_client_volfile(
-                    mdata["options"], mdata["mount_suffix"]
-                )
-
-            # TODO: ideally, keep the pid in structure for easier access
-            # pid = POOL_DATA[volname]["pid"]
-            # cmd = ["kill", "-HUP", str(pid)]
-            cmd = ["ps", "--no-header", "-ww", "-o", "pid,command", "-C", "glusterfs"]
-
-            try:
-                out, err, _ = execute(*cmd)
-                send_signal_to_process(self.name, out, "-HUP")
-            except CommandException as err:
-                logging.error(logf(
-                    "error to execute command",
-                    pool_name=self.name,
-                    cmd=cmd,
-                    error=format(err)
-                ))
-                return False
-
-        return True
-
-    def generate_client_volfile(self):
-        """Generate Client Volfile for Glusterfs Volume"""
-        # Tricky to get this right, but this solves all the elements of distribute in code :-)
-        template_file_path = os.path.join(
-            TEMPLATES_DIR,
-            f"{self.type}.client.vol.j2"
-        )
-        client_volfile = os.path.join(
-            VOLFILES_DIR,
-            f"{self.name}.client.vol"
-        )
-        content = ""
-        with open(template_file_path, encoding="utf-8") as template_file:
-            content = template_file.read()
-
-        Template(content).stream(gvol=self).dump(client_volfile)
-        return True
-
-    def update_options_to_client_volfile(self, pool_opts_str, suffix):
-        """
-        Update the Volume options to already generated Client Volfile
-        """
-        if pool_opts_str == "":
-            return
-
-        # Construct 'dict' from passed storage-options in 'str'
-        pool_options = pool_options_parse(pool_opts_str)
-
-        # Keep the default volfile untouched
-        tmp_volfile_path = tempfile.mkstemp()[1]
-        shutil.copy(self.client_volfile_path(), tmp_volfile_path)
-
-        # Parse the client-volfile, update passed storage-options & save
-        parsed_client_volfile_path = Volfile.parse(tmp_volfile_path)
-        parsed_client_volfile_path.update_options_by_type(pool_options)
-        parsed_client_volfile_path.save()
-
-        os.rename(tmp_volfile_path, self.client_volfile_path(suffix=suffix))
-        return
+    return pool
 
 
-def send_signal_to_process(volname, out, sig):
-    """Sends the signal to one of the process"""
+def list_pools_from_mounted_configmap(filters=None, iteration=40):
+    """List Pools from Configmap"""
+    pools = []
+    for filename in os.listdir(POOLINFO_DIR):
+        if not filename.endswith(".info"):
+            continue
 
-    for line in out.split("\n"):
-        parts = line.split()
-        pid = parts[0]
-        for part in parts:
-            if part.startswith("--volume-id="):
-                if part.split("=")[-1] == volname:
-                    cmd = [ "kill", sig, pid ]
-                    try:
-                        execute(*cmd)
-                    except CommandException as err:
-                        logging.error(logf(
-                            "error to execute command",
-                            volume=volname,
-                            cmd=cmd,
-                            error=format(err)
-                        ))
-                    return
+        total_pools += 1
+        pool_name = filename.replace(".info", "")
 
-    logging.debug(logf(
-        "Sent SIGHUP to glusterfs process",
-        volname=volname
-    ))
-    return
+        pool = apply_pool_filter(pool_name, filters)
+        if pool is not None:
+            pools.append(pool)
 
+    # If pool info file is not yet available, ConfigMap may not be ready
+    # or synced. Wait for some time and try again
+    # Lets just give maximum 2 minutes for the config map to come up!
+    if total_pools == 0 and iteration > 0:
+        time.sleep(3)
+        iteration -= 1
+        return list_pools_from_mounted_configmap(filters, iteration)
 
-# noqa # pylint: disable=too-many-locals
-# noqa # pylint: disable=too-many-statements
-# noqa # pylint: disable=too-few-public-methods
-# noqa # pylint: disable=too-many-branches
-class VolfileElement:
-    """Class to represent multiple elements within a volfile"""
-
-    def __init__(self, name):
-        self.name = name
-        self.type = None
-        self.options = {}
-        self.subvolumes = None
-
-
-class Volfile:
-    """Class with volfile utils methods"""
-
-    def __init__(self, volfile, elements):
-        self.volfile = volfile
-        self.elements = elements
-
-    @classmethod
-    def parse(cls, volfile):
-        """Parse volfile into multiple volfile elements"""
-
-        element = None
-        elements = []
-        with open(volfile, encoding="utf-8") as volf:
-            for line in volf:
-                line = line.strip()
-                if line.startswith("volume "):
-                    element = VolfileElement(line.split()[-1])
-                elif line == "end-volume":
-                    elements.append(element)
-                    element = None
-                elif line.startswith("option "):
-                    _, name, value = line.split()
-                    element.options[name] = value
-                elif line.startswith("subvolumes "):
-                    element.subvolumes = line.split(" ", 1)[-1]
-                elif line.startswith("type "):
-                    element.type = line.split()[-1]
-        return Volfile(volfile, elements)
-
-
-    def update_options_by_type(self, opts):
-        """
-        Update existing storage-options with the options
-        passed by user through storage-class
-        """
-
-        for element in self.elements:
-            if opts.get(element.type, None) is not None:
-                element.options.update(opts.get(element.type, {}))
-
-
-    def save(self, volfile=None):
-        """
-        Reconstruct and saves the volfile
-        with changes made to its elements
-        """
-
-        filepath = self.volfile
-        if volfile is not None:
-            filepath = volfile
-
-        with open(f"{filepath}.tmp", "w", encoding="utf-8") as volf:
-            for element in self.elements:
-                volf.write(f"volume {element.name}\n")
-                volf.write(f"    type {element.type}\n")
-                for name, value in element.options.items():
-                    volf.write(f"    option {name} {value}\n")
-                if element.subvolumes is not None:
-                    volf.write(f"    subvolumes {element.subvolumes}\n")
-                volf.write("end-volume\n\n")
-
-        os.rename(filepath + ".tmp", filepath)
+    return pools
 
 
 def pool_options_parse(opts_raw):
@@ -1621,51 +929,6 @@ def pool_options_parse(opts_raw):
 
         opts[xlator][opt_name] = value
     return opts
-
-
-# TODO: raise exception instead of return error
-def set_quota_deem_statfs(gluster_hosts, gluster_volname):
-    """Set Quota Deem Statfs option"""
-
-    gluster_host = reachable_host(gluster_hosts)
-    if gluster_host is None:
-        errmsg = "All hosts are not reachable"
-        logging.error(logf(errmsg))
-        raise Exception(errmsg)
-
-    use_gluster_quota = False
-    if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
-        and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
-        use_gluster_quota = True
-        secret_private_key = "/etc/secret-volume/ssh-privatekey"
-        secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
-
-    if use_gluster_quota is False:
-        logging.debug(logf("Do not set quota-deem-statfs"))
-        return
-
-    logging.debug(logf("Set quota-deem-statfs for gluster directory Quota"))
-
-    quota_deem_cmd = [
-        "ssh",
-        "-oStrictHostKeyChecking=no",
-        "-i",
-        secret_private_key,
-        f"{secret_username}@{gluster_host}",
-        "sudo",
-        "gluster",
-        "volume",
-        "set",
-        gluster_volname,
-        "quota-deem-statfs",
-        "on"
-    ]
-    try:
-        execute(*quota_deem_cmd)
-    except CommandException as err:
-        errmsg = "Unable to set quota-deem-statfs via ssh"
-        logging.error(logf(errmsg, error=err))
-        raise err
 
 
 # pylint: disable=inconsistent-return-statements
