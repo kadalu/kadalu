@@ -42,9 +42,13 @@ spec:
                   default: delete
                 pool_id:
                   type: string
-                kadalu_format:
+                single_pv_per_pool:
+                  type: boolean
+                  default: false
+                options:
                   type: string
-                  default: native
+                mount_options:
+                  type: string
                 # Refer https://github.com/kubernetes-client/python/blob/da6076/kubernetes/docs/V1Toleration.md
                 tolerations:
                   type: array
@@ -95,18 +99,20 @@ spec:
                       type: array
                       items:
                         type: string
-                    volume_name:
+                    name:
                       type: string
-                    volume_options:
+                    mount_options:
                       type: string
                 kadalu_volume:
                   type: object
                   properties:
-                    mgr_url:
+                    hosts:
+                      type: array
+                      items:
+                        type: string
+                    pool:
                       type: string
-                    pool_name:
+                    name:
                       type: string
-                    volume_name:
-                      type: string
-                    volume_options:
+                    mount_options:
                       type: string

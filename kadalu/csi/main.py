@@ -3,7 +3,6 @@ Starting point of CSI driver GRP server
 """
 import logging
 import os
-import signal
 import time
 from concurrent import futures
 
@@ -43,21 +42,6 @@ def mount_pools():
     return
 
 
-def reconfigure_pool_mounts(_signum, _frame):
-    """
-    Reconfigure the mounts by regenerating the volfiles.
-    """
-    pools = Pool.list()
-    for pool in pools:
-        if pool.is_mode_external:
-            # Need to skip remount external
-            continue
-
-        if pool.reload_process():
-            logging.info(logf("Pool reloaded successfully",
-                              pool_name=pool.name))
-
-
 def main():
     """
     Register Controller Server, Node server and Identity Server and start
@@ -67,8 +51,6 @@ def main():
 
     # If Provisioner pod reboots, mount pools if they exist before reboot
     mount_pools()
-
-    signal.signal(signal.SIGHUP, reconfigure_pool_mounts)
 
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     csi_pb2_grpc.add_ControllerServicer_to_server(ControllerServer(), server)
