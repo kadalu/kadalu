@@ -147,7 +147,7 @@ $ oc -n kadalu  describe  services operator | awk '/Endpoints/ {print "http://"$
 - Go to the UI -> Administrator -> Observe -> Metrics -> Type "kadalu_" -> There should be multiple metrics
 
 
-- In case you got troubles with the Metrics, consider restarting the pods in the openshift-user-workload-monitoring namespace (and in rare cases openshift-monitoring)
+- In case you got troubles with the Metrics, consider setting "openshift.io/cluster-monitoring" to "false" and back to "true" or restarting the pods in the openshift-user-workload-monitoring namespace (and in rare cases openshift-monitoring)
 
 == Alarm configuration
 
