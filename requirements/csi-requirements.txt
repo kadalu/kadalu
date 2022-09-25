@@ -8,7 +8,7 @@ googleapis-common-protos==1.56.4
     # via Kadalu (setup.py)
 grpcio==1.48.1
     # via Kadalu (setup.py)
-protobuf==3.20.1
+protobuf==3.20.2
     # via
     #   Kadalu (setup.py)
     #   googleapis-common-protos
