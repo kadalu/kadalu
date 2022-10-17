@@ -6,7 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.17] - 2022-10-17
+
 - Update Python modules dependencies for all components
+- Openshift documentation improvements
 
 ## [0.8.16] - 2022-09-01
 
@@ -351,7 +354,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.16...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.17...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
@@ -383,3 +386,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.8.14]: https://github.com/kadalu/kadalu/compare/0.8.13...0.8.14
 [0.8.15]: https://github.com/kadalu/kadalu/compare/0.8.14...0.8.15
 [0.8.16]: https://github.com/kadalu/kadalu/compare/0.8.15...0.8.16
+[0.8.17]: https://github.com/kadalu/kadalu/compare/0.8.16...0.8.17
