@@ -1,0 +1,85 @@
+= Storage Pools
+
+Storage pools are the Gluster or Kadalu Volumes that provides persistent volumes as required.
+
+== Storage Pool Modes
+
+=== Native
+
+The Storage units that are part of a Pool are also managed within the Kadalu namespace. If a Storage pool contains three storage units then Kadalu Operator starts three server pods respectively.
+
+----
+$ kubectl kadalu storage-add pool1               \
+    mirror kube-hostname1:/dev/vda1             \
+              kube-hostname2:/dev/vda1             \
+              kube-hostname3:/dev/vda1
+----
+
+Or explicitly specify the mode
+
+----
+$ kubectl kadalu storage-add pool1 --mode=native \
+    mirror kube-hostname1:/dev/vda1             \
+              kube-hostname2:/dev/vda1             \
+              kube-hostname3:/dev/vda1
+----
+
+Above example uses the given devices and creates a Storage pool by starting three server pods.
+
+=== External Kadalu
+
+This mode allows to use externally managed Kadalu Storage Volume as Storage pool. No server pods are started in this configuration.
+
+----
+$ kubectl kadalu storage-add pool2 --mode=external-kadalu \
+    --external-volume vol1 --external-pool pool1 --external-hosts "server1:.."
+    mirror kube-hostname1:/dev/vda1             \
+              kube-hostname2:/dev/vda1             \
+              kube-hostname3:/dev/vda1
+----
+
+=== External Gluster
+
+This mode allows to use externally managed Gluster Volume as Storage pool. No server pods are started in this configuration.
+
+== Storage Pool Types
+
+If the mode is external then the Storage pool type is managed by the external provider itself. Many Storage pool types are supported for Native mode.
+
+=== Replica/Mirror 1
+
+=== Replica/Mirror 2
+
+=== Replica/Mirror 3
+
+=== Disperse
+
+=== Distributed Replica/Mirrored
+
+
+== Add a Storage Pool
+
+== Expand a Storage Pool
+
+== Automatic heal of Storage Pools
+
+== Pools List, detail and Status
+
+Use `storage-list` command to view the list of Storage Pools.
+
+----
+kubectl kadalu storage-list
+kubectl kadalu storage-list --detail
+kubectl kadalu storage-list --detail --status
+----
+
+== Delete a Storage Pool
+
+Delete a Storage pool by running the following command.
+
+----
+kubectl kadalu storage-remove pool1
+----
+
+== Monitoring the Storage Pools
+

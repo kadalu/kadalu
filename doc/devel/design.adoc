@@ -1,0 +1,3 @@
+= Kadalu Storage for Kubernetes
+
+Kadalu Storage manager or Moana is a modern management layer for Kadalu Storage.

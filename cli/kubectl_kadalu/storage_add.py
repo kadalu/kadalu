@@ -36,7 +36,11 @@ def set_args(name, subparsers):
         choices=["Replica1", "Replica3", "External", "Replica2", "Disperse"],
         default=None)
     arg("--volume-id",
-        help="Volume ID of previously created volume",
+        dest="pool_id",
+        help="Pool ID of previously created volume",
+        default=None)
+    arg("--pool-id",
+        help="Pool ID of previously created volume",
         default=None)
     arg("--pv-reclaim-policy",
         help="PV Reclaim Policy",
@@ -284,8 +288,8 @@ def storage_add_data(args):
     if args.pv_reclaim_policy:
         content["spec"]["pvReclaimPolicy"] = args.pv_reclaim_policy
 
-    if args.volume_id:
-        content["spec"]["volume_id"] = args.volume_id
+    if args.pool_id:
+        content["spec"]["pool_id"] = args.pool_id
 
     if args.kadalu_format:
         content["spec"]["kadalu_format"] = args.kadalu_format
