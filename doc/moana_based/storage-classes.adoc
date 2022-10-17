@@ -1,0 +1,25 @@
+= Storage Classes
+
+From https://kubernetes.io/docs/concepts/storage/storage-classes/[kubernetes.io/docs/concepts/storage/storage-classes]
+
+> A StorageClass provides a way for administrators to describe the
+> “classes” of storage they offer. Different classes might map to
+> quality-of-service levels, or to backup policies, or to arbitrary
+> policies determined by the cluster administrators. Kubernetes itself
+> is unopinionated about what classes represent. This concept is
+> sometimes called “profiles” in other storage systems.
+
+Kadalu provides a few storage classes by default, but users are not
+limited to only these classes. This document helps to understand the
+default available storage classes and how to create new ones for your
+requirements.
+
+== Default Storage Classes
+
+== Create a new Storage Classes
+
+=== Options
+
+== List Storage classes
+
+== Delete a Storage class

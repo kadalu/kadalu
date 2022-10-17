@@ -1,0 +1,138 @@
+= Setup
+
+== Setup using Krew
+
+Run below command to install Kadalu Operator and CSI drivers.
+
+[source,console]
+----
+$ kubectl krew install kadalu
+----
+
+Test to ensure the version you installed is up-to-date
+
+[source,console]
+----
+$ kubectl-kadalu version
+----
+
+== Setup using CLI
+
+Kadalu provides a kubectl extention, once installed then it can be invoked as `kubectl kadalu`.
+
+Download and install the latest release of Kadalu Kubectl plugin using,
+
+[source,console]
+----
+$ curl -fsSL https://github.com/kadalu/kadalu/releases/latest/download/install.sh | sudo bash -x
+----
+
+Test to ensure the version you installed is up-to-date
+
+[source,console]
+----
+$ kubectl-kadalu version
+----
+
+Deploy KaDalu Operator using,
+
+[source,console]
+----
+$ kubectl kadalu install
+----
+
+In the case of OpenShift, deploy Kadalu Operator using,
+
+[source,console]
+----
+$ oc kadalu install --type=openshift
+----
+
+= Setup using YAML files
+
+Use the manifest URLs from the release page and install Kadalu Operator and CSI drivers.
+
+[source,console]
+----
+$ kubectl apply -f https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator.yaml
+$ kubectl apply -f https://github.com/kadalu/kadalu/releases/latest/download/csi-nodeplugin.yaml
+----
+
+You have different flavors of operator yaml files available. Mainly for kubernetes (default), openshift, RKE, Microk8s. Find the relevant file from https://github.com/kadalu/kadalu/tree/devel/manifests[here]. Just remember to use the raw file as argument to `kubectl`.
+
+**Note**: Openshift may have some Security Context Constraints, which can be applied only by admins, Run `oc login -u system:admin` to login as admin.
+
+== Setup using Private container registry
+
+**Note**: Private registry support is available only with Kadalu `>=0.8.14`
+
+=== Start the Private Container registry
+
+----
+docker run -d -p 5000:5000 --name registry registry:2.7
+----
+
+=== Download the container images to local registry
+
+Download the following container images and push to the custom registry.
+
+----
+sudo docker pull docker.io/kadalu/kadalu-csi:devel
+sudo docker pull docker.io/kadalu/kadalu-operator:devel
+sudo docker pull docker.io/kadalu/kadalu-server:devel
+sudo docker pull docker.io/raspbernetes/csi-node-driver-registrar:2.0.1
+sudo docker pull docker.io/library/busybox
+sudo docker pull docker.io/raspbernetes/csi-external-provisioner:2.0.2
+sudo docker pull docker.io/raspbernetes/csi-external-attacher:3.0.0
+sudo docker pull docker.io/raspbernetes/csi-external-resizer:1.0.0
+----
+
+**Note:** Change the version of Kadalu Container images as required.
+
+Tag to private registry URL(Example: `my_company_images:5000`)
+
+----
+sudo docker tag docker.io/kadalu/kadalu-csi:devel my_company_images:5000/kadalu/kadalu-csi:devel
+sudo docker tag docker.io/kadalu/kadalu-operator:devel my_company_images:5000/kadalu/kadalu-operator:devel
+sudo docker tag docker.io/kadalu/kadalu-server:devel my_company_images:5000/kadalu/kadalu-server:devel
+sudo docker tag docker.io/raspbernetes/csi-node-driver-registrar:2.0.1 my_company_images:5000/raspbernetes/csi-node-driver-registrar:2.0.1
+sudo docker tag docker.io/library/busybox my_company_images:5000/library/busybox
+sudo docker tag docker.io/raspbernetes/csi-external-provisioner:2.0.2 my_company_images:5000/raspbernetes/csi-external-provisioner:2.0.2
+sudo docker tag docker.io/raspbernetes/csi-external-attacher:3.0.0 my_company_images:5000/raspbernetes/csi-external-attacher:3.0.0
+sudo docker tag docker.io/raspbernetes/csi-external-resizer:1.0.0 my_company_images:5000/raspbernetes/csi-external-resizer:1.0.0
+----
+
+Upload the images to private repository.
+
+----
+sudo docker push my_company_images:5000/kadalu/kadalu-csi:devel
+sudo docker push my_company_images:5000/kadalu/kadalu-operator:devel
+sudo docker push my_company_images:5000/kadalu/kadalu-server:devel
+sudo docker push my_company_images:5000/raspbernetes/csi-node-driver-registrar:2.0.1
+sudo docker push my_company_images:5000/library/busybox
+sudo docker push my_company_images:5000/raspbernetes/csi-external-provisioner:2.0.2
+sudo docker push my_company_images:5000/raspbernetes/csi-external-attacher:3.0.0
+sudo docker push my_company_images:5000/raspbernetes/csi-external-resizer:1.0.0
+----
+
+=== Generate Manifest files
+
+Now generate the manifest files by running the following command.
+
+----
+IMAGES_HUB=my_company_images:5000 make gen-manifest
+----
+
+Change the `IMAGES_HUB` to custom domain as required.
+
+=== Install Kubectl extension
+
+----
+curl -fsSL https://github.com/kadalu/kadalu/releases/latest/download/install.sh | sudo bash -x
+----
+
+== Install Kadalu Operator and CSI
+
+----
+kubectl kadalu install --local-yaml=./manifests/kadalu-operator.yaml --local-csi-yaml=./manifests/csi-nodeplugin.yaml
+----

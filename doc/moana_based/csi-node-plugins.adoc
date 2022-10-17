@@ -1,0 +1,29 @@
+= CSI Node plugins
+
+CSI node plugins are installed in all the nodes of the Kubernetes by default. CSI node plugin takes care of mounting the Persistent Volume when an application requests it.
+
+If running CSI node plugin in all the hundreds of nodes is not desirable then edit the csi-nodeplugin yaml file and add the `nodeSelector` as shown in the example below.
+
+[source,yaml]
+----
+...
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: kadalu-csi-nodeplugin
+  namespace: kadalu
+  labels:
+    app.kubernetes.io/part-of: kadalu
+    app.kubernetes.io/component: csi-driver
+    app.kubernetes.io/name: kadalu-csi-nodeplugin
+spec:
+  nodeSelector:
+    kadalu_node_plugin: "true"
+...
+----
+
+And set the label to all the required nodes
+
+----
+kubectl label nodes <your-node-name> kadalu_node_plugin=true
+----
