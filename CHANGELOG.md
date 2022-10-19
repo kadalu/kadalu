@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Helm chart: fixed namespace management bug
+
 ## [0.8.17] - 2022-10-17
 
 - Update Python modules dependencies for all components
