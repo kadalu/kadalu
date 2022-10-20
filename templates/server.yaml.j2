@@ -112,7 +112,7 @@ spec:
 {%- if pvc_name == "" %}
         - name: gluster-kmods
           hostPath:
-            path: "/usr/lib/modules"
+            path: "/lib/modules"
 {%- endif %}
         - name: glusterfsd-volfilesdir
           configMap:
