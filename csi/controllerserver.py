@@ -626,10 +626,13 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         existing_pvsize = existing_volume.size
         pvname = existing_volume.volname
 
+        additional_pvsize_required = expansion_requested_pvsize - existing_pvsize
+
         logging.info(logf(
             "Existing PV size and Expansion requested PV size",
             existing_pvsize=existing_pvsize,
-            expansion_requested_pvsize=expansion_requested_pvsize
+            expansion_requested_pvsize=expansion_requested_pvsize,
+            additional_size_required=additional_pvsize_required
         ))
 
         # reuse the data that was set while creating a volume
@@ -646,7 +649,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         use_gluster_quota = False
 
         # Check free-size in storage-pool before expansion
-        if not is_hosting_volume_free(hostvol, expansion_requested_pvsize):
+        if not is_hosting_volume_free(hostvol, additional_pvsize_required):
 
             logging.error(logf(
                 "Hosting volume is full. Add more storage",
@@ -699,10 +702,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             duration_seconds=time.time() - start_time
         ))
 
-        # sizechanged is the additional change to be
-        # subtracted from storage-pool
-        sizechange = expansion_requested_pvsize - existing_pvsize
-        update_free_size(hostvol, pvname, -sizechange)
+        update_free_size(hostvol, pvname, -expansion_requested_pvsize)
 
         # if not hostvoltype:
         #     hostvoltype = "unknown"
