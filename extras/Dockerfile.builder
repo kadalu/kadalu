@@ -1,6 +1,6 @@
 FROM python:3.10-bullseye
 
-ARG branch="series_1"
+ARG branch="kadalu_1"
 
 ENV GRPC_PYTHON_BUILD_EXT_COMPILER_JOBS 8
 ENV DEBIAN_FRONTEND=noninteractive
