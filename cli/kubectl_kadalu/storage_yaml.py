@@ -74,7 +74,8 @@ def to_storage_yaml(data):
     if data["spec"].get("volume_id", None) is not None:
         yaml +=  "  volume_id: %s\n" % data["spec"]["volume_id"]
 
-    if data["spec"].get("kadalu_format", None) is not None:
-        yaml +=  "  kadalu_format: %s\n" % data["spec"]["kadalu_format"]
+    if data["spec"].get("single_pv_per_pool", None) is not None:
+        val = f'{data["spec"]["single_pv_per_pool"]}'.lower()
+        yaml +=  f"  single_pv_per_pool: {val}\n"
 
     return yaml

@@ -5,7 +5,7 @@ metadata:
   name: pv-ext # Keep changing the name for different volumes
 spec:
   type: External
-  kadalu_format: non-native            # Will map 1 Gluster Volume : 1 PV
+  single_pv_per_pool: true             # Will map 1 Gluster Volume : 1 PV
   details:
     gluster_hosts:
       - gluster1.kadalu.io             # Change to your gluster host

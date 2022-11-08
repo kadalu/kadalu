@@ -19,7 +19,7 @@ from kadalulib import (PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
                        CommandException, SizeAccounting, execute,
                        get_volname_hash, get_volume_path,
                        is_gluster_mount_proc_running, logf, makedirs,
-                       reachable_host, retry_errors)
+                       reachable_host, retry_errors, get_single_pv_per_pool)
 
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/bin/mount"
@@ -42,18 +42,19 @@ mount_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 
 class Volume():
     """Hosting Volume object"""
+    # noqa # pylint: disable=too-many-instance-attributes
     def __init__(self, volname, voltype, hostvol, **kwargs):
         self.voltype = voltype
         self.volname = volname
         self.volhash = kwargs.get("volhash", None)
         self.volpath = kwargs.get("volpath", None)
         self.hostvol = hostvol
+        self.single_pv_per_pool = False
         self.size = kwargs.get("size", None)
         self.extra = {}
         self.extra['ghost'] = kwargs.get("ghost", None)
         self.extra['hostvoltype'] = kwargs.get("hostvoltype", None)
         self.extra['gvolname'] = kwargs.get("gvolname", None)
-        self.extra['kformat'] = kwargs.get("kformat", 'native')
         self.setpath()
 
     def setpath(self):
@@ -183,7 +184,7 @@ def get_pv_hosting_volumes(filters={}, iteration=40):
                 "g_volname": data.get("gluster_volname", None),
                 "g_host": data.get("gluster_hosts", None),
                 "g_options": data.get("gluster_options", ""),
-                "kformat": data.get("kadalu_format", None),
+                "single_pv_per_pool": get_single_pv_per_pool(data)
             }
 
             volumes.append(volume)
@@ -808,7 +809,7 @@ def search_volume(volname):
                     hostvol=hvol,
                     size=data["size"],
                     volpath=info_path,
-                    kformat=volume.get('kformat', 'native'),
+                    single_pv_per_pool=get_single_pv_per_pool(data),
                     hostvoltype=volume.get('type', None),
                     ghost=volume.get('g_host', None),
                     gvolname=volume.get('g_volname', None),
@@ -1376,11 +1377,12 @@ def check_external_volume(pv_request, host_volumes):
         if vol["type"] != "External":
             continue
 
-        # For external volume both kformat, g_volname and hosts should match
+        # For external volume both single_pv_per_pool,
+        # g_volname and hosts should match
         # gluster_hosts is flattened to a string and can be compared as such
         # Assumptions:
         # 1. User will not reuse a gluster non-native volume
-        if (vol["kformat"] == params["kadalu_format"]
+        if (get_single_pv_per_pool(vol) == get_single_pv_per_pool(params)
                 and vol["g_volname"] == params["gluster_volname"]
                 and vol["g_host"] == params["gluster_hosts"]):
             mntdir = os.path.join(HOSTVOL_MOUNTDIR, vol["name"])
