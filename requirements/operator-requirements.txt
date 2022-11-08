@@ -16,7 +16,7 @@ google-auth==2.11.0
     # via kubernetes
 idna==3.3
     # via requests
-kubernetes==11.0.0
+kubernetes==25.3.0
     # via Kadalu (setup.py)
 oauthlib==3.2.1
     # via requests-oauthlib
