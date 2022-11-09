@@ -14,7 +14,7 @@ import urllib3
 from jinja2 import Template
 from kadalulib import execute as lib_execute
 from kadalulib import (is_host_reachable, logf, logging_setup,
-                       send_analytics_tracker)
+                       send_analytics_tracker, get_single_pv_per_pool)
 from kubernetes import client, config, watch
 from urllib3.exceptions import NewConnectionError, ProtocolError
 from utils import CommandError
@@ -344,7 +344,7 @@ def update_config_map(core_v1_client, obj):
         "kadalu_version": VERSION,
         "volname": volname,
         "volume_id": volume_id,
-        "kadalu_format": obj["spec"].get("kadalu_format", "native"),
+        "single_pv_per_pool": get_single_pv_per_pool(obj["spec"]),
         "type": voltype,
         "pvReclaimPolicy" : pv_reclaim_policy,
         "bricks": [],
@@ -479,7 +479,7 @@ def handle_external_storage_addition(core_v1_client, obj):
         "type": VOLUME_TYPE_EXTERNAL,
         "pvReclaimPolicy": pv_reclaim_policy,
         # CRD would set 'native' but just being cautious
-        "kadalu_format": obj["spec"].get("kadalu_format", "native"),
+        "single_pv_per_pool": get_single_pv_per_pool(obj["spec"]),
         "gluster_hosts": ",".join(hosts),
         "gluster_volname": details["gluster_volname"],
         "gluster_options": details.get("gluster_options", ""),
@@ -992,7 +992,7 @@ def deploy_storage_class(obj):
 
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
                  hostvol_name=obj["metadata"]["name"],
-                 kadalu_format=obj["spec"].get("kadalu_format", "native"))
+                 single_pv_per_pool=get_single_pv_per_pool(obj["spec"]))
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
 
