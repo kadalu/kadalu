@@ -194,11 +194,11 @@ mount -t glusterfs {{ gluster_host }}:/{{ gluster_volname }} -o{{gluster_options
 Other than this, the CSI volume's behavior would be same for both Native mode, and External mode.
 
 
-=== External Storage for non-kadalu mode.
+=== Single PV per Pool
 
 This option is provided in kadalu to access a gluster volume as a whole as PV. This is particularly useful if one wants to use an already existing Gluster volume as a PV (for example, a gluster volume created by heketi). We don't recommend this for normal usage, as this mode would have scale limitations, and also would add more k8s resources likes StorageClass.
 
-The example config file added for CI/CD gives an idea about options. Note that the options provided here looks same as whats given in storage config, but when kadalu operator creates the StorageClass with values (`natvie` vs `non-native`) supplied to field `kadalu_format` inorder to decide kadalu or non-kadalu mode. Refer the link:./external-gluster-storage.adoc[external-storage document] for more information on this mode.
+The example config file added for CI/CD gives an idea about options. Note that the options provided here looks same as whats given in storage config, but when kadalu operator creates the StorageClass with values supplied to field `single_pv_per_pool` inorder to decide multiple PVs per pool or not. Refer the link:./external-gluster-storage.adoc[external-storage document] for more information on this mode.
 
 
 == Archiving Persistent Volume Claims
