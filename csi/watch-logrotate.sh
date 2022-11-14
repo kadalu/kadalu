@@ -1,7 +1,7 @@
 #!/bin/bash
 while true
 do
-  if [[ $(ls /var/log/gluster/*.gz | wc -l) -ge 9 ]]; then
+  if [[ $(ls /var/log/gluster/*.gz | wc -l) -ge 4 ]]; then
     rm -rf /var/log/gluster/*.gz
   fi
   logrotate /kadalu/logrotate.conf
