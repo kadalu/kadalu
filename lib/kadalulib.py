@@ -425,3 +425,19 @@ class Monitor:
         except KeyboardInterrupt:
             self.terminating = True
             sys.exit(1)
+
+
+def get_single_pv_per_pool(data):
+    """
+    Extract single PV per pool backward compatible way. Both
+    kadalu_format and single_pv_per_pool are supported.
+    """
+    kformat = data.get('kadalu_format', None)
+    if kformat is not None:
+        return kformat.lower() != "native"
+
+    val = data.get("single_pv_per_pool", False)
+    if isinstance(val, str):
+        return val.lower() == "true"
+
+    return val

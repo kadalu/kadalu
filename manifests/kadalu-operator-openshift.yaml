@@ -43,6 +43,9 @@ spec:
                 kadalu_format:
                   type: string
                   default: native
+                single_pv_per_pool:
+                  type: boolean
+                  default: false
                 # Refer https://github.com/kubernetes-client/python/blob/da6076/kubernetes/docs/V1Toleration.md
                 tolerations:
                   type: array

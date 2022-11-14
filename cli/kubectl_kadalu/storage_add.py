@@ -91,6 +91,10 @@ def set_args(name, subparsers):
                   "(1 PV: 1 Volume) format. Default: native"),
             choices=["native", "non-native"],
             default=None)
+    arg("--single-pv-per-pool",
+        help=("Specifies whether the  cluster should be provisioned as "
+              "1 PV == 1 Pool. Default: False"),
+        action="store_true")
     utils.add_global_flags(parser)
 
 
@@ -287,8 +291,8 @@ def storage_add_data(args):
     if args.volume_id:
         content["spec"]["volume_id"] = args.volume_id
 
-    if args.kadalu_format:
-        content["spec"]["kadalu_format"] = args.kadalu_format
+    if args.single_pv_per_pool:
+        content["spec"]["single_pv_per_pool"] = args.single_pv_per_pool
 
     # External details are specified, no 'storage' section required
     if args.external:
