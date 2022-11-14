@@ -46,9 +46,9 @@ metadata:
   name: ext-config
 spec:
   type: External
-  # Omitting 'kadalu_format' or using 'native' as a value will create
+  # Omitting 'single_pv_per_pool' or using 'false' as a value will create
   # 1 PV : 1 Subdir in external gluster volume
-  kadalu_format: native
+  single_pv_per_pool: false
   details:
     # gluster_hosts: [ gluster1.kadalu.io, gluster2.kadalu.io ]
     gluster_host: gluster1.kadalu.io
@@ -148,8 +148,8 @@ metadata:
   name: pv-ext # Keep changing the name for different volumes
 spec:
   type: External
-  # Setting 'kadalu_format' as 'non-native' is important
-  kadalu_format: non-native          # Will map 1 Gluster Volume : 1 PV
+  # Setting 'single_pv_per_pool' as 'true' is important
+  single_pv_per_pool: true            # Will map 1 Gluster Volume : 1 PV
   details:
     gluster_host: gluster1.kadalu.io   # Change to your gluster host
     gluster_volname: test              # Change to existing gluster volume

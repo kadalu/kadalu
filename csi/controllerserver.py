@@ -12,7 +12,7 @@ import csi_pb2_grpc
 import grpc
 from kadalulib import (PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
                        CommandException, execute, logf, reachable_host,
-                       send_analytics_tracker)
+                       send_analytics_tracker, get_single_pv_per_pool)
 from volumeutils import (HOSTVOL_MOUNTDIR, check_external_volume,
                          create_block_volume, create_subdir_volume,
                          delete_volume, expand_mounted_volume,
@@ -210,17 +210,17 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
             hostvoltype = data['type']
 
-        kformat = filters.get('kadalu_format', "native")
+        single_pv_per_pool = get_single_pv_per_pool(filters)
         if hostvoltype == 'External':
             ext_volume = check_external_volume(request, host_volumes)
 
             if ext_volume:
                 mntdir = os.path.join(HOSTVOL_MOUNTDIR, ext_volume['name'])
 
-                # By default 'kadalu_format' is set to 'native' as part of CRD
+                # By default 'single_pv_per_pool' is set to 'False' as part of CRD
                 # definition
-                if kformat == 'non-native':
-                    # If 'kadalu_format' is 'non-native', the request will be
+                if single_pv_per_pool:
+                    # If 'single_pv_per_pool' is True, the request will be
                     # considered as to map 1 PV to 1 Gluster volume
 
                     # No need to keep the mount on controller
@@ -250,7 +250,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                                 "gserver": ext_volume['g_host'],
                                 "fstype": "xfs",
                                 "options": ext_volume['g_options'],
-                                "kformat": kformat,
+                                "single_pv_per_pool": f"{single_pv_per_pool}",
                             }
                         }
                     )
@@ -321,7 +321,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                             "gserver": ext_volume['g_host'],
                             "fstype": "xfs",
                             "options": ext_volume['g_options'],
-                            "kformat": kformat,
+                            "single_pv_per_pool": f"{single_pv_per_pool}",
                         }
                     }
                 )
@@ -349,7 +349,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                 context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
                 return csi_pb2.CreateVolumeResponse()
 
-        if kformat == 'non-native':
+        if single_pv_per_pool:
             # Then mount the whole volume as PV
             msg = "non-native way of Kadalu mount expected"
             logging.info(msg)
@@ -362,7 +362,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                         "hostvol": hostvol,
                         "pvtype": pvtype,
                         "fstype": "xfs",
-                        "kformat": kformat,
+                        "single_pv_per_pool": f"{single_pv_per_pool}",
                     }
                 }
             )
@@ -399,7 +399,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                     "pvtype": pvtype,
                     "path": vol.volpath,
                     "fstype": "xfs",
-                    "kformat": kformat,
+                    "single_pv_per_pool": f"{single_pv_per_pool}",
                     "storage_options": storage_options
                 }
             })
@@ -616,8 +616,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
             return csi_pb2.ControllerExpandVolumeResponse()
 
-        if existing_volume.extra['kformat'] == 'non-native':
-            errmsg = "PV with kadalu_format == non-native doesn't support Expansion"
+        if existing_volume.single_pv_per_pool:
+            errmsg = "PV with single_pv_per_pool doesn't support Expansion"
             logging.error(errmsg)
             # But lets not fail the call, and continue here
             return csi_pb2.ControllerExpandVolumeResponse()
