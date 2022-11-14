@@ -1278,6 +1278,7 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
             GLUSTERFS_CMD,
             "--process-name", "fuse",
             "-l", log_file,
+            "-L", "DEBUG",
             "--volfile-id", volname,
             "--fs-display-name", "kadalu:%s" % volname,
             "-f", client_volfile_path,

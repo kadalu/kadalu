@@ -115,7 +115,7 @@ spec:
         - name: kadalu-logging
           image: {{ images_hub }}/library/busybox
           command: ["/bin/sh"]
-          args: ["-c", "while true; do logcnt=$(/bin/ls /var/log/gluster/ | wc -l); if [ ${logcnt} -gt 0 ]; then break; fi; sleep 5; done; tail -f /var/log/gluster/*.log"]
+          args: ["-c", "while true; do logcnt=$(/bin/ls /var/log/gluster/ | wc -l); if [ ${logcnt} -gt 0 ]; then break; fi; sleep 5; done; tail -F /var/log/gluster/*.log"]
           volumeMounts:
             - name: varlog
               mountPath: "/var/log/gluster"
