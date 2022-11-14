@@ -1,3 +1,4 @@
+{% if tiebreaker %}
 volume {{ volume_id }}-ta
     type protocol/client
     option transport.socket.read-fail-log false
@@ -5,6 +6,7 @@ volume {{ volume_id }}-ta
     option remote-port {{ tiebreaker["port"] }}
     option remote-subvolume {{ tiebreaker["path"] }}
 end-volume
+{% endif %}
 
 {% for brick in bricks %}
 volume {{ volname }}-client-{{ brick["brick_index"] }}
@@ -26,9 +28,14 @@ volume {{ volname }}-replica-{{ i }}
     option metadata-self-heal on
     option entry-self-heal on
     option read-hash-mode 5
+    {% if tiebreaker %}
     option afr-pending-xattr {{ volname }}-client-{{ i * 2 }},{{ volname }}-client-{{ (i * 2) + 1}},{{ volume_id }}-ta
     option thin-arbiter {{ tiebreaker["node"] }}:{{ tiebreaker["path"] }}
     subvolumes {{ volname }}-client-{{ i * 2 }} {{ volname }}-client-{{ (i * 2) + 1}} {{ volume_id }}-ta
+    {% else %}
+    option afr-pending-xattr {{ volname }}-client-{{ i * 2 }},{{ volname }}-client-{{ (i * 2) + 1}}
+    subvolumes {{ volname }}-client-{{ i * 2 }} {{ volname }}-client-{{ (i * 2) + 1}}
+    {% endif %}
 end-volume
 
 {% endfor %}

@@ -59,7 +59,7 @@ $ kubectl kadalu storage-add storage-pool1 --type=Replica1 \
 +
 To create a PVC from this storage, you need to provide `storageClassName` option as `kadalu.replica1`.
 
-* **Replica2** In this mode, Gluster will be started with high availability, with 'tie-breaker' (or thin-arbiter in gluster speak) option. It will use 2 storage options, from which the RWX and RWO PVs will be carved out. This storage will be exposed by a gluster server pod, which gets spawned by kadalu operator. The `tiebreaker` node has to be managed outside, and if the user doesn't want to host it, kadalu provides a free service for the same, which can be consumed by not providing any `tiebreaker` option :-)
+* **Replica2** In this mode, Gluster will be started with high availability, with 'tie-breaker' (or thin-arbiter in gluster speak) option. It will use 2 storage options, from which the RWX and RWO PVs will be carved out. This storage will be exposed by a gluster server pod, which gets spawned by kadalu operator. The `tiebreaker` node has to be managed outside, and if the tiebreaker option is not provided, Kadalu creates the Replica 2 Volume without Tiebreaker.
 +
 [source,yaml]
 ----

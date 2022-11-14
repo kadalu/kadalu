@@ -141,8 +141,6 @@ def validate(args):
                 "in the format <node>:/<path>",
                 file=sys.stderr)
             sys.exit(1)
-    else:
-        args.tiebreaker = "tie-breaker.kadalu.io:/mnt"
 
     if not args.type:
         args.type = "Replica1"
@@ -333,7 +331,7 @@ def storage_add_data(args):
             content["spec"]["storage"].append({"pvc": pvc})
 
     # TODO: Support for different port can be added later
-    if args.type == "Replica2":
+    if args.type == "Replica2" and args.tiebreaker is not None:
         node, path = args.tiebreaker.split(":", 1)
         content["spec"]["tiebreaker"] = {
             "node": node,

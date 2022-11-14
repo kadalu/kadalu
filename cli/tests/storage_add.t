@@ -133,10 +133,6 @@ spec:
       path: "/exports/sp1/s1"
     - node: "server2.example.com"
       path: "/exports/sp1/s2"
-  tiebreaker:
-    node: "tie-breaker.kadalu.io"
-    path: "/mnt"
-    port: 24007
 
 )
 
@@ -163,10 +159,6 @@ spec:
       device: "/dev/vdc"
     - node: "server2.example.com"
       device: "/dev/vdc"
-  tiebreaker:
-    node: "tie-breaker.kadalu.io"
-    path: "/mnt"
-    port: 24007
 
 )
 
@@ -191,10 +183,6 @@ spec:
   storage:
     - pvc: "pvc1"
     - pvc: "pvc2"
-  tiebreaker:
-    node: "tie-breaker.kadalu.io"
-    path: "/mnt"
-    port: 24007
 
 )
 
@@ -512,10 +500,6 @@ spec:
       path: "/exports/sp1/s3"
     - node: "server4.example.com"
       path: "/exports/sp1/s4"
-  tiebreaker:
-    node: "tie-breaker.kadalu.io"
-    path: "/mnt"
-    port: 24007
 
 )
 
@@ -546,10 +530,6 @@ spec:
       device: "/dev/vdc"
     - node: "server4.example.com"
       device: "/dev/vdc"
-  tiebreaker:
-    node: "tie-breaker.kadalu.io"
-    path: "/mnt"
-    port: 24007
 
 )
 
@@ -562,7 +542,7 @@ EQUAL expected, actual, "Distributed Replica2 with alternate syntax and --storag
 actual = TEST "#{cmd} storage-add --dry-run sp1 replica 2 server1.example.com:/dev/vdc server2.example.com:/dev/vdc server3.example.com:/dev/vdc server4.example.com:/dev/vdc --storage-unit-type=device"
 EQUAL expected, actual, "Distributed Replica2 with alternate syntax 2 and --storage-unit-type=device"
 
-# Replica2 with pvc
+# Replica2 with pvc and tiebreaker
 expected = %(Storage Yaml file for your reference:
 
 apiVersion: "kadalu-operator.storage/v1alpha1"
@@ -580,6 +560,26 @@ spec:
     node: "tie-breaker.kadalu.io"
     path: "/mnt"
     port: 24007
+
+)
+
+actual = TEST "#{cmd} storage-add --dry-run sp1 --type=Replica2 --pvc pvc1 --pvc pvc2 --pvc pvc3 --pvc pvc4 --tiebreaker tie-breaker.kadalu.io:/mnt"
+EQUAL expected, actual, "Distributed Replica2 with --pvc and tiebreaker"
+
+# Replica2 with pvc
+expected = %(Storage Yaml file for your reference:
+
+apiVersion: "kadalu-operator.storage/v1alpha1"
+kind: "KadaluStorage"
+metadata:
+  name: "sp1"
+spec:
+  type: "Replica2"
+  storage:
+    - pvc: "pvc1"
+    - pvc: "pvc2"
+    - pvc: "pvc3"
+    - pvc: "pvc4"
 
 )
 

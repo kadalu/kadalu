@@ -321,10 +321,6 @@ def upgrade_storage_pods(core_v1_client):
             obj["spec"]["storage"][idx]["device"] = val["brick_device"]
             obj["spec"]["storage"][idx]["pvc"] = val["pvc_name"]
 
-        if data['type'] == VOLUME_TYPE_REPLICA_2:
-            if "tie-breaker.kadalu.io" not in data['tiebreaker']['node']:
-                obj["spec"]["tiebreaker"] = data['tiebreaker']
-
         # TODO: call upgrade_pods_with_heal_check() here
         deploy_server_pods(obj)
 
@@ -378,18 +374,12 @@ def update_config_map(core_v1_client, obj):
     if voltype == VOLUME_TYPE_REPLICA_2:
         tiebreaker = obj["spec"].get("tiebreaker", None)
         if not tiebreaker:
-            logging.warning(logf("No 'tiebreaker' provided for replica2 "
-                                 "config. Using default tie-breaker.kadalu.io:/mnt",
-                                 volname=volname))
-            # Add default tiebreaker if no tie-breaker option provided
-            tiebreaker = {
-                "node": "tie-breaker.kadalu.io",
-                "path": "/mnt",
-            }
-        if not tiebreaker.get("port", None):
-            tiebreaker["port"] = 24007
+            data["tiebreaker"] = {}
+        else:
+            if not tiebreaker.get("port", None):
+                tiebreaker["port"] = 24007
 
-        data["tiebreaker"] = tiebreaker
+            data["tiebreaker"] = tiebreaker
 
     volinfo_file = "%s.info" % volname
     configmap_data.data[volinfo_file] = json.dumps(data)
