@@ -150,6 +150,7 @@ def execute(*cmd):
     with subprocess.Popen(cmd,
                           stderr=subprocess.PIPE,
                           stdout=subprocess.PIPE,
+                          cwd=None,
                           universal_newlines=True) as proc:
         out, err = proc.communicate()
         if proc.returncode != 0:
