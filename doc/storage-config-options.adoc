@@ -39,7 +39,8 @@ The above 3 fields will be common for config files for all different modes.
 === Tolerations
 
 * For `.spec.tolerations` refer link:https://github.com/kubernetes-client/python/blob/da6076/kubernetes/docs/V1Toleration.md[Toleration Spec]
-* These tolerations will get added to `server` pods and typical use-case includes usage of tainted nodes from which kadalu storage is created
+* These tolerations will get added to `server` and `kadalu-csi-nodeplugin` pods typical use-case includes usage of tainted nodes from which kadalu storage is created.
+* Please decide on what all tolerations should be used before applying the Pool CR as modifications would typically restart `server` and `kadalu-csi-nodeplugin` pods.
 
 == Native mode
 

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Helm chart: fixed namespace management bug
+- Mount FHS standardized kernel module directory
+- Fix wrong calculations of free_size_bytes
+- Bump kubernetes python package and use latest glusterfs build (with tcmalloc)
+- Internally map kadalu_format to single_pv_per_pool
+- Remove default tiebreaker node and add support for Replica2
+- Implement logrotate to free-up used space from gluster logs
+- Fix application of tolerations from Pool CR on glusterfs-server and
+  nodeplugin pods
+- Fix documentation related to using Kadalu metrics with OpenShift
+  user-workload-monitoring feature
 
 ## [0.8.17] - 2022-10-17
 
