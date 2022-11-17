@@ -23,6 +23,17 @@ spec:
         app.kubernetes.io/component: server
         app.kubernetes.io/name: server
     spec:
+{%- if tolerations %}
+      tolerations:
+  {%- for toleration in tolerations %}
+        - key: {{ toleration.get("key") }}
+          operator: {{ toleration.get("operator") }}
+          {%- if toleration.get("value") %}
+          value: {{ toleration.get("value") }}
+          {%- endif %}
+          effect: {{ toleration.get("effect") }}
+  {%- endfor %}
+{%- endif %}
       serviceAccountName: kadalu-server-sa
 {%- if kube_hostname != "" %}
       affinity:
