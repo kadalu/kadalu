@@ -7,6 +7,7 @@ This guide will assist you in collecting metrics & performance data into Openshi
 
 Follow the official documentation for enabling user workload monitoring.
 This is a sample from OKD4.10 and it should be used as a guidance only.
+This effectively informs OKD in-cluster monitoring to scrape user workload endpoints as well.
 
 ```
 # In this example we also use Kadalu as persistent storage of Prometheus.
@@ -45,21 +46,10 @@ data:
            requests:
              storage: 50Gi
 
-$ oc  -n openshift-user-workload-monitoring  edit configmap user-workload-monitoring-config
-
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: user-workload-monitoring-config
-  namespace: openshift-user-workload-monitoring
-data:
-  config.yaml: |
-```
-
 == Apply the following manifest:
 ```
 ---
+# Enables monitoring infra to scrape metrics from `kadalu` namespace
 kind: Namespace
 apiVersion: v1
 metadata:
@@ -92,7 +82,7 @@ metadata:
     name: kadalu
 spec:
   endpoints:
-    - path: /metrics
+    - path: /metrics/
       port: kadalu-metrics
       scheme: http
       bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
@@ -101,34 +91,34 @@ spec:
   selector:
     matchLabels:
       name: kadalu
-```
-
-== Set necessary permissions.
-
-- Assign a relevant role for the service account (I'm using 'kadalu-operator' as we do not have a viewer role, yet):
-```
-oc policy add-role-to-user kadalu-operator system:serviceaccount:openshift-monitoring:prometheus-k8s -n kadalu
-```
-
-- Verify the rolebinding
-```
-$ oc -n kadalu get rolebinding kadalu-operator -o yaml
-
+---
+# Enables monitoring infra to have necessary RBAC for scraping metrics in `kadalu` namespace
+kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
 metadata:
-  annotations:
-    kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"rbac.authorization.k8s.io/v1","kind":"RoleBinding","metadata":{"annotations":{},"creationTimestamp":"2022-04-13T14:39:10Z","name":"kadalu-operator","namespace":"kadalu","resourceVersion":"42934554","uid":"f8ce8d9f-b5cd-46c1-98bc-bde6dff0ecca"},"roleRef":{"apiGroup":"rbac.authorization.k8s.io","kind":"ClusterRole","name":"kadalu-operator"},"subjects":[{"kind":"ServiceAccount","name":"prometheus-k8s","namespace":"openshift-monitoring"}]}
-  creationTimestamp: "2022-04-13T14:39:10Z"
-  name: kadalu-operator
+  name: kadalu-metrics
   namespace: kadalu
-  resourceVersion: "49108675"
-  uid: f8ce8d9f-b5cd-46c1-98bc-bde6dff0ecca
+rules:
+ - apiGroups:
+   - ""
+   resources:
+    - services
+    - endpoints
+    - pods
+   verbs:
+    - get
+    - list
+    - watch
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kadalu-metrics
+  namespace: kadalu
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: kadalu-operator
+  kind: Role
+  name: kadalu-metrics
 subjects:
 - kind: ServiceAccount
   name: prometheus-k8s
@@ -145,9 +135,6 @@ $ oc -n kadalu  describe  services operator | awk '/Endpoints/ {print "http://"$
 - Go to the UI -> Administrator -> Observe -> Targets
 
 - Go to the UI -> Administrator -> Observe -> Metrics -> Type "kadalu_" -> There should be multiple metrics
-
-
-- In case you got troubles with the Metrics, consider setting "openshift.io/cluster-monitoring" to "false" and back to "true" and if needed restarting the pods in the openshift-user-workload-monitoring namespace (and in rare cases openshift-monitoring)
 
 == Alarm configuration
 
