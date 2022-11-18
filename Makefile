@@ -116,7 +116,7 @@ pylint:
 	@pylint --disable=W0511,C0302,W1514,R1710,C0209,W0621 -s n csi/volumeutils.py
 	@pylint --disable=W0511,C0302,W1514,C0209 -s n kadalu_operator/main.py
 	@pylint --disable=W0511,R0903,R0914,C0201,E0401,C0209,W1514 -s n kadalu_operator/exporter.py
-	@pylint --disable=W0511,R0914,E0401,C0114,C0209,W1514 -s n csi/exporter.py
+	@pylint --disable=W0511,R0914,R0912,E0401,C0114,C0209,W1514, -s n csi/exporter.py
 	@pylint --disable=W0511,E0401,C0114,C0209,W1514 -s n server/exporter.py
 	@rm csi/kadalulib.py
 	@rm server/kadalulib.py
