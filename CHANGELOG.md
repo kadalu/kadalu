@@ -6,11 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2022-11-21
+
 - Helm chart: fixed namespace management bug
 - Mount FHS standardized kernel module directory
-- Fix wrong calculations of free_size_bytes
+- Fix wrong calculations of `free_size_bytes`
 - Bump kubernetes python package and use latest glusterfs build (with tcmalloc)
-- Internally map kadalu_format to single_pv_per_pool
+- Internally map `kadalu_format` to `single_pv_per_pool`
 - Remove default tiebreaker node and add support for Replica2
 - Implement logrotate to free-up used space from gluster logs
 - Fix application of tolerations from Pool CR on glusterfs-server and
@@ -366,7 +368,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and Analytics support added.
 - End-to-end testing using Minikube and Travis-ci.
 
-[Unreleased]: https://github.com/kadalu/kadalu/compare/0.8.17...HEAD
+[Unreleased]: https://github.com/kadalu/kadalu/compare/0.9.0...HEAD
 [0.1.0]: https://github.com/kadalu/kadalu/compare/e434f25...0.1.0
 [0.2.0]: https://github.com/kadalu/kadalu/compare/0.1.0...0.2.0
 [0.3.0]: https://github.com/kadalu/kadalu/compare/0.2.0...0.3.0
@@ -399,3 +401,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.8.15]: https://github.com/kadalu/kadalu/compare/0.8.14...0.8.15
 [0.8.16]: https://github.com/kadalu/kadalu/compare/0.8.15...0.8.16
 [0.8.17]: https://github.com/kadalu/kadalu/compare/0.8.16...0.8.17
+[0.9.0]: https://github.com/kadalu/kadalu/compare/0.8.17...0.9.0
