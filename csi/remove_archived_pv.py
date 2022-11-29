@@ -11,7 +11,12 @@ def get_archived_pvs(storage_name, pvc_name):
     """ Return all or specified archived_pvcs based on agrs """
 
     archived_pvs = {}
-    mntdir = os.path.join(HOSTVOL_MOUNTDIR, storage_name)
+
+    mntdir = os.path.join(HOSTVOL_MOUNTDIR, storage_name, "info")
+    if not os.path.isdir(mntdir):
+        sys.stderr.write(f"Metadata for storagepool {storage_name} is not found")
+        return -1
+
     try:
         for pvc in yield_pvc_from_mntdir(mntdir):
             if pvc is not None:
