@@ -8,7 +8,7 @@ anyio==3.6.1
     # via
     #   starlette
     #   watchfiles
-certifi==2022.6.15
+certifi==2022.12.7
     # via requests
 charset-normalizer==2.1.1
     # via requests
