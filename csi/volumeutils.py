@@ -231,7 +231,7 @@ def mount_and_select_hosting_volume(pv_hosting_volumes, required_size):
             # file not exists even in case of ENOTCONN
             mntdir_stat = retry_errors(os.statvfs, [mntdir], [ENOTCONN])
             with SizeAccounting(hvol, mntdir) as acc:
-                acc.update_summary(mntdir_stat.f_bavail * mntdir_stat.f_bsize)
+                acc.update_summary(mntdir_stat.f_blocks * mntdir_stat.f_bsize)
                 pv_stats = acc.get_stats()
                 reserved_size = pv_stats["free_size_bytes"] * RESERVED_SIZE_PERCENTAGE/100
 
@@ -436,7 +436,7 @@ def is_hosting_volume_free(hostvol, requested_pvsize):
         # file not exists even in case of ENOTCONN
         mntdir_stat = retry_errors(os.statvfs, [mntdir], [ENOTCONN])
         with SizeAccounting(hostvol, mntdir) as acc:
-            acc.update_summary(mntdir_stat.f_bavail * mntdir_stat.f_bsize)
+            acc.update_summary(mntdir_stat.f_blocks * mntdir_stat.f_bsize)
             pv_stats = acc.get_stats()
             reserved_size = pv_stats["free_size_bytes"] * RESERVED_SIZE_PERCENTAGE/100
 
