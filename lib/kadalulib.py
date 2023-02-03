@@ -2,7 +2,6 @@
 
 import logging
 import os
-import signal
 import socket
 import sqlite3
 import subprocess
@@ -306,127 +305,6 @@ class SizeAccounting:
         }
 
 
-# noqa # pylint: disable=too-few-public-methods
-class Proc:
-    """Handle Process details"""
-    def __init__(self, name, command, args):
-        self.name = name
-        self.command = command
-        self.args = args
-
-    def with_args(self):
-        """Return command and args together to use in Popen"""
-        return [self.command] + self.args
-
-
-class ProcState:
-    """Handle Process states"""
-    def __init__(self, proc):
-        self.proc = proc
-        self.enabled = True
-        self.subproc = None
-
-    def start(self):
-        """Start a Process"""
-        # Context Manager here would wait for subprocess to complete which we
-        # don't want and had to disable pylint error
-        # noqa # pylint: disable=consider-using-with
-        self.subproc = subprocess.Popen(self.proc.with_args(),
-                                        stderr=sys.stderr,
-                                        universal_newlines=True,
-                                        env=os.environ)
-
-    def stop(self):
-        """Stop a Process"""
-        if self.subproc is not None:
-            self.subproc.kill()
-            self.subproc.communicate()
-            self.subproc = None
-
-    def restart(self):
-        """Restart a Process"""
-        self.stop()
-        self.start()
-
-
-class Monitor:
-    """Start and Monitor multiple processes"""
-    def __init__(self, procs=None):
-        self.procs = {}
-        self.terminating = False
-        signal.signal(signal.SIGINT, self.exit_gracefully)
-        signal.signal(signal.SIGTERM, self.exit_gracefully)
-        if procs is not None:
-            for proc in procs:
-                self.procs[proc.name] = ProcState(proc)
-
-    def add_process(self, proc):
-        """Add a Process to the list of Monitored processes"""
-        self.procs[proc.name] = ProcState(proc)
-
-    def start_all(self):
-        """Start all Managed Processes"""
-        for name, state in self.procs.items():
-            state.start()
-            logging.info(logf("Started Process", name=name))
-
-    def stop_all(self):
-        """Stop all Managed Processes"""
-        for name, state in self.procs.items():
-            state.stop()
-            logging.info(logf("Stopped Process", name=name))
-
-    def restart_all(self):
-        """Restart all managed Processes"""
-        for name, state in self.procs.items():
-            state.restart()
-            logging.info(logf("Restarted Process", name=name))
-
-    def exit_gracefully(self, _signum, _frame):
-        """When SIGTERM/SIGINT received"""
-        self.terminating = True
-
-    def monitor_proc(self, state, terminating):
-        """Monitor single process"""
-        if not state.enabled:
-            return
-
-        if terminating:
-            state.stop()
-            logging.info(logf("Terminated Process", name=state.proc.name))
-            return
-
-        ret = state.subproc.poll()
-        if ret is None:
-            return
-
-        if not terminating:
-            state.restart()
-            logging.info(logf("Restarted Process", name=state.proc.name))
-
-    def monitor(self):
-        """
-        Start monitoring all the started processes.
-        Restart processes on failure
-        """
-        try:
-            while True:
-                terminating = self.terminating
-
-                for _, state in self.procs.items():
-                    self.monitor_proc(state, terminating)
-
-                if terminating:
-                    logging.info("Terminating Monitor process")
-                    sys.exit(0)
-                    break
-
-                time.sleep(1)
-        except KeyboardInterrupt:
-            self.terminating = True
-            sys.exit(1)
-
-
 def get_single_pv_per_pool(data):
     """
     Extract single PV per pool backward compatible way. Both
@@ -441,3 +319,21 @@ def get_single_pv_per_pool(data):
         return val.lower() == "true"
 
     return val
+
+
+class SupervisordConf:
+    """
+    Utility library for generating supervisord.conf
+    """
+    def __init__(self, conf_file="/etc/supervisor/conf.d/supervisord.conf"):
+        self.content = "[supervisord]\nnodaemon=true\nuser=root\n\n"
+        self.conf_file = conf_file
+
+    def add_program(self, name, command):
+        """Add program to supervisord conf file"""
+        self.content += f"[program:{name}]\ncommand={command}\n\n"
+
+    def save(self):
+        """Save the supervisord conf file"""
+        with open(self.conf_file, "w", encoding="utf-8") as conf_file:
+            conf_file.write(self.content)

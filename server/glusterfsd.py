@@ -8,7 +8,7 @@ import uuid
 
 import xattr
 from jinja2 import Template
-from kadalulib import (CommandException, Proc, execute, logf,
+from kadalulib import (CommandException, execute, logf,
                        send_analytics_tracker)
 
 # noqa # pylint: disable=I1101
@@ -208,22 +208,18 @@ def start_args():
     # developers to understand and build project in a better way
     send_analytics_tracker("server", uid)
 
-    return Proc(
-        "glusterfsd",
-        "/opt/sbin/glusterfsd",
-        [
-            "-N",
-            "--volfile-id", volfile_id,
-            "-p", "/var/run/gluster/glusterfsd-%s.pid" % brick_path_name,
-            "-S", "/var/run/gluster/brick.socket",
-            "--brick-name", brick_path,
-            "-l", "-",  # Log to stderr
-            "--xlator-option",
-            "*-posix.glusterd-uuid=%s" % os.environ["NODEID"],
-            "--process-name", "brick",
-            "--brick-port", "24007",
-            "--xlator-option",
-            "%s-server.listen-port=24007" % volname,
-            "-f", volfile_path
-        ]
-    )
+    return [
+        "-N",
+        "--volfile-id", volfile_id,
+        "-p", "/var/run/gluster/glusterfsd-%s.pid" % brick_path_name,
+        "-S", "/var/run/gluster/brick.socket",
+        "--brick-name", brick_path,
+        "-l", "-",  # Log to stderr
+        "--xlator-option",
+        "*-posix.glusterd-uuid=%s" % os.environ["NODEID"],
+        "--process-name", "brick",
+        "--brick-port", "24007",
+        "--xlator-option",
+        "%s-server.listen-port=24007" % volname,
+        "-f", volfile_path
+    ]

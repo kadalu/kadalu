@@ -13,7 +13,7 @@ FROM python:3.10-slim-bullseye as prod
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends procps && \
+    apt-get install -y --no-install-recommends procps supervisor && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -43,11 +43,11 @@ COPY templates/external-storageclass.yaml.j2         /kadalu/templates/external-
 COPY lib/kadalulib.py                       /kadalu/kadalulib.py
 COPY cli/kubectl_kadalu/utils.py            /kadalu/utils.py
 COPY kadalu_operator/main.py                       /kadalu/
-COPY kadalu_operator/start.py                      /kadalu/
 COPY kadalu_operator/metrics.py                    /kadalu/
 COPY kadalu_operator/exporter.py                   /kadalu/
 COPY cli/build/kubectl-kadalu               /usr/bin/kubectl-kadalu
 COPY lib/startup.sh                         /kadalu/startup.sh
+COPY kadalu_operator/supervisord.conf /etc/supervisor/conf.d/
 
 RUN chmod +x /kadalu/startup.sh
 
@@ -64,7 +64,7 @@ LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="kadalu"
 LABEL version="${version}"
 
-ENTRYPOINT ["python3", "/kadalu/start.py"]
+ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 
 # Debugging, Comment the above line and
 # uncomment below line

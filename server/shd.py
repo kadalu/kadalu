@@ -5,7 +5,6 @@ import json
 import os
 
 from jinja2 import Template
-from kadalulib import Proc
 
 VOLFILES_DIR = "/kadalu/volfiles"
 TEMPLATES_DIR = "/kadalu/templates"
@@ -68,18 +67,14 @@ def start_args():
     volfile_path = os.path.join(VOLFILES_DIR, "glustershd.vol")
     generate_shd_volfile(volfile_path, volname, voltype)
 
-    return Proc(
-        "shd",
-        "/opt/sbin/glusterfs",
-        [
-            "-N",
-            "--volfile-id", "gluster/glustershd",
-            "-p", "/var/run/gluster/glustershd.pid",
-            "-S", "/var/run/gluster/shd.socket",
-            "-l", "-",  # Log to stderr
-            "--xlator-option",
-            "*replicate*.node-uuid=%s" % os.environ["NODEID"],
-            "--fs-display-name", "kadalu:%s" % volname,
-            "-f", volfile_path
-        ]
-    )
+    return [
+        "-N",
+        "--volfile-id", "gluster/glustershd",
+        "-p", "/var/run/gluster/glustershd.pid",
+        "-S", "/var/run/gluster/shd.socket",
+        "-l", "-",  # Log to stderr
+        "--xlator-option",
+        "*replicate*.node-uuid=%s" % os.environ["NODEID"],
+        "--fs-display-name", "kadalu:%s" % volname,
+        "-f", volfile_path
+    ]
