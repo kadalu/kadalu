@@ -18,7 +18,7 @@ idna==3.3
     # via requests
 kubernetes==25.3.0
     # via Kadalu (setup.py)
-oauthlib==3.2.1
+oauthlib==3.2.2
     # via requests-oauthlib
 pyasn1==0.4.8
     # via

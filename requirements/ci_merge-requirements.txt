@@ -50,7 +50,7 @@ markupsafe==2.1.1
     # via jinja2
 more-itertools==8.14.0
     # via jaraco-classes
-oauthlib==3.2.1
+oauthlib==3.2.2
     # via requests-oauthlib
 packaging==21.3
     # via pytest
