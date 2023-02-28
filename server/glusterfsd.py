@@ -11,10 +11,11 @@ from jinja2 import Template
 from kadalulib import (CommandException, Proc, execute, logf,
                        send_analytics_tracker)
 
+import kadalu_volgen
+
 # noqa # pylint: disable=I1101
 VOLUME_ID_XATTR_NAME = "trusted.glusterfs.volume-id"
 VOLFILES_DIR = "/kadalu/volfiles"
-TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
 MKFS_XFS_CMD = "/sbin/mkfs.xfs"
 
@@ -61,24 +62,26 @@ def set_volume_id_xattr(brick_path, volume_id):
         sys.exit(1)
 
 
-def generate_brick_volfile(volfile_path, volname, volume_id, brick_path):
+def generate_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_path):
     """
-    Generate Volfile based on Volinfo stored in Config map
+    Generate Brick/Storage Unit Volfile based on Volinfo stored in Config map
     For now, Generated Volfile is used in configmap
     """
-    content = ""
-    template_file = os.path.join(TEMPLATES_DIR, "brick.vol.j2")
-    with open(template_file) as tmpl_file:
-        content = tmpl_file.read()
 
-    data = {}
-    # Brick volfile needs only these 3 parameters
-    data["volname"] = volname
-    data["volume_id"] = volume_id
-    data["brick_path"] = brick_path
+    storage_unit = {}
+    storage_unit["path"] = brick_path
+    storage_unit["port"] = 24007
+    storage_unit["volume"] = {}
+    storage_unit["volume"]["name"] = volname
+    storage_unit["volume"]["id"] = volume_id
 
-    tmpl = Template(content)
-    tmpl.stream(**data).dump(volfile_path)
+    content = kadalu_volgen.generate(
+        "/var/lib/kadalu/templates/storage_unit.vol.j2",
+        data=storage_unit
+    )
+
+    with open(storage_unit_volfile_path, "w") as su_volfile:
+        su_volfile.write(content)
 
 
 def create_and_mount_brick(brick_device, brick_path, brickfs):
@@ -195,8 +198,8 @@ def start_args():
     set_volume_id_xattr(brick_path, volume_id)
 
     volfile_id = "%s.%s.%s" % (volname, nodename, brick_path_name)
-    volfile_path = os.path.join(VOLFILES_DIR, "%s.vol" % volfile_id)
-    generate_brick_volfile(volfile_path, volname, volume_id, brick_path)
+    storage_unit_volfile_path = os.path.join(VOLFILES_DIR, "%s.vol" % volfile_id)
+    generate_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_path)
 
     # UID is stored at the time of installation in configmap.
     uid = None
@@ -224,6 +227,6 @@ def start_args():
             "--brick-port", "24007",
             "--xlator-option",
             "%s-server.listen-port=24007" % volname,
-            "-f", volfile_path
+            "-f", storage_unit_volfile_path
         ]
     )

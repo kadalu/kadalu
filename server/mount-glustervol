@@ -5,8 +5,9 @@ import json
 
 from jinja2 import Template
 
+from serverutils import generate_client_volfile
+
 info_dir = "/var/lib/gluster"
-templates_dir = "/kadalu/templates"
 volfiles_dir = "/kadalu/volfiles"
 
 volname = sys.argv[1]
@@ -16,43 +17,11 @@ data = {}
 with open(info_file) as f:
     data = json.load(f)
 
-# Tricky to get this right, but this solves all the elements of distribute in code :-)
-data['dht_subvol'] = []
-decommissioned = []
-if data["type"] == "Replica1":
-    for brick in data["bricks"]:
-        brick_name = "%s-client-%d" % (data["volname"], brick["brick_index"])
-        data["dht_subvol"].append(brick_name)
-        if brick.get("decommissioned", "") != "":
-            decommissioned.append(brick_name)
+client_volfile_path = os.path.join(volfiles_dir, "%s.client.vol" % volname)
 
-else:
-    count = 3
-    if data["type"] == "Replica2":
-        count = 2
-    if data["type"] == "Disperse":
-        count = data["disperse"]["data"] + data["disperse"]["redundancy"]
-        data["disperse_redundancy"] = data["disperse"]["redundancy"]
-
-    for i in range(0, int(len(data["bricks"]) / count)):
-        brick_name = "%s-%s-%d" % (
-            data["volname"],
-            "disperse" if data["type"] == "Disperse" else "replica",
-            i
-        )
-        data["dht_subvol"].append(brick_name)
-        if data["bricks"][(i * count)].get("decommissioned", "") != "":
-            decommissioned.append(brick_name)
-
-data['decommissioned'] = "" if decommissioned == [] else ",".join(decommissioned)
-
-template_file = os.path.join(templates_dir, "%s.client.vol" % data["type"])
-client_volfile = os.path.join(volfiles_dir, "%s.client.vol" % volname)
-content = ""
-with open(template_file) as f:
-    content = f.read()
-
-Template(content).stream(**data).dump(client_volfile)
+content = generate_client_volfile(data)
+with open(client_volfile_path, "w") as client_volfile:
+    client_volfile.write(content)
 
 os.makedirs("/mnt/%s" % volname)
 
@@ -63,7 +32,7 @@ os.execv(
         "--process-name", "fuse",
         "--volfile-id=%s" % volname,
         "--fs-display-name", "kadalu:%s" % volname,
-        "-f", client_volfile,
+        "-f", client_volfile_path,
         "/mnt/%s" % volname
     ]
 )

@@ -24,9 +24,11 @@ COPY --from=builder /kadalu /kadalu
 RUN ln -sfn /usr/local/bin/python3 /kadalu/bin/python3
 
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends attr xfsprogs libtirpc3 sqlite3 liburcu6 procps libgoogle-perftools4 && \
+    apt-get install -y --no-install-recommends curl attr xfsprogs libtirpc3 sqlite3 liburcu6 procps libgoogle-perftools4 && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://github.com/kadalu/volgen/releases/latest/download/install.sh | bash -x
 
 RUN mkdir -p /kadalu/templates /kadalu/volfiles
 RUN mkdir -p /var/run/gluster /var/log/glusterfs
@@ -39,16 +41,7 @@ COPY server/mount-glustervol /usr/bin/mount-glustervol
 COPY lib/startup.sh          /kadalu/startup.sh
 COPY server/stop-server.sh   /kadalu/stop-server.sh
 COPY server/exporter.py      /kadalu/exporter.py
-
-# Copy Volfile templates
-COPY templates/Replica1.client.vol.j2 /kadalu/templates/
-COPY templates/Replica2.client.vol.j2 /kadalu/templates/
-COPY templates/Replica3.client.vol.j2 /kadalu/templates/
-COPY templates/Disperse.client.vol.j2 /kadalu/templates/
-COPY templates/Replica2.shd.vol.j2    /kadalu/templates/
-COPY templates/Replica3.shd.vol.j2    /kadalu/templates/
-COPY templates/Disperse.shd.vol.j2    /kadalu/templates/
-COPY templates/brick.vol.j2           /kadalu/templates/
+COPY server/serverutils.py   /kadalu/serverutils.py
 
 RUN chmod +x /usr/bin/mount-glustervol
 RUN chmod +x /kadalu/startup.sh
