@@ -1,10 +1,6 @@
 import os
 import kadalu_volgen
 
-VOLFILES_DIR = "/var/lib/kadalu/volfiles"
-
-if not os.path.exists(VOLFILES_DIR):
-    os.makedirs(VOLFILES_DIR)
 
 def generate_client_volgen_data(data):
     """

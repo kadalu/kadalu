@@ -209,7 +209,7 @@ def start_args():
 
     volfile_id = "%s.%s.%s" % (volname, nodename, brick_path_name)
     storage_unit_volfile_path = os.path.join(VOLFILES_DIR, "%s.vol" % volfile_id)
-    client_volfile_path = os.path.join(VOLFILES_DIR, "%s.client.vol" % volname)
+    client_volfile_path = os.path.join(VOLFILES_DIR, "%s.vol" % volname)
     create_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_path)
     create_client_volfile(client_volfile_path, volname)
 
