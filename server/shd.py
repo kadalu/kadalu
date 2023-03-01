@@ -4,16 +4,14 @@ Starts Gluster Brick Self Heal Daemon(shd) process
 import json
 import os
 
-from jinja2 import Template
 from kadalulib import Proc
-
 from serverutils import generate_shd_volfile
 
-VOLFILES_DIR = "/kadalu/volfiles"
+VOLFILES_DIR = "/var/lib/kadalu/volfiles"
 VOLINFO_DIR = "/var/lib/gluster"
 
 
-def create_shd_volfile(shd_volfile_path, volname, voltype):
+def create_shd_volfile(shd_volfile_path, volname):
     """
     Generate Self Heal Daemon(SHD) Volfile for Glusterfs
     Volume of type Replica2.
@@ -24,9 +22,7 @@ def create_shd_volfile(shd_volfile_path, volname, voltype):
     with open(info_file_path) as info_file:
         data = json.load(info_file)
 
-    content = generate_shd_volfile(data)
-    with open(shd_volfile_path, "w") as shd_volfile:
-        shd_volfile.write(content)
+    generate_shd_volfile(data, shd_volfile_path)
 
 
 def start_args():
@@ -34,10 +30,9 @@ def start_args():
     Start the Gluster Self-Heal Process
     """
     volname = os.environ["VOLUME"]
-    voltype = os.environ["VOLUME_TYPE"]
 
     shd_volfile_path = os.path.join(VOLFILES_DIR, "glustershd.vol")
-    create_shd_volfile(shd_volfile_path, volname, voltype)
+    create_shd_volfile(shd_volfile_path, volname)
 
     return Proc(
         "shd",

@@ -3,25 +3,21 @@ import os
 import sys
 import json
 
-from jinja2 import Template
-
 from serverutils import generate_client_volfile
 
-info_dir = "/var/lib/gluster"
-volfiles_dir = "/kadalu/volfiles"
+INFO_DIR = "/var/lib/gluster"
+VOLFILES_DIR= "/kadalu/volfiles"
 
 volname = sys.argv[1]
 
-info_file = os.path.join(info_dir, "%s.info" % volname)
+info_file = os.path.join(INFO_DIR, "%s.info" % volname)
 data = {}
 with open(info_file) as f:
     data = json.load(f)
 
-client_volfile_path = os.path.join(volfiles_dir, "%s.client.vol" % volname)
+client_volfile_path = os.path.join(VOLFILES_DIR, "%s.client.vol" % volname)
 
-content = generate_client_volfile(data)
-with open(client_volfile_path, "w") as client_volfile:
-    client_volfile.write(content)
+generate_client_volfile(data, client_volfile_path)
 
 os.makedirs("/mnt/%s" % volname)
 

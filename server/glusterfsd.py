@@ -5,17 +5,18 @@ import logging
 import os
 import sys
 import uuid
+import json
 
 import xattr
-from jinja2 import Template
 from kadalulib import (CommandException, Proc, execute, logf,
                        send_analytics_tracker)
 
-import kadalu_volgen
+from serverutils import (generate_brick_volfile,
+                         generate_client_volfile)
 
 # noqa # pylint: disable=I1101
 VOLUME_ID_XATTR_NAME = "trusted.glusterfs.volume-id"
-VOLFILES_DIR = "/kadalu/volfiles"
+VOLFILES_DIR = "/var/lib/kadalu/volfiles"
 VOLINFO_DIR = "/var/lib/gluster"
 MKFS_XFS_CMD = "/sbin/mkfs.xfs"
 
@@ -62,9 +63,9 @@ def set_volume_id_xattr(brick_path, volume_id):
         sys.exit(1)
 
 
-def generate_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_path):
+def create_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_path):
     """
-    Generate Brick/Storage Unit Volfile based on Volinfo stored in Config map
+    Create Brick/Storage Unit Volfile based on Volinfo stored in Config map
     For now, Generated Volfile is used in configmap
     """
 
@@ -75,13 +76,22 @@ def generate_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_
     storage_unit["volume"]["name"] = volname
     storage_unit["volume"]["id"] = volume_id
 
-    content = kadalu_volgen.generate(
-        "/var/lib/kadalu/templates/storage_unit.vol.j2",
-        data=storage_unit
-    )
+    generate_brick_volfile(storage_unit, storage_unit_volfile_path)
 
-    with open(storage_unit_volfile_path, "w") as su_volfile:
-        su_volfile.write(content)
+
+def create_client_volfile(client_volfile_path, volname):
+    """
+    Create client volfile based on Volinfo stored in Config map using
+    Kadalu Volgen library.
+    """
+
+    info_file_path = os.path.join(VOLINFO_DIR, "%s.info" % volname)
+    data = {}
+    with open(info_file_path) as info_file:
+        data = json.load(info_file)
+
+    generate_client_volfile(data, client_volfile_path)
+
 
 
 def create_and_mount_brick(brick_device, brick_path, brickfs):
@@ -199,7 +209,9 @@ def start_args():
 
     volfile_id = "%s.%s.%s" % (volname, nodename, brick_path_name)
     storage_unit_volfile_path = os.path.join(VOLFILES_DIR, "%s.vol" % volfile_id)
-    generate_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_path)
+    client_volfile_path = os.path.join(VOLFILES_DIR, "%s.client.vol" % volname)
+    create_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_path)
+    create_client_volfile(client_volfile_path, volname)
 
     # UID is stored at the time of installation in configmap.
     uid = None
