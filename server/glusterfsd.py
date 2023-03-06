@@ -5,16 +5,18 @@ import logging
 import os
 import sys
 import uuid
+import json
 
 import xattr
-from jinja2 import Template
 from kadalulib import (CommandException, Proc, execute, logf,
                        send_analytics_tracker)
 
+from serverutils import (generate_brick_volfile,
+                         generate_client_volfile)
+
 # noqa # pylint: disable=I1101
 VOLUME_ID_XATTR_NAME = "trusted.glusterfs.volume-id"
-VOLFILES_DIR = "/kadalu/volfiles"
-TEMPLATES_DIR = "/kadalu/templates"
+VOLFILES_DIR = "/var/lib/kadalu/volfiles"
 VOLINFO_DIR = "/var/lib/gluster"
 MKFS_XFS_CMD = "/sbin/mkfs.xfs"
 
@@ -61,24 +63,35 @@ def set_volume_id_xattr(brick_path, volume_id):
         sys.exit(1)
 
 
-def generate_brick_volfile(volfile_path, volname, volume_id, brick_path):
+def create_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_path):
     """
-    Generate Volfile based on Volinfo stored in Config map
+    Create Brick/Storage Unit Volfile based on Volinfo stored in Config map
     For now, Generated Volfile is used in configmap
     """
-    content = ""
-    template_file = os.path.join(TEMPLATES_DIR, "brick.vol.j2")
-    with open(template_file) as tmpl_file:
-        content = tmpl_file.read()
 
+    storage_unit = {}
+    storage_unit["path"] = brick_path
+    storage_unit["port"] = 24007
+    storage_unit["volume"] = {}
+    storage_unit["volume"]["name"] = volname
+    storage_unit["volume"]["id"] = volume_id
+
+    generate_brick_volfile(storage_unit, storage_unit_volfile_path)
+
+
+def create_client_volfile(client_volfile_path, volname):
+    """
+    Create client volfile based on Volinfo stored in Config map using
+    Kadalu Volgen library.
+    """
+
+    info_file_path = os.path.join(VOLINFO_DIR, "%s.info" % volname)
     data = {}
-    # Brick volfile needs only these 3 parameters
-    data["volname"] = volname
-    data["volume_id"] = volume_id
-    data["brick_path"] = brick_path
+    with open(info_file_path) as info_file:
+        data = json.load(info_file)
 
-    tmpl = Template(content)
-    tmpl.stream(**data).dump(volfile_path)
+    generate_client_volfile(data, client_volfile_path)
+
 
 
 def create_and_mount_brick(brick_device, brick_path, brickfs):
@@ -195,8 +208,10 @@ def start_args():
     set_volume_id_xattr(brick_path, volume_id)
 
     volfile_id = "%s.%s.%s" % (volname, nodename, brick_path_name)
-    volfile_path = os.path.join(VOLFILES_DIR, "%s.vol" % volfile_id)
-    generate_brick_volfile(volfile_path, volname, volume_id, brick_path)
+    storage_unit_volfile_path = os.path.join(VOLFILES_DIR, "%s.vol" % volfile_id)
+    client_volfile_path = os.path.join(VOLFILES_DIR, "%s.vol" % volname)
+    create_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_path)
+    create_client_volfile(client_volfile_path, volname)
 
     # UID is stored at the time of installation in configmap.
     uid = None
@@ -224,6 +239,6 @@ def start_args():
             "--brick-port", "24007",
             "--xlator-option",
             "%s-server.listen-port=24007" % volname,
-            "-f", volfile_path
+            "-f", storage_unit_volfile_path
         ]
     )
