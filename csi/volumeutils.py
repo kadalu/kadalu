@@ -1161,6 +1161,8 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
     else:
         volname = volume["name"]
 
+    hosts = volume['g_host']
+
     if volume['type'] == 'External':
         # Try to mount the Host Volume, handle failure if
         # already mounted
@@ -1168,7 +1170,7 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
             with mount_lock:
                 mount_glusterfs_with_host(volname,
                                         mountpoint,
-                                        volume['g_host'],
+                                        hosts,
                                         volume['g_options'],
                                         is_client)
         else:
@@ -1186,7 +1188,7 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
         secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
 
         # SSH into only first reachable host in volume['g_host'] entry
-        g_host = reachable_host(volume['g_host'])
+        g_host = reachable_host(hosts)
 
         if g_host is None:
             logging.error(logf("All hosts are not reachable"))
@@ -1218,11 +1220,14 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
                 raise err
         return mountpoint
 
-    generate_client_volfile(volname)
-    client_volfile_path = os.path.join(
-        VOLFILES_DIR,
-        "%s.client.vol" % volname
-    )
+    # Pass storage options as mount option,
+    # instead of editing client volfile_path
+
+    # generate_client_volfile(volname)
+    # client_volfile_path = os.path.join(
+    #     VOLFILES_DIR,
+    #     "%s.client.vol" % volname
+    # )
 
     if storage_options != "":
 
@@ -1274,19 +1279,33 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
         # Fix the log, so we can check it out later
         # log_file = "/var/log/gluster/%s.log" % mountpoint.replace("/", "-")
         log_file = "/var/log/gluster/gluster.log"
+
         cmd = [
             GLUSTERFS_CMD,
             "--process-name", "fuse",
             "-l", log_file,
             "--volfile-id", volname,
             "--fs-display-name", "kadalu:%s" % volname,
-            "-f", client_volfile_path,
             mountpoint
         ]
 
         ## required for 'simple-quota'
         if not is_client:
             cmd.extend(["--client-pid", "-14"])
+
+        data = {}
+        hosts = []
+        with open(os.path.join(VOLINFO_DIR, "%s.info" % volname)) as info_file:
+            data = json.load(info_file)
+
+        for brick in data["bricks"]:
+            hosts.append(brick["node"])
+
+        # Use volfile server of bricks/storage_unit processes,
+        # instead of volfile paths. Since now brick processes
+        # supports serving of client volfiles.
+        for host in hosts:
+            cmd.extend(["--volfile-server", host])
 
         try:
             (_, err, pid) = execute(*cmd)
