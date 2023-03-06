@@ -921,7 +921,7 @@ def expand_mounted_volume(mountpoint):
         execute("xfs_growfs", "-d", mountpoint)
 
 
-def generate_client_volfile(volname):
+def has_configmap_changed(volname):
     """Generate Client Volfile for Glusterfs Volume"""
     info_file_path = os.path.join(VOLINFO_DIR, "%s.info" % volname)
     data = {}
@@ -940,50 +940,52 @@ def generate_client_volfile(volname):
 
     VOL_DATA[volname]["hash"] = current_hash
 
-    # Tricky to get this right, but this solves all the elements of distribute in code :-)
-    data['dht_subvol'] = []
-    decommissioned = []
-    if data["type"] == "Replica1":
-        for brick in data["bricks"]:
-            brick_name = "%s-client-%d" % (data["volname"], brick["brick_index"])
-            data["dht_subvol"].append(brick_name)
-            if brick.get("decommissioned", "") != "":
-                decommissioned.append(brick_name)
-    else:
-        count = 3
-        if data["type"] == "Replica2":
-            count = 2
-
-        if data["type"] == "Disperse":
-            count = data["disperse"]["data"] + data["disperse"]["redundancy"]
-            data["disperse_redundancy"] = data["disperse"]["redundancy"]
-
-        data["subvol_bricks_count"] = count
-        for i in range(0, int(len(data.get("bricks", [])) / count)):
-            brick_name = "%s-%s-%d" % (
-                data["volname"],
-                "disperse" if data["type"] == "Disperse" else "replica",
-                i
-            )
-            data["dht_subvol"].append(brick_name)
-            if data.get("bricks", [])[(i * count)].get("decommissioned", "") != "":
-                decommissioned.append(brick_name)
-
-    data["decommissioned"] = ",".join(decommissioned)
-    template_file_path = os.path.join(
-        TEMPLATES_DIR,
-        "%s.client.vol.j2" % data["type"]
-    )
-    client_volfile = os.path.join(
-        VOLFILES_DIR,
-        "%s.client.vol" % volname
-    )
-    content = ""
-    with open(template_file_path) as template_file:
-        content = template_file.read()
-
-    Template(content).stream(**data).dump(client_volfile)
     return True
+
+    # # Tricky to get this right, but this solves all the elements of distribute in code :-)
+    # data['dht_subvol'] = []
+    # decommissioned = []
+    # if data["type"] == "Replica1":
+    #     for brick in data["bricks"]:
+    #         brick_name = "%s-client-%d" % (data["volname"], brick["brick_index"])
+    #         data["dht_subvol"].append(brick_name)
+    #         if brick.get("decommissioned", "") != "":
+    #             decommissioned.append(brick_name)
+    # else:
+    #     count = 3
+    #     if data["type"] == "Replica2":
+    #         count = 2
+
+    #     if data["type"] == "Disperse":
+    #         count = data["disperse"]["data"] + data["disperse"]["redundancy"]
+    #         data["disperse_redundancy"] = data["disperse"]["redundancy"]
+
+    #     data["subvol_bricks_count"] = count
+    #     for i in range(0, int(len(data.get("bricks", [])) / count)):
+    #         brick_name = "%s-%s-%d" % (
+    #             data["volname"],
+    #             "disperse" if data["type"] == "Disperse" else "replica",
+    #             i
+    #         )
+    #         data["dht_subvol"].append(brick_name)
+    #         if data.get("bricks", [])[(i * count)].get("decommissioned", "") != "":
+    #             decommissioned.append(brick_name)
+
+    # data["decommissioned"] = ",".join(decommissioned)
+    # template_file_path = os.path.join(
+    #     TEMPLATES_DIR,
+    #     "%s.client.vol.j2" % data["type"]
+    # )
+    # client_volfile = os.path.join(
+    #     VOLFILES_DIR,
+    #     "%s.client.vol" % volname
+    # )
+    # content = ""
+    # with open(template_file_path) as template_file:
+    #     content = template_file.read()
+
+    # Template(content).stream(**data).dump(client_volfile)
+    # return True
 
 
 def send_signal_to_process(volname, out, sig):
@@ -1026,7 +1028,7 @@ def reload_glusterfs(volume):
 
     # Ignore if already glusterfs process running for that volume
     with mount_lock:
-        if not generate_client_volfile(volname):
+        if not has_configmap_changed(volname):
             return False
         # TODO: ideally, keep the pid in structure for easier access
         # pid = VOL_DATA[volname]["pid"]
@@ -1220,14 +1222,14 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
                 raise err
         return mountpoint
 
+    # Todo:
     # Pass storage options as mount option,
     # instead of editing client volfile_path
-
-    # generate_client_volfile(volname)
-    # client_volfile_path = os.path.join(
-    #     VOLFILES_DIR,
-    #     "%s.client.vol" % volname
-    # )
+    has_configmap_changed(volname)
+    client_volfile_path = os.path.join(
+        VOLFILES_DIR,
+        "%s.client.vol" % volname
+    )
 
     if storage_options != "":
 
