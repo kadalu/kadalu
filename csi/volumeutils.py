@@ -14,7 +14,6 @@ from errno import ENOTCONN
 from pathlib import Path
 
 import xxhash
-from jinja2 import Template
 from kadalulib import (PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
                        CommandException, SizeAccounting, execute,
                        get_volname_hash, get_volume_path,
@@ -29,7 +28,6 @@ XFS_GROWFS_CMD = "/sbin/xfs_growfs"
 RESERVED_SIZE_PERCENTAGE = 10
 HOSTVOL_MOUNTDIR = "/mnt"
 VOLFILES_DIR = "/kadalu/volfiles"
-TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
 
 # This variable contains in-memory map of all glusterfs processes (hash of volfile and pid)
@@ -922,7 +920,10 @@ def expand_mounted_volume(mountpoint):
 
 
 def has_configmap_changed(volname):
-    """Generate Client Volfile for Glusterfs Volume"""
+    """
+    Generate hash based of configmap data into vol_data,
+    return True if configmap has been changed
+    """
     info_file_path = os.path.join(VOLINFO_DIR, "%s.info" % volname)
     data = {}
     with open(info_file_path) as info_file:
@@ -942,82 +943,9 @@ def has_configmap_changed(volname):
 
     return True
 
-    # # Tricky to get this right, but this solves all the elements of distribute in code :-)
-    # data['dht_subvol'] = []
-    # decommissioned = []
-    # if data["type"] == "Replica1":
-    #     for brick in data["bricks"]:
-    #         brick_name = "%s-client-%d" % (data["volname"], brick["brick_index"])
-    #         data["dht_subvol"].append(brick_name)
-    #         if brick.get("decommissioned", "") != "":
-    #             decommissioned.append(brick_name)
-    # else:
-    #     count = 3
-    #     if data["type"] == "Replica2":
-    #         count = 2
-
-    #     if data["type"] == "Disperse":
-    #         count = data["disperse"]["data"] + data["disperse"]["redundancy"]
-    #         data["disperse_redundancy"] = data["disperse"]["redundancy"]
-
-    #     data["subvol_bricks_count"] = count
-    #     for i in range(0, int(len(data.get("bricks", [])) / count)):
-    #         brick_name = "%s-%s-%d" % (
-    #             data["volname"],
-    #             "disperse" if data["type"] == "Disperse" else "replica",
-    #             i
-    #         )
-    #         data["dht_subvol"].append(brick_name)
-    #         if data.get("bricks", [])[(i * count)].get("decommissioned", "") != "":
-    #             decommissioned.append(brick_name)
-
-    # data["decommissioned"] = ",".join(decommissioned)
-    # template_file_path = os.path.join(
-    #     TEMPLATES_DIR,
-    #     "%s.client.vol.j2" % data["type"]
-    # )
-    # client_volfile = os.path.join(
-    #     VOLFILES_DIR,
-    #     "%s.client.vol" % volname
-    # )
-    # content = ""
-    # with open(template_file_path) as template_file:
-    #     content = template_file.read()
-
-    # Template(content).stream(**data).dump(client_volfile)
-    # return True
-
-
-def send_signal_to_process(volname, out, sig):
-    """Sends the signal to one of the process"""
-
-    for line in out.split("\n"):
-        parts = line.split()
-        pid = parts[0]
-        for part in parts:
-            if part.startswith("--volume-id="):
-                if part.split("=")[-1] == volname:
-                    cmd = [ "kill", sig, pid ]
-                    try:
-                        execute(*cmd)
-                    except CommandException as err:
-                        logging.error(logf(
-                            "error to execute command",
-                            volume=volname,
-                            cmd=cmd,
-                            error=format(err)
-                        ))
-                    return
-
-    logging.debug(logf(
-        "Sent SIGHUP to glusterfs process",
-        volname=volname
-    ))
-    return
-
 
 def reload_glusterfs(volume):
-    """Mount Glusterfs Volume"""
+    """Reload glusterfs process by sending SIGHUP"""
     if volume["type"] == "External":
         return False
 
@@ -1030,14 +958,12 @@ def reload_glusterfs(volume):
     with mount_lock:
         if not has_configmap_changed(volname):
             return False
-        # TODO: ideally, keep the pid in structure for easier access
-        # pid = VOL_DATA[volname]["pid"]
-        # cmd = ["kill", "-HUP", str(pid)]
-        cmd = ["ps", "--no-header", "-ww", "-o", "pid,command", "-C", "glusterfs"]
+
+        pid = VOL_DATA[volname].get("pid", 0)
+        cmd = ["kill", "-HUP", str(pid)]
 
         try:
-            out, err, _ = execute(*cmd)
-            send_signal_to_process(volname, out, "-HUP")
+            _, err, _ = execute(*cmd)
         except CommandException as err:
             logging.error(logf(
                 "error to execute command",
