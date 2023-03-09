@@ -7,13 +7,11 @@ import logging
 import os
 import re
 import shutil
-import tempfile
 import threading
 import time
 from errno import ENOTCONN
 from pathlib import Path
 
-import xxhash
 from kadalulib import (PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
                        CommandException, SizeAccounting, execute,
                        get_volname_hash, get_volume_path,
@@ -29,10 +27,6 @@ RESERVED_SIZE_PERCENTAGE = 10
 HOSTVOL_MOUNTDIR = "/mnt"
 VOLFILES_DIR = "/kadalu/volfiles"
 VOLINFO_DIR = "/var/lib/gluster"
-
-# This variable contains in-memory map of all glusterfs processes (hash of volfile and pid)
-# Used while sending SIGHUP during any modifcation to storage config
-VOL_DATA = {}
 
 statfile_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 mount_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
@@ -919,170 +913,7 @@ def expand_mounted_volume(mountpoint):
         execute("xfs_growfs", "-d", mountpoint)
 
 
-def has_configmap_changed(volname):
-    """
-    Generate hash based of configmap data into vol_data,
-    return True if configmap has been changed
-    """
-    info_file_path = os.path.join(VOLINFO_DIR, "%s.info" % volname)
-    data = {}
-    with open(info_file_path) as info_file:
-        data = json.load(info_file)
-
-    # If the hash of configmap is same for the given volume, then there
-    # is no need to generate client volfile again.
-    if not VOL_DATA.get(volname, None):
-        VOL_DATA[volname] = {}
-    hashval = VOL_DATA[volname].get("hash", 0)
-    current_hash = hash(json.dumps(data))
-
-    if hashval == current_hash:
-        return False
-
-    VOL_DATA[volname]["hash"] = current_hash
-
-    return True
-
-
-def reload_glusterfs(volume):
-    """Reload glusterfs process by sending SIGHUP"""
-    if volume["type"] == "External":
-        return False
-
-    volname = volume["name"]
-
-    if not VOL_DATA.get(volname, None):
-        return False
-
-    # Ignore if already glusterfs process running for that volume
-    with mount_lock:
-        if not has_configmap_changed(volname):
-            return False
-
-        pid = VOL_DATA[volname].get("pid", 0)
-        cmd = ["kill", "-HUP", str(pid)]
-
-        try:
-            _, err, _ = execute(*cmd)
-        except CommandException as err:
-            logging.error(logf(
-                "error to execute command",
-                volume=volume,
-                cmd=cmd,
-                error=format(err)
-            ))
-            return False
-
-    return True
-
-
-# noqa # pylint: disable=too-many-locals
-# noqa # pylint: disable=too-many-statements
-# noqa # pylint: disable=too-few-public-methods
-# noqa # pylint: disable=too-many-branches
-class VolfileElement:
-    """Class to represent multiple elements within a volfile"""
-
-    def __init__(self, name):
-        self.name = name
-        self.type = None
-        self.options = {}
-        self.subvolumes = None
-
-
-class Volfile:
-    """Class with volfile utils methods"""
-
-    def __init__(self, volfile, elements):
-        self.volfile = volfile
-        self.elements = elements
-
-    @classmethod
-    def parse(cls, volfile):
-        """Parse volfile into multiple volfile elements"""
-
-        element = None
-        elements = []
-        with open(volfile) as volf:
-            for line in volf:
-                line = line.strip()
-                if line.startswith("volume "):
-                    element = VolfileElement(line.split()[-1])
-                elif line == "end-volume":
-                    elements.append(element)
-                    element = None
-                elif line.startswith("option "):
-                    _, name, value = line.split()
-                    element.options[name] = value
-                elif line.startswith("subvolumes "):
-                    element.subvolumes = line.split(" ", 1)[-1]
-                elif line.startswith("type "):
-                    element.type = line.split()[-1]
-        return Volfile(volfile, elements)
-
-
-    def update_options_by_type(self, opts):
-        """
-        Update existing storage-options with the options
-        passed by user through storage-class
-        """
-
-        for element in self.elements:
-            if opts.get(element.type, None) is not None:
-                element.options.update(opts.get(element.type, {}))
-
-
-    def save(self, volfile=None):
-        """
-        Reconstruct and saves the volfile
-        with changes made to its elements
-        """
-
-        filepath = self.volfile
-        if volfile is not None:
-            filepath = volfile
-
-        with open(filepath + ".tmp", "w") as volf:
-            for element in self.elements:
-                volf.write("volume {0}\n".format(element.name))
-                volf.write("    type {0}\n".format(element.type))
-                for name, value in element.options.items():
-                    volf.write("    option {0} {1}\n".format(name, value))
-                if element.subvolumes is not None:
-                    volf.write("    subvolumes {0}\n".format(element.subvolumes))
-                volf.write("end-volume\n\n")
-
-        os.rename(filepath + ".tmp", filepath)
-
-
-def get_storage_options_hash(storage_options_sorted_str):
-    """Return hash for storage options sorted by key"""
-
-    return xxhash.xxh64_hexdigest(storage_options_sorted_str)
-
-
-def storage_options_parse(opts_raw):
-    """
-    Parse the storage options specified in 'str' and
-    construct to much more usable 'dict' format
-    """
-
-    opts_list = [opt.strip() for opt in opts_raw.split(",") if opt.strip() != ""]
-    opts = {}
-    for opt in opts_list:
-        key, value = opt.split(":")
-        xlator, opt_name = key.split(".")
-        xlator = xlator.strip()
-        opt_name = opt_name.strip()
-        value = value.strip()
-        if opts.get(xlator, None) is None:
-            opts[xlator] = {}
-
-        opts[xlator][opt_name] = value
-    return opts
-
-
-def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
+def mount_glusterfs(volume, mountpoint, is_client=False):
     """Mount Glusterfs Volume"""
     if volume["type"] == "External":
         volname = volume['g_volname']
@@ -1148,43 +979,8 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
                 raise err
         return mountpoint
 
-    # Todo:
-    # Pass storage options as mount option,
-    # instead of editing client volfile_path
-    has_configmap_changed(volname)
-    client_volfile_path = os.path.join(
-        VOLFILES_DIR,
-        "%s.client.vol" % volname
-    )
-
-    if storage_options != "":
-
-        # Construct 'dict' from passed storage-options in 'str'
-        storage_options = storage_options_parse(storage_options)
-
-        # Keep the default volfile untouched
-        tmp_volfile_path = tempfile.mkstemp()[1]
-        shutil.copy(client_volfile_path, tmp_volfile_path)
-
-        # Parse the client-volfile, update passed storage-options & save
-        parsed_client_volfile_path = Volfile.parse(tmp_volfile_path)
-        parsed_client_volfile_path.update_options_by_type(storage_options)
-        parsed_client_volfile_path.save()
-
-        # Sort storage-options and generate hash
-        storage_options_hash = get_storage_options_hash(
-            json.dumps(storage_options, sort_keys=True))
-
-        # Rename mountpoint & client volfile path with hash
-        mountpoint = mountpoint + "_" + storage_options_hash
-        new_client_volfile_path = os.path.join(VOLFILES_DIR,
-            "%s_%s.client.vol" %(volname, storage_options_hash))
-        os.rename(tmp_volfile_path, new_client_volfile_path)
-        client_volfile_path = new_client_volfile_path
-
     # Ignore if already glusterfs process running for that volume
     if is_gluster_mount_proc_running(volname, mountpoint):
-        reload_glusterfs(volume)
         logging.debug(logf(
             "Already mounted",
             mount=mountpoint
@@ -1193,7 +989,6 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
 
     # Ignore if already mounted
     if is_gluster_mount_proc_running(volname, mountpoint):
-        reload_glusterfs(volume)
         logging.debug(logf(
             "Already mounted (2nd try)",
             mount=mountpoint
@@ -1236,8 +1031,7 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
             cmd.extend(["--volfile-server", host])
 
         try:
-            (_, err, pid) = execute(*cmd)
-            VOL_DATA[volname]["pid"] = pid
+            (_, err, _) = execute(*cmd)
         except CommandException as err:
             logging.error(logf(
                 "error to execute command",

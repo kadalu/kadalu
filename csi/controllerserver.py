@@ -131,8 +131,6 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         pvtype = PV_TYPE_SUBVOL
         is_block = False
 
-        storage_options = request.parameters.get("storage_options", "")
-
         # Mounted BlockVolume is requested via Storage Class.
         # GlusterFS File Volume may not be useful for some workloads
         # they can request for the Virtual Block formated and mounted
@@ -399,8 +397,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                     "pvtype": pvtype,
                     "path": vol.volpath,
                     "fstype": "xfs",
-                    "single_pv_per_pool": f"{single_pv_per_pool}",
-                    "storage_options": storage_options
+                    "single_pv_per_pool": f"{single_pv_per_pool}"
                 }
             })
 
