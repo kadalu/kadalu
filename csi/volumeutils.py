@@ -365,8 +365,8 @@ def create_subdir_volume(hostvol_mnt, volname, size, use_gluster_quota):
     # Wait for quota set
     # TODO: Handle Timeout
     pvsize_buffer = size * 0.05  # 5%
-    pvsize_min = (size - pvsize_buffer)
-    pvsize_max = (size + pvsize_buffer)
+    pvsize_min = size - pvsize_buffer
+    pvsize_max = size + pvsize_buffer
     logging.debug(logf(
         "Watching df of pv directory",
         pvdir=volpath,
@@ -484,8 +484,8 @@ def update_subdir_volume(hostvol_mnt, hostvoltype, volname, expansion_requested_
     # Wait for quota set
     # TODO: Handle Timeout
     pvsize_buffer = expansion_requested_pvsize * 0.05  # 5%
-    pvsize_min = (expansion_requested_pvsize - pvsize_buffer)
-    pvsize_max = (expansion_requested_pvsize + pvsize_buffer)
+    pvsize_min = expansion_requested_pvsize - pvsize_buffer
+    pvsize_max = expansion_requested_pvsize + pvsize_buffer
     logging.debug(logf(
         "Watching df of pv directory",
         pvdir=volpath,

@@ -419,7 +419,6 @@ class Monitor:
                 if terminating:
                     logging.info("Terminating Monitor process")
                     sys.exit(0)
-                    break
 
                 time.sleep(1)
         except KeyboardInterrupt:
