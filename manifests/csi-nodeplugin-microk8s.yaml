@@ -40,6 +40,8 @@ spec:
       app.kubernetes.io/part-of: kadalu
       app.kubernetes.io/name: kadalu-csi-nodeplugin
       app.kubernetes.io/component: csi-driver
+  updateStrategy:
+    type: OnDelete
   template:
     metadata:
       labels:

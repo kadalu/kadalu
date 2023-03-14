@@ -1,7 +1,7 @@
 apiVersion: v2
 name: kadalu
 icon: https://kadalu.io/static/css/logo.png
-description: Contains subchart for deploying Kadalu Operator and Kadalu CSI Nodeplugin
+description: Contains chart for deploying Kadalu Operator, CSI Controller and CSI Nodeplugin
 type: application
 # Value of 'version' will be replaced with correct version on part of release
 version: 0.0.0-0
