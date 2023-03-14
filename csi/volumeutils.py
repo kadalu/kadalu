@@ -16,7 +16,8 @@ from kadalulib import (PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
                        CommandException, SizeAccounting, execute,
                        get_volname_hash, get_volume_path,
                        is_gluster_mount_proc_running, logf, makedirs,
-                       reachable_host, retry_errors, get_single_pv_per_pool)
+                       reachable_host, retry_errors, get_single_pv_per_pool,
+                       is_host_reachable)
 
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/bin/mount"
@@ -916,12 +917,23 @@ def expand_mounted_volume(mountpoint):
 def mount_glusterfs(volume, mountpoint, is_client=False):
     """Mount Glusterfs Volume"""
 
-    hosts = volume['g_host']
+    data = {}
+    hosts = []
+    volname = volume["name"]
+    with open(os.path.join(VOLINFO_DIR, "%s.info" % volname)) as info_file:
+        data = json.load(info_file)
+
+    for brick in data["bricks"]:
+        hosts.append(brick["node"])
+
+    if not is_host_reachable(hosts, 24007, 100):
+        logging.error(logf(
+            "None of the hosts are reachable"
+        ))
+        raise CommandException
 
     if volume['type'] == 'External':
-        return handle_external_volume(volume, mountpoint, is_client, hosts)
-
-    volname = volume["name"]
+        return handle_external_volume(volume, mountpoint, is_client, volume['g_host'])
 
     # Ignore if already glusterfs process running for that volume
     if is_gluster_mount_proc_running(volname, mountpoint):
@@ -959,14 +971,6 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
         ## required for 'simple-quota'
         if not is_client:
             cmd.extend(["--client-pid", "-14"])
-
-        data = {}
-        hosts = []
-        with open(os.path.join(VOLINFO_DIR, "%s.info" % volname)) as info_file:
-            data = json.load(info_file)
-
-        for brick in data["bricks"]:
-            hosts.append(brick["node"])
 
         # Use volfile server of bricks/storage_unit processes,
         # instead of volfile paths. Since now brick processes

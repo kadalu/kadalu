@@ -79,9 +79,11 @@ def is_gluster_mount_proc_running(volname, mountpoint):
         return proc.returncode == 0
 
 
-def is_host_reachable(hosts, port):
-    """Check if glusterd is reachable in the given node"""
-    timeout = 5
+def is_host_reachable(hosts, port=22, timeout=5):
+    """
+    For external volume: Check if glusterd is reachable in the given node at port 22
+    For native volume: Check if glusterfsd is reachable in the given node at port 24007
+    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(timeout)
     for host in hosts:
