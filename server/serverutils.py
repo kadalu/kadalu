@@ -1,6 +1,17 @@
-import os
+""" Utils for server component """
+
+import copy
 import kadalu_volgen
 
+DEFAULT_OPTIONS = {
+    "performance.client-io-threads": "off",
+    "performance.stat-prefetch": "off",
+    "performance.quick-read": "off",
+    "performance.open-behind": "off",
+    "performance.read-ahead": "off",
+    "performance.io-cache": "off",
+    "performance.readdir-ahead": "off"
+}
 
 def generate_client_volgen_data(data):
     """
@@ -84,10 +95,12 @@ def generate_shd_volfile(data, shd_volfile_path):
 def generate_client_volfile(data, client_volfile_path):
     """ Generate client volfile using Kadalu Volgen library"""
 
+    options = copy.copy(DEFAULT_OPTIONS)
     client_data = generate_client_volgen_data(data)
 
     kadalu_volgen.generate(
         "/var/lib/kadalu/templates/client.vol.j2",
         data=client_data,
+        options=options,
         output_file=client_volfile_path
     )
