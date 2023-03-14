@@ -915,69 +915,13 @@ def expand_mounted_volume(mountpoint):
 
 def mount_glusterfs(volume, mountpoint, is_client=False):
     """Mount Glusterfs Volume"""
-    if volume["type"] == "External":
-        volname = volume['g_volname']
-    else:
-        volname = volume["name"]
 
     hosts = volume['g_host']
 
     if volume['type'] == 'External':
-        # Try to mount the Host Volume, handle failure if
-        # already mounted
-        if not is_gluster_mount_proc_running(volname, mountpoint):
-            with mount_lock:
-                mount_glusterfs_with_host(volname,
-                                        mountpoint,
-                                        hosts,
-                                        volume['g_options'],
-                                        is_client)
-        else:
-            logging.debug(logf(
-                "Already mounted",
-                mount=mountpoint
-            ))
-            return mountpoint
+        return handle_external_volume(volume, mountpoint, is_client, hosts)
 
-        use_gluster_quota = False
-        if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
-            and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
-            use_gluster_quota = True
-        secret_private_key = "/etc/secret-volume/ssh-privatekey"
-        secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
-
-        # SSH into only first reachable host in volume['g_host'] entry
-        g_host = reachable_host(hosts)
-
-        if g_host is None:
-            logging.error(logf("All hosts are not reachable"))
-            return
-
-        if use_gluster_quota is False:
-            logging.debug(logf("Do not set quota-deem-statfs"))
-        else:
-            logging.debug(logf("Set quota-deem-statfs for gluster directory Quota"))
-            quota_deem_cmd = [
-                "ssh",
-                "-oStrictHostKeyChecking=no",
-                "-i",
-                "%s" % secret_private_key,
-                "%s@%s" % (secret_username, g_host),
-                "sudo",
-                "gluster",
-                "volume",
-                "set",
-                "%s" % volume['g_volname'],
-                "quota-deem-statfs",
-                "on"
-            ]
-            try:
-                execute(*quota_deem_cmd)
-            except CommandException as err:
-                errmsg = "Unable to set quota-deem-statfs via ssh"
-                logging.error(logf(errmsg, error=err))
-                raise err
-        return mountpoint
+    volname = volume["name"]
 
     # Ignore if already glusterfs process running for that volume
     if is_gluster_mount_proc_running(volname, mountpoint):
@@ -1041,6 +985,70 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             ))
             raise err
 
+    return mountpoint
+
+
+def handle_external_volume(volume, mountpoint, is_client, hosts):
+    """
+    Handle mounting of volume with external host and setting of quota
+    """
+
+    volname = volume['g_volname']
+
+    # Try to mount the Host Volume, handle failure if
+    # already mounted
+    if not is_gluster_mount_proc_running(volname, mountpoint):
+        with mount_lock:
+            mount_glusterfs_with_host(volname,
+                                    mountpoint,
+                                    hosts,
+                                    volume['g_options'],
+                                    is_client)
+    else:
+        logging.debug(logf(
+            "Already mounted",
+            mount=mountpoint
+        ))
+        return mountpoint
+
+    use_gluster_quota = False
+    if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
+        and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
+        use_gluster_quota = True
+    secret_private_key = "/etc/secret-volume/ssh-privatekey"
+    secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
+
+    # SSH into only first reachable host in volume['g_host'] entry
+    g_host = reachable_host(hosts)
+
+    if g_host is None:
+        logging.error(logf("All hosts are not reachable"))
+        return
+
+    if use_gluster_quota is False:
+        logging.debug(logf("Do not set quota-deem-statfs"))
+    else:
+        logging.debug(logf("Set quota-deem-statfs for gluster directory Quota"))
+        quota_deem_cmd = [
+            "ssh",
+            "-oStrictHostKeyChecking=no",
+            "-i",
+            "%s" % secret_private_key,
+            "%s@%s" % (secret_username, g_host),
+            "sudo",
+            "gluster",
+            "volume",
+            "set",
+            "%s" % volume['g_volname'],
+            "quota-deem-statfs",
+            "on"
+        ]
+        try:
+            execute(*quota_deem_cmd)
+        except CommandException as err:
+            errmsg = "Unable to set quota-deem-statfs via ssh"
+            logging.error(logf(errmsg, error=err))
+            raise err
     return mountpoint
 
 
