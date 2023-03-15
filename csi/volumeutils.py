@@ -17,7 +17,7 @@ from kadalulib import (PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
                        get_volname_hash, get_volume_path,
                        is_gluster_mount_proc_running, logf, makedirs,
                        reachable_host, retry_errors, get_single_pv_per_pool,
-                       is_host_reachable)
+                       is_server_pod_reachable)
 
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/bin/mount"
@@ -926,11 +926,11 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
     for brick in data["bricks"]:
         hosts.append(brick["node"])
 
-    if not is_host_reachable(hosts, 24007, 100):
+    if not is_server_pod_reachable(hosts, 24007, 20):
         logging.error(logf(
-            "None of the hosts are reachable"
+            "None of the server pods are reachable"
         ))
-        raise CommandException
+        return mountpoint
 
     if volume['type'] == 'External':
         return handle_external_volume(volume, mountpoint, is_client, volume['g_host'])

@@ -9,7 +9,7 @@ import csi_pb2
 import csi_pb2_grpc
 import grpc
 from kadalulib import logf
-from volumeutils import mount_volume, unmount_volume
+from volumeutils import mount_glusterfs, mount_volume, unmount_volume
 
 HOSTVOL_MOUNTDIR = "/mnt"
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
@@ -84,6 +84,8 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             'g_options': options,
             'type': voltype,
         }
+
+        mount_glusterfs(volume, mntdir, True)
 
         if voltype == "External":
             logging.debug(logf(
