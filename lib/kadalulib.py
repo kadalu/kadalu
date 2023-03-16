@@ -79,8 +79,38 @@ def is_gluster_mount_proc_running(volname, mountpoint):
         return proc.returncode == 0
 
 
+def is_server_pod_reachable(hosts, port=24007, timeout=20):
+    """
+    Return True if atleast one of server pods(internal hosts),
+    are reachable at port 24007.
+    Retries every 30 seconds if the server pod is not reachable.
+    Returns False server pods are not reachable even after the timeout.
+    """
+
+    socket.setdefaulttimeout(timeout)
+
+    for host in hosts:
+        retry_count = 0
+        while retry_count < 2:
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.connect((host, port))
+                sock.close()
+                return True
+            except socket.error:
+                logging.info(logf(
+                    "Waiting for the server pod to come up...",
+                    server_pod=host,
+                    retry_count=retry_count+1
+                ))
+                time.sleep(30)
+                retry_count += 1
+    return False
+
+
 def is_host_reachable(hosts, port):
     """Check if glusterd is reachable in the given node"""
+
     timeout = 5
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.settimeout(timeout)

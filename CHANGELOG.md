@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - Server: Use Kadalu Volgen library for volfile generation
+- CSI: Fetch volfiles from brick processes in server using --volfile-server &
+  remove storage options from mount flow.
 
 ## [0.9.0] - 2022-11-21
 

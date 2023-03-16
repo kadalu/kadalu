@@ -63,8 +63,6 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
         gvolname = request.volume_context.get("gvolname", None)
         options = request.volume_context.get("options", None)
 
-        # Storage volfile options
-        storage_options = request.volume_context.get("storage_options", "")
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
 
         pvpath_full = os.path.join(mntdir, pvpath)
@@ -76,8 +74,7 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             hostvol=hostvol,
             pvpath=pvpath,
             pvtype=pvtype,
-            pvpath_full=pvpath_full,
-            storage_options=storage_options
+            pvpath_full=pvpath_full
         ))
 
         volume = {
@@ -88,21 +85,15 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
             'type': voltype,
         }
 
-        mountpoint = mount_glusterfs(volume, mntdir, storage_options, True)
+        mount_glusterfs(volume, mntdir, True)
 
         if voltype == "External":
             logging.debug(logf(
                 "Mounted Volume for PV",
                 volume=volume,
-                mntdir=mntdir,
-                storage_options=storage_options
+                mntdir=mntdir
             ))
             # return csi_pb2.NodePublishVolumeResponse()
-
-        # When 'storage_options' is configured mountpoint & volfile path change,
-        # Update pvpath_full accordingly.
-        if storage_options != "":
-            pvpath_full = os.path.join(mountpoint, pvpath)
 
         logging.debug(logf(
             "Mounted Hosting Volume",

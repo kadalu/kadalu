@@ -40,11 +40,16 @@ def generate_client_volgen_data(data):
 
     for dist_grp_idx, dist_grp in enumerate(client_data["distribute_groups"]):
         if "Replica" in data["type"]:
-            dist_grp["type"] = "replica"
+            dist_grp["type"] = "replicate"
         else:
             dist_grp["type"] = "disperse"
 
-        dist_grp["replica_count"] = replica_count
+        if replica_count:
+            dist_grp["replica_count"] = replica_count
+        if dist_grp["type"] == "disperse":
+            dist_grp["disperse_count"] = data["disperse"].get("data", 0)
+            dist_grp["redundancy_count"] = data["disperse"].get("redundancy", 0)
+
         dist_grp["storage_units"] = [{} for _ in range(storage_unit_count)]
 
         for storage_unit_idx, storage_unit in enumerate(dist_grp["storage_units"]):
