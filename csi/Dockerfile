@@ -53,11 +53,6 @@ COPY csi/watch-logrotate.sh    /kadalu/
 
 COPY extras/kadalu-logrotate.conf     /kadalu/logrotate.conf
 
-COPY templates/Replica1.client.vol.j2 /kadalu/templates/
-COPY templates/Replica2.client.vol.j2 /kadalu/templates/
-COPY templates/Replica3.client.vol.j2 /kadalu/templates/
-COPY templates/Disperse.client.vol.j2 /kadalu/templates/
-
 RUN chmod +x /kadalu/startup.sh
 RUN chmod +x /kadalu/heal-info.sh
 

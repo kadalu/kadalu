@@ -7,19 +7,17 @@ import logging
 import os
 import re
 import shutil
-import tempfile
 import threading
 import time
 from errno import ENOTCONN
 from pathlib import Path
 
-import xxhash
-from jinja2 import Template
 from kadalulib import (PV_TYPE_RAWBLOCK, PV_TYPE_SUBVOL, PV_TYPE_VIRTBLOCK,
                        CommandException, SizeAccounting, execute,
                        get_volname_hash, get_volume_path,
                        is_gluster_mount_proc_running, logf, makedirs,
-                       reachable_host, retry_errors, get_single_pv_per_pool)
+                       reachable_host, retry_errors, get_single_pv_per_pool,
+                       is_server_pod_reachable)
 
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
 MOUNT_CMD = "/bin/mount"
@@ -29,12 +27,7 @@ XFS_GROWFS_CMD = "/sbin/xfs_growfs"
 RESERVED_SIZE_PERCENTAGE = 10
 HOSTVOL_MOUNTDIR = "/mnt"
 VOLFILES_DIR = "/kadalu/volfiles"
-TEMPLATES_DIR = "/kadalu/templates"
 VOLINFO_DIR = "/var/lib/gluster"
-
-# This variable contains in-memory map of all glusterfs processes (hash of volfile and pid)
-# Used while sending SIGHUP during any modifcation to storage config
-VOL_DATA = {}
 
 statfile_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
 mount_lock = threading.Lock()    # noqa # pylint: disable=invalid-name
@@ -365,8 +358,8 @@ def create_subdir_volume(hostvol_mnt, volname, size, use_gluster_quota):
     # Wait for quota set
     # TODO: Handle Timeout
     pvsize_buffer = size * 0.05  # 5%
-    pvsize_min = (size - pvsize_buffer)
-    pvsize_max = (size + pvsize_buffer)
+    pvsize_min = size - pvsize_buffer
+    pvsize_max = size + pvsize_buffer
     logging.debug(logf(
         "Watching df of pv directory",
         pvdir=volpath,
@@ -484,8 +477,8 @@ def update_subdir_volume(hostvol_mnt, hostvoltype, volname, expansion_requested_
     # Wait for quota set
     # TODO: Handle Timeout
     pvsize_buffer = expansion_requested_pvsize * 0.05  # 5%
-    pvsize_min = (expansion_requested_pvsize - pvsize_buffer)
-    pvsize_max = (expansion_requested_pvsize + pvsize_buffer)
+    pvsize_min = expansion_requested_pvsize - pvsize_buffer
+    pvsize_max = expansion_requested_pvsize + pvsize_buffer
     logging.debug(logf(
         "Watching df of pv directory",
         pvdir=volpath,
@@ -921,337 +914,32 @@ def expand_mounted_volume(mountpoint):
         execute("xfs_growfs", "-d", mountpoint)
 
 
-def generate_client_volfile(volname):
-    """Generate Client Volfile for Glusterfs Volume"""
-    info_file_path = os.path.join(VOLINFO_DIR, "%s.info" % volname)
+def mount_glusterfs(volume, mountpoint, is_client=False):
+    """Mount Glusterfs Volume"""
+
     data = {}
-    with open(info_file_path) as info_file:
+    hosts = []
+    volname = volume["name"]
+    with open(os.path.join(VOLINFO_DIR, "%s.info" % volname)) as info_file:
         data = json.load(info_file)
 
-    # If the hash of configmap is same for the given volume, then there
-    # is no need to generate client volfile again.
-    if not VOL_DATA.get(volname, None):
-        VOL_DATA[volname] = {}
-    hashval = VOL_DATA[volname].get("hash", 0)
-    current_hash = hash(json.dumps(data))
+    for brick in data["bricks"]:
+        hosts.append(brick["node"])
 
-    if hashval == current_hash:
-        return False
-
-    VOL_DATA[volname]["hash"] = current_hash
-
-    # Tricky to get this right, but this solves all the elements of distribute in code :-)
-    data['dht_subvol'] = []
-    decommissioned = []
-    if data["type"] == "Replica1":
-        for brick in data["bricks"]:
-            brick_name = "%s-client-%d" % (data["volname"], brick["brick_index"])
-            data["dht_subvol"].append(brick_name)
-            if brick.get("decommissioned", "") != "":
-                decommissioned.append(brick_name)
-    else:
-        count = 3
-        if data["type"] == "Replica2":
-            count = 2
-
-        if data["type"] == "Disperse":
-            count = data["disperse"]["data"] + data["disperse"]["redundancy"]
-            data["disperse_redundancy"] = data["disperse"]["redundancy"]
-
-        data["subvol_bricks_count"] = count
-        for i in range(0, int(len(data.get("bricks", [])) / count)):
-            brick_name = "%s-%s-%d" % (
-                data["volname"],
-                "disperse" if data["type"] == "Disperse" else "replica",
-                i
-            )
-            data["dht_subvol"].append(brick_name)
-            if data.get("bricks", [])[(i * count)].get("decommissioned", "") != "":
-                decommissioned.append(brick_name)
-
-    data["decommissioned"] = ",".join(decommissioned)
-    template_file_path = os.path.join(
-        TEMPLATES_DIR,
-        "%s.client.vol.j2" % data["type"]
-    )
-    client_volfile = os.path.join(
-        VOLFILES_DIR,
-        "%s.client.vol" % volname
-    )
-    content = ""
-    with open(template_file_path) as template_file:
-        content = template_file.read()
-
-    Template(content).stream(**data).dump(client_volfile)
-    return True
-
-
-def send_signal_to_process(volname, out, sig):
-    """Sends the signal to one of the process"""
-
-    for line in out.split("\n"):
-        parts = line.split()
-        pid = parts[0]
-        for part in parts:
-            if part.startswith("--volume-id="):
-                if part.split("=")[-1] == volname:
-                    cmd = [ "kill", sig, pid ]
-                    try:
-                        execute(*cmd)
-                    except CommandException as err:
-                        logging.error(logf(
-                            "error to execute command",
-                            volume=volname,
-                            cmd=cmd,
-                            error=format(err)
-                        ))
-                    return
-
-    logging.debug(logf(
-        "Sent SIGHUP to glusterfs process",
-        volname=volname
-    ))
-    return
-
-
-def reload_glusterfs(volume):
-    """Mount Glusterfs Volume"""
-    if volume["type"] == "External":
-        return False
-
-    volname = volume["name"]
-
-    if not VOL_DATA.get(volname, None):
-        return False
-
-    # Ignore if already glusterfs process running for that volume
-    with mount_lock:
-        if not generate_client_volfile(volname):
-            return False
-        # TODO: ideally, keep the pid in structure for easier access
-        # pid = VOL_DATA[volname]["pid"]
-        # cmd = ["kill", "-HUP", str(pid)]
-        cmd = ["ps", "--no-header", "-ww", "-o", "pid,command", "-C", "glusterfs"]
-
-        try:
-            out, err, _ = execute(*cmd)
-            send_signal_to_process(volname, out, "-HUP")
-        except CommandException as err:
-            logging.error(logf(
-                "error to execute command",
-                volume=volume,
-                cmd=cmd,
-                error=format(err)
-            ))
-            return False
-
-    return True
-
-
-# noqa # pylint: disable=too-many-locals
-# noqa # pylint: disable=too-many-statements
-# noqa # pylint: disable=too-few-public-methods
-# noqa # pylint: disable=too-many-branches
-class VolfileElement:
-    """Class to represent multiple elements within a volfile"""
-
-    def __init__(self, name):
-        self.name = name
-        self.type = None
-        self.options = {}
-        self.subvolumes = None
-
-
-class Volfile:
-    """Class with volfile utils methods"""
-
-    def __init__(self, volfile, elements):
-        self.volfile = volfile
-        self.elements = elements
-
-    @classmethod
-    def parse(cls, volfile):
-        """Parse volfile into multiple volfile elements"""
-
-        element = None
-        elements = []
-        with open(volfile) as volf:
-            for line in volf:
-                line = line.strip()
-                if line.startswith("volume "):
-                    element = VolfileElement(line.split()[-1])
-                elif line == "end-volume":
-                    elements.append(element)
-                    element = None
-                elif line.startswith("option "):
-                    _, name, value = line.split()
-                    element.options[name] = value
-                elif line.startswith("subvolumes "):
-                    element.subvolumes = line.split(" ", 1)[-1]
-                elif line.startswith("type "):
-                    element.type = line.split()[-1]
-        return Volfile(volfile, elements)
-
-
-    def update_options_by_type(self, opts):
-        """
-        Update existing storage-options with the options
-        passed by user through storage-class
-        """
-
-        for element in self.elements:
-            if opts.get(element.type, None) is not None:
-                element.options.update(opts.get(element.type, {}))
-
-
-    def save(self, volfile=None):
-        """
-        Reconstruct and saves the volfile
-        with changes made to its elements
-        """
-
-        filepath = self.volfile
-        if volfile is not None:
-            filepath = volfile
-
-        with open(filepath + ".tmp", "w") as volf:
-            for element in self.elements:
-                volf.write("volume {0}\n".format(element.name))
-                volf.write("    type {0}\n".format(element.type))
-                for name, value in element.options.items():
-                    volf.write("    option {0} {1}\n".format(name, value))
-                if element.subvolumes is not None:
-                    volf.write("    subvolumes {0}\n".format(element.subvolumes))
-                volf.write("end-volume\n\n")
-
-        os.rename(filepath + ".tmp", filepath)
-
-
-def get_storage_options_hash(storage_options_sorted_str):
-    """Return hash for storage options sorted by key"""
-
-    return xxhash.xxh64_hexdigest(storage_options_sorted_str)
-
-
-def storage_options_parse(opts_raw):
-    """
-    Parse the storage options specified in 'str' and
-    construct to much more usable 'dict' format
-    """
-
-    opts_list = [opt.strip() for opt in opts_raw.split(",") if opt.strip() != ""]
-    opts = {}
-    for opt in opts_list:
-        key, value = opt.split(":")
-        xlator, opt_name = key.split(".")
-        xlator = xlator.strip()
-        opt_name = opt_name.strip()
-        value = value.strip()
-        if opts.get(xlator, None) is None:
-            opts[xlator] = {}
-
-        opts[xlator][opt_name] = value
-    return opts
-
-
-def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
-    """Mount Glusterfs Volume"""
-    if volume["type"] == "External":
-        volname = volume['g_volname']
-    else:
-        volname = volume["name"]
+    if not is_server_pod_reachable(hosts, 24007, 20):
+        logging.error(logf(
+            "None of the server pods are reachable",
+            volume=volume,
+        ))
+        err = "Cannot establish socket connection with none of the hosts!"
+        cmd = "sock.connect(hosts, 24007)"
+        raise CommandException(-1, cmd, err)
 
     if volume['type'] == 'External':
-        # Try to mount the Host Volume, handle failure if
-        # already mounted
-        if not is_gluster_mount_proc_running(volname, mountpoint):
-            with mount_lock:
-                mount_glusterfs_with_host(volname,
-                                        mountpoint,
-                                        volume['g_host'],
-                                        volume['g_options'],
-                                        is_client)
-        else:
-            logging.debug(logf(
-                "Already mounted",
-                mount=mountpoint
-            ))
-            return mountpoint
-
-        use_gluster_quota = False
-        if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
-            and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
-            use_gluster_quota = True
-        secret_private_key = "/etc/secret-volume/ssh-privatekey"
-        secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
-
-        # SSH into only first reachable host in volume['g_host'] entry
-        g_host = reachable_host(volume['g_host'])
-
-        if g_host is None:
-            logging.error(logf("All hosts are not reachable"))
-            return
-
-        if use_gluster_quota is False:
-            logging.debug(logf("Do not set quota-deem-statfs"))
-        else:
-            logging.debug(logf("Set quota-deem-statfs for gluster directory Quota"))
-            quota_deem_cmd = [
-                "ssh",
-                "-oStrictHostKeyChecking=no",
-                "-i",
-                "%s" % secret_private_key,
-                "%s@%s" % (secret_username, g_host),
-                "sudo",
-                "gluster",
-                "volume",
-                "set",
-                "%s" % volume['g_volname'],
-                "quota-deem-statfs",
-                "on"
-            ]
-            try:
-                execute(*quota_deem_cmd)
-            except CommandException as err:
-                errmsg = "Unable to set quota-deem-statfs via ssh"
-                logging.error(logf(errmsg, error=err))
-                raise err
-        return mountpoint
-
-    generate_client_volfile(volname)
-    client_volfile_path = os.path.join(
-        VOLFILES_DIR,
-        "%s.client.vol" % volname
-    )
-
-    if storage_options != "":
-
-        # Construct 'dict' from passed storage-options in 'str'
-        storage_options = storage_options_parse(storage_options)
-
-        # Keep the default volfile untouched
-        tmp_volfile_path = tempfile.mkstemp()[1]
-        shutil.copy(client_volfile_path, tmp_volfile_path)
-
-        # Parse the client-volfile, update passed storage-options & save
-        parsed_client_volfile_path = Volfile.parse(tmp_volfile_path)
-        parsed_client_volfile_path.update_options_by_type(storage_options)
-        parsed_client_volfile_path.save()
-
-        # Sort storage-options and generate hash
-        storage_options_hash = get_storage_options_hash(
-            json.dumps(storage_options, sort_keys=True))
-
-        # Rename mountpoint & client volfile path with hash
-        mountpoint = mountpoint + "_" + storage_options_hash
-        new_client_volfile_path = os.path.join(VOLFILES_DIR,
-            "%s_%s.client.vol" %(volname, storage_options_hash))
-        os.rename(tmp_volfile_path, new_client_volfile_path)
-        client_volfile_path = new_client_volfile_path
+        return handle_external_volume(volume, mountpoint, is_client, volume['g_host'])
 
     # Ignore if already glusterfs process running for that volume
     if is_gluster_mount_proc_running(volname, mountpoint):
-        reload_glusterfs(volume)
         logging.debug(logf(
             "Already mounted",
             mount=mountpoint
@@ -1260,7 +948,6 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
 
     # Ignore if already mounted
     if is_gluster_mount_proc_running(volname, mountpoint):
-        reload_glusterfs(volume)
         logging.debug(logf(
             "Already mounted (2nd try)",
             mount=mountpoint
@@ -1274,13 +961,13 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
         # Fix the log, so we can check it out later
         # log_file = "/var/log/gluster/%s.log" % mountpoint.replace("/", "-")
         log_file = "/var/log/gluster/gluster.log"
+
         cmd = [
             GLUSTERFS_CMD,
             "--process-name", "fuse",
             "-l", log_file,
             "--volfile-id", volname,
             "--fs-display-name", "kadalu:%s" % volname,
-            "-f", client_volfile_path,
             mountpoint
         ]
 
@@ -1288,9 +975,14 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
         if not is_client:
             cmd.extend(["--client-pid", "-14"])
 
+        # Use volfile server of bricks/storage_unit processes,
+        # instead of volfile paths. Since now brick processes
+        # supports serving of client volfiles.
+        for host in hosts:
+            cmd.extend(["--volfile-server", host])
+
         try:
-            (_, err, pid) = execute(*cmd)
-            VOL_DATA[volname]["pid"] = pid
+            (_, err, _) = execute(*cmd)
         except CommandException as err:
             logging.error(logf(
                 "error to execute command",
@@ -1300,6 +992,70 @@ def mount_glusterfs(volume, mountpoint, storage_options="", is_client=False):
             ))
             raise err
 
+    return mountpoint
+
+
+def handle_external_volume(volume, mountpoint, is_client, hosts):
+    """
+    Handle mounting of volume with external host and setting of quota
+    """
+
+    volname = volume['g_volname']
+
+    # Try to mount the Host Volume, handle failure if
+    # already mounted
+    if not is_gluster_mount_proc_running(volname, mountpoint):
+        with mount_lock:
+            mount_glusterfs_with_host(volname,
+                                    mountpoint,
+                                    hosts,
+                                    volume['g_options'],
+                                    is_client)
+    else:
+        logging.debug(logf(
+            "Already mounted",
+            mount=mountpoint
+        ))
+        return mountpoint
+
+    use_gluster_quota = False
+    if (os.path.isfile("/etc/secret-volume/ssh-privatekey")
+        and "SECRET_GLUSTERQUOTA_SSH_USERNAME" in os.environ):
+        use_gluster_quota = True
+    secret_private_key = "/etc/secret-volume/ssh-privatekey"
+    secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
+
+    # SSH into only first reachable host in volume['g_host'] entry
+    g_host = reachable_host(hosts)
+
+    if g_host is None:
+        logging.error(logf("All hosts are not reachable"))
+        return
+
+    if use_gluster_quota is False:
+        logging.debug(logf("Do not set quota-deem-statfs"))
+    else:
+        logging.debug(logf("Set quota-deem-statfs for gluster directory Quota"))
+        quota_deem_cmd = [
+            "ssh",
+            "-oStrictHostKeyChecking=no",
+            "-i",
+            "%s" % secret_private_key,
+            "%s@%s" % (secret_username, g_host),
+            "sudo",
+            "gluster",
+            "volume",
+            "set",
+            "%s" % volume['g_volname'],
+            "quota-deem-statfs",
+            "on"
+        ]
+        try:
+            execute(*quota_deem_cmd)
+        except CommandException as err:
+            errmsg = "Unable to set quota-deem-statfs via ssh"
+            logging.error(logf(errmsg, error=err))
+            raise err
     return mountpoint
 
 

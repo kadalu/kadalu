@@ -1,5 +1,4 @@
 import os
-import sys
 
 from kadalulib import Monitor, Proc, logging_setup
 
