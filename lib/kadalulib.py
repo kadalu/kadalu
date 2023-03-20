@@ -91,7 +91,7 @@ def is_server_pod_reachable(hosts, port=24007, timeout=20):
 
     for host in hosts:
         retry_count = 0
-        while retry_count < 2:
+        while retry_count < 4:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect((host, port))

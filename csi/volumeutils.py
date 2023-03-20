@@ -926,14 +926,16 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
     for brick in data["bricks"]:
         hosts.append(brick["node"])
 
-    if not is_server_pod_reachable(hosts, 24007, 20):
+    try:
+        if not is_server_pod_reachable(hosts, 24007, 20):
+            err = "Cannot establish socket connection with none of the hosts!"
+            cmd = "sock.connect(hosts, 24007)"
+            raise CommandException(-1, cmd, err)
+    except CommandException:
         logging.error(logf(
             "None of the server pods are reachable",
-            volume=volume,
+            volume=volume
         ))
-        err = "Cannot establish socket connection with none of the hosts!"
-        cmd = "sock.connect(hosts, 24007)"
-        raise CommandException(-1, cmd, err)
 
     if volume['type'] == 'External':
         return handle_external_volume(volume, mountpoint, is_client, volume['g_host'])
