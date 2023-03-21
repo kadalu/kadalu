@@ -19,6 +19,7 @@ VOLUME_ID_XATTR_NAME = "trusted.glusterfs.volume-id"
 VOLFILES_DIR = "/var/lib/kadalu/volfiles"
 VOLINFO_DIR = "/var/lib/gluster"
 MKFS_XFS_CMD = "/sbin/mkfs.xfs"
+XFS_GROWFS_CMD = "/sbin/xfs_growfs"
 
 
 def create_brickdir(brick_path):
@@ -184,6 +185,26 @@ def create_and_mount_brick(brick_device, brick_path, brickfs):
 
         else:
             pass
+
+    # Expand the device file-system to match the current device size,
+    # When a underlying device is expanded, grow the filesystem.
+    try:
+        execute(XFS_GROWFS_CMD, "-d", mountdir)
+        logging.info(logf(
+            "Successfully expanded device on path",
+            fstype=brickfs,
+            device=brick_device,
+            mountdir=mountdir,
+            ))
+    except CommandException as err:
+        logging.error(logf(
+            "Failed to expand export brick (after mkfs and mount)",
+            fstype=brickfs,
+            device=brick_device,
+            mountdir=mountdir,
+            error=err,
+        ))
+        sys.exit(1)
 
 
 def start_args():
