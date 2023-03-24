@@ -920,9 +920,12 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
     data = {}
     hosts = []
     volname = volume["name"]
+
+    if volume['type'] == 'External':
+        return handle_external_volume(volume, mountpoint, is_client, volume['g_host'])
+
     with open(os.path.join(VOLINFO_DIR, "%s.info" % volname)) as info_file:
         data = json.load(info_file)
-
     for brick in data["bricks"]:
         hosts.append(brick["node"])
 
@@ -936,9 +939,6 @@ def mount_glusterfs(volume, mountpoint, is_client=False):
             "None of the server pods are reachable",
             volume=volume
         ))
-
-    if volume['type'] == 'External':
-        return handle_external_volume(volume, mountpoint, is_client, volume['g_host'])
 
     # Ignore if already glusterfs process running for that volume
     if is_gluster_mount_proc_running(volname, mountpoint):
