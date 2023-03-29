@@ -24,7 +24,8 @@ COPY --from=builder /kadalu /kadalu
 RUN ln -sfn /usr/local/bin/python3 /kadalu/bin/python3
 
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends curl attr xfsprogs libtirpc3 sqlite3 liburcu6 procps libgoogle-perftools4 && \
+    apt-get install -y --no-install-recommends curl attr xfsprogs libtirpc3 sqlite3 liburcu6 procps \
+    libgoogle-perftools4 libxml2 && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -41,11 +42,13 @@ COPY server/mount-glustervol /usr/bin/mount-glustervol
 COPY lib/startup.sh          /kadalu/startup.sh
 COPY server/stop-server.sh   /kadalu/stop-server.sh
 COPY server/exporter.py      /kadalu/exporter.py
+COPY server/heal-info.sh     /kadalu/heal-info.sh
 COPY server/serverutils.py   /kadalu/serverutils.py
 
 RUN chmod +x /usr/bin/mount-glustervol
 RUN chmod +x /kadalu/startup.sh
 RUN chmod +x /kadalu/stop-server.sh
+RUN chmod +x /kadalu/heal-info.sh
 
 ARG version="(unknown)"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')

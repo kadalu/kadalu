@@ -47,14 +47,14 @@ COPY csi/volumeutils.py        /kadalu/
 COPY lib/startup.sh            /kadalu/
 COPY csi/quota-crawler.sh      /kadalu/
 COPY csi/watch-vol-changes.sh  /kadalu/
-COPY csi/heal-info.sh          /kadalu/
+COPY csi/client_heal.sh        /kadalu/
 COPY csi/remove_archived_pv.py /kadalu/
 COPY csi/watch-logrotate.sh    /kadalu/
 
 COPY extras/kadalu-logrotate.conf     /kadalu/logrotate.conf
 
 RUN chmod +x /kadalu/startup.sh
-RUN chmod +x /kadalu/heal-info.sh
+RUN chmod +x /kadalu/client_heal.sh
 
 ARG version="(unknown)"
 # Container build time (date -u '+%Y-%m-%dT%H:%M:%S.%NZ')
