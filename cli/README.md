@@ -120,6 +120,47 @@ Remove particular archived pvc provisioned from a particular storage-pool/volume
 $ kubectl kadalu remove-archived-pv storage-pool-1 --pvc=archived-pvc-e91ab8c8-4a48-48ad-ab5e-b207399565bc
 ```
 
+### Getting healinfo and Triggering client-side heal
+
+Get healinfo or trigger-client-side heal for all or particular storage-pools.
+
+Fetch healinfo for all storage-pools:
+
+> Note:
+> Requires atleast a single server-pod from each storage pool
+> to be running for successful return.
+
+```
+$ kubectl kadalu healinfo
+```
+
+Fetch healinfo for a particular storage-pool using --name
+
+```
+$ kubectl kadalu healinfo --name=storage-pool-1
+```
+
+Trigger client-side heal for all storage-pools
+
+> Note:
+> Requires kadalu-csi-provisioner to
+> to be running for successful return.
+
+
+```
+$ kubectl kadalu healinfo --trigger-full-heal
+```
+
+Trigger client-side heal for a particular storage-pool using --name
+
+```
+$ kubectl kadalu healinfo --trigger-full-heal --name=storage-pool-1
+```
+
+> Note:
+> Alternatively can run below as shell scrips by exec-ing into server-pods, without install kubeclt-kadalu.
+
+
 
 ## Contributing
 

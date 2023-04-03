@@ -3,6 +3,7 @@ Utility methods for the CLI tool
 """
 from __future__ import print_function
 import subprocess
+import json
 import sys
 
 KUBECTL_CMD = "kubectl"
@@ -24,6 +25,61 @@ class CommandError(Exception):
         super().__init__(u"error %d %s" % (returncode, err))
         self.returncode = returncode
         self.stderr = err
+
+# noqa # pylint: disable=too-many-instance-attributes
+# noqa # pylint: disable=useless-object-inheritance
+# noqa # pylint: disable=too-few-public-methods
+# noqa # pylint: disable=bad-option-value
+class StorageUnit(object):
+    """Structure for Brick/Storage unit"""
+    def __init__(self):
+        self.kube_host = None
+        self.podname = None
+        self.path = None
+        self.device = None
+        self.pvc = None
+
+class Storage(object):
+    """Structure for Storage"""
+    def __init__(self):
+        self.storage_name = None
+        self.storage_id = None
+        self.storage_type = None
+        self.total_size_bytes = 0
+        self.used_size_bytes = 0
+        self.pv_count = 0
+        self.avg_pv_size = 0
+        self.min_pv_size = 0
+        self.max_pv_size = 0
+        self.storage_units = []
+
+
+def list_storages(cmd_out, _args):
+    """Parse list of Storages from JSON input"""
+    storages_json = json.loads(cmd_out)
+
+    storages = []
+    for key, value in storages_json["data"].items():
+        if key.endswith(".info"):
+            storage_raw = json.loads(value)
+            storage = Storage()
+            storage.storage_name = storage_raw["volname"]
+            storage.storage_id = storage_raw["volume_id"]
+            storage.storage_type = storage_raw["type"]
+
+            for brick in storage_raw.get("bricks", []):
+                storage_unit = StorageUnit()
+                storage_unit.kube_host = brick["kube_hostname"]
+                storage_unit.path = brick["host_brick_path"]
+                storage_unit.device = brick["brick_device"]
+                storage_unit.pvc = brick["pvc_name"]
+                storage_unit.podname = brick["node"].replace(
+                    "." + storage.storage_name, "")
+                storage.storage_units.append(storage_unit)
+
+            storages.append(storage)
+
+    return storages
 
 
 def execute(cmd):
