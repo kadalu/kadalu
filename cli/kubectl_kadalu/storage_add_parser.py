@@ -207,6 +207,10 @@ def distribute_group(storage_units, current_keyword):
             len(storage_units["replica"]),
             len(storage_units["mirror"])
         )
+    elif len(storage_units["arbiter"]) == 3:
+        dist_group.storage_units = storage_units["arbiter"]
+        dist_group.replica_count = 3
+        dist_group.arbiter_count = 1
     elif len(storage_units["disperse"]) > 0 or \
          len(storage_units["disperse-data"]) > 0:
         dist_group.storage_units = storage_units["disperse"] + \
