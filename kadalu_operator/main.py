@@ -35,13 +35,14 @@ CSI_POD_PREFIX = "csi-"
 STORAGE_CLASS_NAME_PREFIX = "kadalu."
 # TODO: Add ThinArbiter
 VALID_HOSTING_VOLUME_TYPES = ["Replica1", "Replica2", "Replica3",
-                              "Disperse", "External"]
+                              "Disperse", "External", "Arbiter"]
 VALID_PV_RECLAIM_POLICY_TYPES = ["delete", "archive", "retain"]
 VOLUME_TYPE_REPLICA_1 = "Replica1"
 VOLUME_TYPE_REPLICA_2 = "Replica2"
 VOLUME_TYPE_REPLICA_3 = "Replica3"
 VOLUME_TYPE_EXTERNAL = "External"
 VOLUME_TYPE_DISPERSE = "Disperse"
+VOLUME_TYPE_ARBITER = "Arbiter"
 
 CREATE_CMD = "create"
 APPLY_CMD = "apply"
@@ -126,6 +127,7 @@ def validate_ext_details(obj):
 
 # pylint: disable=too-many-return-statements
 # pylint: disable=too-many-branches
+# pylint: disable=too-many-statements
 def validate_volume_request(obj):
     """Validate the Volume request for Replica options, number of bricks etc"""
     if not obj.get("spec", None):
@@ -224,6 +226,15 @@ def validate_volume_request(obj):
                            not tiebreaker.get("path", None)):
             logging.error(logf("'tiebreaker' provided for replica2 "
                                "config is not valid"))
+            return False
+
+    if voltype == VOLUME_TYPE_ARBITER:
+        # Arbiter volume require atleast 2 data bricks and atmost 1 arbiter brick,
+        # Per each distribute group.
+        subvol_bricks_count = 2 + 1
+        if len(bricks) < 3 or len(bricks) % subvol_bricks_count != 0:
+            logging.error("Invalid number of storage directories/devices"
+                " specified for volume type 'Arbiter'")
             return False
 
     logging.debug(logf("Storage %s successfully validated" % \

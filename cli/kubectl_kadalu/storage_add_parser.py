@@ -311,8 +311,12 @@ def validate(req):
     Validate the Volume create request after parsing
     """
     for dist_grp in req.distribute_groups:
+        replica_arbiter_dist_grp_size = dist_grp.replica_count
+        if dist_grp.arbiter_count > 0 and dist_grp.replica_count == 2:
+            replica_arbiter_dist_grp_size += 1
+
         if dist_grp.replica_count > 0 and \
-           len(dist_grp.storage_units) != dist_grp.replica_count:
+           len(dist_grp.storage_units) != replica_arbiter_dist_grp_size:
             raise InvalidVolumeCreateRequest(
                 "Number of Storage units not matching "
                 f"{dist_grp.replica_keyword} count"
@@ -327,6 +331,9 @@ def validate(req):
 def volume_type(req):
     """Find Volume Type based on the first distribute Group"""
     dist_grp_1 = req.distribute_groups[0]
+    if dist_grp_1.arbiter_count > 0:
+        return "Arbiter"
+
     if dist_grp_1.replica_count == 2:
         return "Replica2"
 

@@ -21,7 +21,7 @@ def generate_client_volgen_data(data):
 
     Client volgen data is created by calculating number of distribute
     groups and storage units in each distribute group.
-    Then slicing bricks data(Created using storgae pool info based on configmap)
+    Then slicing bricks data(Created using storage pool info based on configmap)
     into respective distribute groups.
     """
 
@@ -30,6 +30,7 @@ def generate_client_volgen_data(data):
     # No of storage units in a distribute group
     storage_unit_count = 0
     replica_count = 0
+    arbiter_count = 0
 
     get_replica_count = {
         "Replica1" : 1,
@@ -40,8 +41,11 @@ def generate_client_volgen_data(data):
     if data["type"] == "Disperse":
         storage_unit_count = data["disperse"]["data"] + data["disperse"]["redundancy"]
         replica_count = 0
-    else:
+    elif "Replica" in data["type"]:
         storage_unit_count = replica_count = get_replica_count.get(data["type"], "")
+    elif data["type"] == "Arbiter":
+        storage_unit_count = replica_count = 3
+        arbiter_count = 1
 
     client_data = {}
     client_data["name"] = data["volname"]
@@ -53,11 +57,15 @@ def generate_client_volgen_data(data):
     for dist_grp_idx, dist_grp in enumerate(client_data["distribute_groups"]):
         if "Replica" in data["type"]:
             dist_grp["type"] = "replicate"
-        else:
+        elif "Disperse" in data["type"]:
             dist_grp["type"] = "disperse"
+        else:
+            dist_grp["type"] = "arbiter"
 
         if replica_count:
             dist_grp["replica_count"] = replica_count
+        if arbiter_count:
+            dist_grp["arbiter_count"] = arbiter_count
         if dist_grp["type"] == "disperse":
             dist_grp["disperse_count"] = data["disperse"].get("data", 0)
             dist_grp["redundancy_count"] = data["disperse"].get("redundancy", 0)

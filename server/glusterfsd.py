@@ -70,6 +70,20 @@ def create_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_pa
     """
 
     storage_unit = {}
+    info_file_path = os.path.join(VOLINFO_DIR, "%s.info" % volname)
+    data = {}
+    with open(info_file_path) as info_file:
+        data = json.load(info_file)
+
+    if data["type"] == "Arbiter":
+        bricks = data.get("bricks", None)
+        if len(bricks) > 2 and len(bricks) % 3 == 0:
+            # Mark every third brick starting from index 2 (0 based),
+            # If it matches the current brick_index as type 'arbiter'.
+            for index in range(2, len(bricks), 3):
+                if int(bricks[index].get("brick_index")) == int(os.environ.get("BRICK_INDEX")):
+                    storage_unit["type"] = "arbiter"
+
     storage_unit["path"] = brick_path
     storage_unit["port"] = 24007
     storage_unit["volume"] = {}

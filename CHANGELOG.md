@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   remove storage options from mount flow.
 - Server: Disbale default client volfile options
 - CLI: Move healinfo to server pods, Trigger client-heal from csi pod.
+- Server, CLI, Operator: Add feature for volume type Arbiter
 
 ## [0.9.0] - 2022-11-21
 
