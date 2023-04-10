@@ -63,13 +63,19 @@ def set_volume_id_xattr(brick_path, volume_id):
         sys.exit(1)
 
 
-def create_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_path):
+def create_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_path, data):
     """
     Create Brick/Storage Unit Volfile based on Volinfo stored in Config map
     For now, Generated Volfile is used in configmap
     """
 
     storage_unit = {}
+
+    # Set every third brick/storage_unit as arbiter brick.
+    # Arbiter brick will hold only file & directory structure but not the content.
+    if data["type"] == "Arbiter" and (int(os.environ.get("BRICK_INDEX")) + 1) % 3 == 0:
+        storage_unit["type"] = "arbiter"
+
     storage_unit["path"] = brick_path
     storage_unit["port"] = 24007
     storage_unit["volume"] = {}
@@ -79,19 +85,13 @@ def create_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_pa
     generate_brick_volfile(storage_unit, storage_unit_volfile_path)
 
 
-def create_client_volfile(client_volfile_path, volname):
+def create_client_volfile(client_volfile_path, data):
     """
     Create client volfile based on Volinfo stored in Config map using
     Kadalu Volgen library.
     """
 
-    info_file_path = os.path.join(VOLINFO_DIR, "%s.info" % volname)
-    data = {}
-    with open(info_file_path) as info_file:
-        data = json.load(info_file)
-
     generate_client_volfile(data, client_volfile_path)
-
 
 
 def create_and_mount_brick(brick_device, brick_path, brickfs):
@@ -210,8 +210,14 @@ def start_args():
     volfile_id = "%s.%s.%s" % (volname, nodename, brick_path_name)
     storage_unit_volfile_path = os.path.join(VOLFILES_DIR, "%s.vol" % volfile_id)
     client_volfile_path = os.path.join(VOLFILES_DIR, "%s.vol" % volname)
-    create_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_path)
-    create_client_volfile(client_volfile_path, volname)
+
+    info_file_path = os.path.join(VOLINFO_DIR, "%s.info" % volname)
+    data = {}
+    with open(info_file_path) as info_file:
+        data = json.load(info_file)
+
+    create_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_path, data)
+    create_client_volfile(client_volfile_path, data)
 
     # UID is stored at the time of installation in configmap.
     uid = None

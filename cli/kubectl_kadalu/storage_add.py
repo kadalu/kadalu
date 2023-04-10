@@ -33,7 +33,7 @@ def set_args(name, subparsers):
         default=None)
     arg("--type",
         help="Storage Type",
-        choices=["Replica1", "Replica3", "External", "Replica2", "Disperse"],
+        choices=["Replica1", "Replica3", "External", "Replica2", "Disperse", "Arbiter"],
         default=None)
     arg("--volume-id",
         help="Volume ID of previously created volume",
