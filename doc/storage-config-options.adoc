@@ -48,7 +48,7 @@ In this mode, the storage is provided from inside of the kubernetes cluster. Let
 
 === Type
 
-Native mode is available with 3 `type` options. They are `Replica1`, `Replica2` and another `Replica3`.
+Native mode is available with 5 `type` options. They are `Replica1`, `Replica2`, `Replica3`, `Disperse` and `Arbiter`.
 
 * **Replica1** In this mode, Gluster will be started without high availability, i.e without replicate module. It will use just one storage, from which the RWX and RWO PVs will be carved out. This storage will be exposed by a gluster server pod, which gets spawned by kadalu operator.
 +
@@ -102,6 +102,22 @@ $ kubectl kadalu storage-add storage-pool1 --type=Disperse \
 ----
 +
 To create a PVC from this storage, you need to provide `storageClassName` option as `kadalu.disperse`.
+
+
+* **Arbiter** Arbiter volume type is a subset of Replica volume. Arbiter volume aims to reduce split-brain and inconsitencies amongst the storage-units/bricks. The Arbiter storage unit will only hold the directory structure, the file and its metadata without the content. Providing Replica3 level consistency without requiring 3 copies of space. This mode requires atleast 3 storages or mulitple of 3 storages if more storages are needed based on the requirement. Refer https://docs.gluster.org/en/v3/Administrator%20Guide/arbiter-volumes-and-quorum/[GlusterFS documentation] to know more about Arbiter Volumes.
++
+[source,yaml]
+----
+$ kubectl kadalu storage-add storage-pool1 --type=Arbiter \
+    --device kube-nodename1:/dev/vdc \
+    --device kube-nodename2:/dev/vdc \
+    --device kube-nodename3:/dev/vdc \
+----
++
+Above command creates storage-pool of type `Arbiter` where 1st and 2nd bricks are replicated data bricks and the 3rd brick is the Arbiter brick which holds no file contents.
++
+To create a PVC from this storage, you need to provide `storageClassName` option as `kadalu.arbiter`.
+
 
 === Storage
 
