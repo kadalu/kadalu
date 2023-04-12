@@ -63,6 +63,45 @@ def template(filename, **kwargs):
     return Template(content).stream(**kwargs).dump(filename)
 
 
+def options_validation(options):
+    """ Validate Pool Options """
+
+    # default_options = [
+    #     "performance.client-io-threads",
+    #     "performance.stat-prefetch",
+    #     "performance.quick-read",
+    #     "performance.open-behind",
+    #     "performance.read-ahead",
+    #     "performance.io-cache",
+    #     "performance.readdir-ahead"
+    # ]
+
+    for option in options:
+        logging.info(logf(
+            "key:value",
+            xlator=option.get("key", None),
+            status=option.get("value", None)
+        ))
+
+        if option.get("key", None) is None and \
+           option.get("value", None) is None:
+           logging.error(logf("Key/Value not specified for Storage Pool Options"))
+           return False
+
+        # if option.get("xlator", None) is None or \
+        #    option.get("xlator", None) not in default_options:
+        #    logging.error(logf("Xlator option not valid for Storage Pool Options",
+        #                       xlator=option.get("xlator", None)))
+        #    return False
+
+        # if option.get("status", None) is None or \
+        #    option.get("status", None) not in ["off", "on"]:
+        #    logging.error(logf("Status option not valid for Storage Pool Option. Should be either 'on' or 'off'."))
+        #    return False
+
+    return True
+
+
 def bricks_validation(bricks):
     """Validate Brick path and node options"""
     ret = True
@@ -152,6 +191,10 @@ def validate_volume_request(obj):
 
     if voltype == VOLUME_TYPE_EXTERNAL:
         return validate_ext_details(obj)
+
+    options = obj["spec"].get("options", [])
+    if not options_validation(options):
+        return False
 
     bricks = obj["spec"].get("storage", [])
     if not bricks_validation(bricks):
@@ -361,12 +404,20 @@ def update_config_map(core_v1_client, obj):
             "data": disperse_config.get("data", 0),
             "redundancy": disperse_config.get("redundancy", 0)
         },
-        "options": obj["spec"].get("options", {})
+        "options": {}
     }
 
     # Add new entry in the existing config map
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
+
+    # Add options entry as key:value
+    if obj["spec"].get("options", None):
+        options = obj["spec"]["options"]
+        for option in options:
+            data["options"].update({
+                option.get("key"): option.get("value")
+            })
 
     # For each brick, add brick path and node id
     bricks = obj["spec"]["storage"]

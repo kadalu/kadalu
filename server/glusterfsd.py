@@ -70,11 +70,16 @@ def create_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_pa
     """
 
     storage_unit = {}
+    options = {}
 
     # Set every third brick/storage_unit as arbiter brick.
     # Arbiter brick will hold only file & directory structure but not the content.
     if data["type"] == "Arbiter" and (int(os.environ.get("BRICK_INDEX")) + 1) % 3 == 0:
         storage_unit["type"] = "arbiter"
+
+    # If Storage Pool options are configured, pass to Kadalu Volgen
+    if data["options"]:
+        options = data["options"]
 
     storage_unit["path"] = brick_path
     storage_unit["port"] = 24007
@@ -82,7 +87,7 @@ def create_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_pa
     storage_unit["volume"]["name"] = volname
     storage_unit["volume"]["id"] = volume_id
 
-    generate_brick_volfile(storage_unit, storage_unit_volfile_path)
+    generate_brick_volfile(storage_unit, storage_unit_volfile_path, options)
 
 
 def create_client_volfile(client_volfile_path, data):
