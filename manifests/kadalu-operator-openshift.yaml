@@ -42,7 +42,6 @@ spec:
                   type: string
                 kadalu_format:
                   type: string
-                  default: native
                 single_pv_per_pool:
                   type: boolean
                   default: false
