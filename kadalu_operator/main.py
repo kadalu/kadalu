@@ -63,41 +63,15 @@ def template(filename, **kwargs):
     return Template(content).stream(**kwargs).dump(filename)
 
 
+# TODO: Validate given options using kadalu/volgen API
 def options_validation(options):
     """ Validate Pool Options """
 
-    # default_options = [
-    #     "performance.client-io-threads",
-    #     "performance.stat-prefetch",
-    #     "performance.quick-read",
-    #     "performance.open-behind",
-    #     "performance.read-ahead",
-    #     "performance.io-cache",
-    #     "performance.readdir-ahead"
-    # ]
-
     for option in options:
-        logging.info(logf(
-            "key:value",
-            xlator=option.get("key", None),
-            status=option.get("value", None)
-        ))
-
         if option.get("key", None) is None and \
            option.get("value", None) is None:
-           logging.error(logf("Key/Value not specified for Storage Pool Options"))
-           return False
-
-        # if option.get("xlator", None) is None or \
-        #    option.get("xlator", None) not in default_options:
-        #    logging.error(logf("Xlator option not valid for Storage Pool Options",
-        #                       xlator=option.get("xlator", None)))
-        #    return False
-
-        # if option.get("status", None) is None or \
-        #    option.get("status", None) not in ["off", "on"]:
-        #    logging.error(logf("Status option not valid for Storage Pool Option. Should be either 'on' or 'off'."))
-        #    return False
+            logging.error(logf("Key/Value not specified for Storage Pool Options"))
+            return False
 
     return True
 
@@ -167,6 +141,7 @@ def validate_ext_details(obj):
 # pylint: disable=too-many-return-statements
 # pylint: disable=too-many-branches
 # pylint: disable=too-many-statements
+# pylint: disable=too-many-locals
 def validate_volume_request(obj):
     """Validate the Volume request for Replica options, number of bricks etc"""
     if not obj.get("spec", None):
@@ -277,7 +252,7 @@ def validate_volume_request(obj):
         subvol_bricks_count = 2 + 1
         if len(bricks) < 3 or len(bricks) % subvol_bricks_count != 0:
             logging.error("Invalid number of storage directories/devices"
-                " specified for volume type 'Arbiter'")
+                          " specified for volume type 'Arbiter'")
             return False
 
     logging.debug(logf("Storage %s successfully validated" % \

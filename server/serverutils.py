@@ -83,24 +83,18 @@ def generate_client_volgen_data(data):
 
     return client_data
 
-def generate_brick_volfile(storage_unit, storage_unit_volfile_path, options):
+def generate_brick_volfile(storage_unit, storage_unit_volfile_path, custom_options):
     """ Generate brick/storage_unit volfile using Kadalu Volgen library"""
 
-    if options:
-        kadalu_volgen.generate(
-            "/var/lib/kadalu/templates/storage_unit.vol.j2",
-            data=storage_unit,
-            options=options,
-            output_file=storage_unit_volfile_path
-        )
-    # TODO:
-    # If kadalu volgen is able to handle empty options, no need of else block.
-    else:
-        kadalu_volgen.generate(
-            "/var/lib/kadalu/templates/storage_unit.vol.j2",
-            data=storage_unit,
-            output_file=storage_unit_volfile_path
-        )
+    options = copy.copy(DEFAULT_OPTIONS)
+    options.update(custom_options)
+
+    kadalu_volgen.generate(
+        "/var/lib/kadalu/templates/storage_unit.vol.j2",
+        data=storage_unit,
+        options=options,
+        output_file=storage_unit_volfile_path
+    )
 
 
 def generate_shd_volfile(data, shd_volfile_path):
