@@ -45,6 +45,8 @@ COPY server/exporter.py      /kadalu/exporter.py
 COPY server/heal-info.sh     /kadalu/heal-info.sh
 COPY server/serverutils.py   /kadalu/serverutils.py
 
+COPY server/watch_volfile_changes.py /kadalu/watch_volfile_changes.py
+
 RUN chmod +x /usr/bin/mount-glustervol
 RUN chmod +x /kadalu/startup.sh
 RUN chmod +x /kadalu/stop-server.sh
