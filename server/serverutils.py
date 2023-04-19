@@ -83,12 +83,16 @@ def generate_client_volgen_data(data):
 
     return client_data
 
-def generate_brick_volfile(storage_unit, storage_unit_volfile_path):
+def generate_brick_volfile(storage_unit, storage_unit_volfile_path, custom_options):
     """ Generate brick/storage_unit volfile using Kadalu Volgen library"""
+
+    options = copy.copy(DEFAULT_OPTIONS)
+    options.update(custom_options)
 
     kadalu_volgen.generate(
         "/var/lib/kadalu/templates/storage_unit.vol.j2",
         data=storage_unit,
+        options=options,
         output_file=storage_unit_volfile_path
     )
 
@@ -109,6 +113,7 @@ def generate_client_volfile(data, client_volfile_path):
     """ Generate client volfile using Kadalu Volgen library"""
 
     options = copy.copy(DEFAULT_OPTIONS)
+    options.update(data["options"])
     client_data = generate_client_volgen_data(data)
 
     kadalu_volgen.generate(

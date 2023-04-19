@@ -62,6 +62,15 @@ spec:
                         type: integer
                       value:
                         type: string
+                options:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                      value:
+                        type: string
                 storage:
                   type: array
                   items:

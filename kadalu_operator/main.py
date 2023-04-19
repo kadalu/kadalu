@@ -63,6 +63,19 @@ def template(filename, **kwargs):
     return Template(content).stream(**kwargs).dump(filename)
 
 
+# TODO: Validate given options using kadalu/volgen API
+def options_validation(options):
+    """ Validate Pool Options """
+
+    for option in options:
+        if option.get("key", None) is None and \
+           option.get("value", None) is None:
+            logging.error(logf("Key/Value not specified for Storage Pool Options"))
+            return False
+
+    return True
+
+
 def bricks_validation(bricks):
     """Validate Brick path and node options"""
     ret = True
@@ -128,6 +141,7 @@ def validate_ext_details(obj):
 # pylint: disable=too-many-return-statements
 # pylint: disable=too-many-branches
 # pylint: disable=too-many-statements
+# pylint: disable=too-many-locals
 def validate_volume_request(obj):
     """Validate the Volume request for Replica options, number of bricks etc"""
     if not obj.get("spec", None):
@@ -152,6 +166,10 @@ def validate_volume_request(obj):
 
     if voltype == VOLUME_TYPE_EXTERNAL:
         return validate_ext_details(obj)
+
+    options = obj["spec"].get("options", [])
+    if not options_validation(options):
+        return False
 
     bricks = obj["spec"].get("storage", [])
     if not bricks_validation(bricks):
@@ -234,7 +252,7 @@ def validate_volume_request(obj):
         subvol_bricks_count = 2 + 1
         if len(bricks) < 3 or len(bricks) % subvol_bricks_count != 0:
             logging.error("Invalid number of storage directories/devices"
-                " specified for volume type 'Arbiter'")
+                          " specified for volume type 'Arbiter'")
             return False
 
     logging.debug(logf("Storage %s successfully validated" % \
@@ -361,12 +379,20 @@ def update_config_map(core_v1_client, obj):
             "data": disperse_config.get("data", 0),
             "redundancy": disperse_config.get("redundancy", 0)
         },
-        "options": obj["spec"].get("options", {})
+        "options": {}
     }
 
     # Add new entry in the existing config map
     configmap_data = core_v1_client.read_namespaced_config_map(
         KADALU_CONFIG_MAP, NAMESPACE)
+
+    # Add options entry as key:value
+    if obj["spec"].get("options", None):
+        options = obj["spec"]["options"]
+        for option in options:
+            data["options"].update({
+                option.get("key"): option.get("value")
+            })
 
     # For each brick, add brick path and node id
     bricks = obj["spec"]["storage"]
