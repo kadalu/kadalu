@@ -2,6 +2,7 @@ import os
 import time
 import json
 import logging
+import signal
 import serverutils
 from kadalulib import (CommandException, execute, logf,
                        logging_setup)
@@ -30,63 +31,24 @@ info_file_path = os.path.join(VOLINFO_DIR, "%s.info" % volname)
 
 def send_sighup():
     """ Send SIGHUP to Brick & SHD Process notifing change in volfiles """
-    brick_process = "glusterfsd"
-    shd_process = "glusterfs"
-    brick_pid = ""
-    shd_pid = ""
 
     try:
-        out, err = execute("pgrep -f  -a 'glusterfsd|shd')
+        out, _, _ = execute("pgrep", "-f", "-a", "glusterfsd|shd")
         for line in out.split("\n"):
-            pid = line.split(" ", 1)[0]
-            os.kill(int(pid), signal.SIGHUP)
+            try:
+                pid = line.split(" ", 1)[0]
+                os.kill(int(pid), signal.SIGHUP)
+            except ProcessLookupError as err:
+                logging.error(logf(
+                    "Failed to send SIGHUP",
+                    line=line,
+                    error=err
+                ))
     except CommandException as err:
         logging.error(logf(
-            "Failed to send SIGHUP",
+            "Failed to get pid",
             error=err
         ))
-
-    # try:
-    #     out, err, pid = execute("pidof", brick_process)
-    #     if out:
-    #         logging.info(logf("Brick PID", brick_pid=out))
-    #         brick_pid = out
-    # except CommandException as err:
-    #     logging.error(logf(
-    #         "Failed to get brick process PID",
-    #         error=err
-    #     ))
-
-    # try:
-    #     out, err, pid = execute("pidof", shd_process)
-    #     if out:
-    #         logging.info(logf("SHD PID", shd_pid=out))
-    #         shd_pid = out
-    # except CommandException as err:
-    #     logging.error(logf(
-    #         "Failed to get SHD process PID",
-    #         error=err
-    #     ))
-
-    # if brick_pid:
-    #     try:
-    #         execute("kill", "-HUP", str(brick_pid))
-    #         logging.info(logf("Send SIGHUP to brick process(GlusterFSD)"))
-    #     except CommandException as err:
-    #         logging.error(logf(
-    #             "Failed to send SIGHUP to brick process",
-    #             error=err
-    #         ))
-
-    # if shd_pid:
-    #     try:
-    #         execute("kill", "-HUP", str(shd_pid))
-    #         logging.info(logf("Send SIGHUP to SHD process"))
-    #     except CommandException as err:
-    #         logging.error(logf(
-    #             "Failed to send SIGHUP to SHD process",
-    #             error=err
-    #         ))
 
 
 # TODO: Find more efficient ways to watch change on configmap.
@@ -114,18 +76,13 @@ def watch_volfile_changes():
                     "Detected change in configmap content. Regenerating volfiles."
                 ))
 
-                data = json.load(info_file)
+                data = json.loads(content)
                 create_brick_volfile(storage_unit_volfile_path, volname, volume_id, brick_path, data)
                 create_shd_volfile(shd_volfile_path, volname)
                 create_client_volfile(client_volfile_path, data)
 
                 # Send HUP to GlusterFSD & SHD processes
                 send_sighup()
-
-            else:
-                logging.info(logf(
-                    "No change detected."
-                ))
 
         time.sleep(10)
 
