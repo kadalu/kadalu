@@ -19,6 +19,7 @@ def start_server_process():
 
     curr_dir = os.path.dirname(__file__)
     mon.add_process(Proc("metrics", "python3", [curr_dir + "/exporter.py"]))
+    mon.add_process(Proc("volfile-watch", "python3", [curr_dir + "/watch_volfile_changes.py"]))
     glusterfsd_proc = glusterfsd.start_args()
 
     mon.add_process(glusterfsd_proc)
