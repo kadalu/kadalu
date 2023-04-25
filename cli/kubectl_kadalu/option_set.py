@@ -36,8 +36,6 @@ def set_args(name, subparsers):
 def validate(args):
     """ validate arguments """
 
-    print(len(args.options))
-
     if len(args.options) < 2 or len(args.options) % 2 != 0:
         print(
             "Invalid storage pool option-set details. Please specify options "
@@ -73,16 +71,12 @@ def run(args):
         utils.kubectl_cmd_help(args.kubectl_cmd)
         sys.exit(1)
 
-    print("from data", data["spec"].get("options", []))
-
     if data["spec"].get("options", []):
         options = data["spec"]["options"]
         for option in options:
             existing_options.update({
                 option.get("key"): option.get("value")
             })
-
-    print("existing_options", existing_options)
 
     updated_options = existing_options.copy()
 
@@ -91,21 +85,14 @@ def run(args):
             args.options[index]: args.options[index + 1]
         })
 
-    print("given_options", given_options)
-
     updated_options.update(given_options)
-
-    print("updated_options", updated_options)
 
     # Save back into CRD in array of objects format.
     # Which will be processed while deploying configmaps in operator.
     for key,value in updated_options.items():
         options.append({"key": key, "value": value})
 
-    print(options)
-
     data["spec"]["options"] = options
-    print("to data", data)
 
     print("Storage Options before updation")
     if not existing_options:
@@ -151,6 +138,6 @@ def run(args):
         print()
     except FileNotFoundError:
         utils.kubectl_cmd_help(args.kubectl_cmd)
-    # finally:
-    #     if os.path.exists(temp_file_path):
-    #         os.remove(temp_file_path)
+    finally:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)

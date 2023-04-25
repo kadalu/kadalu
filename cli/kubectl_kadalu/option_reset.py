@@ -98,8 +98,6 @@ def run(args):
         utils.kubectl_cmd_help(args.kubectl_cmd)
         sys.exit(1)
 
-    print("from data", data["spec"].get("options", []))
-
     if data["spec"].get("options", []):
         options = data["spec"]["options"]
         for option in options:
@@ -109,8 +107,6 @@ def run(args):
 
     if existing_options is None:
         print("No options present in Storage Pool to reset.")
-
-    print("existing_options", existing_options)
 
     updated_options = existing_options.copy()
 
@@ -139,14 +135,6 @@ def run(args):
             for key, value in updated_options.items():
                 print("Key: %s :: Value: %s" %(key, value))
 
-
-    # # given_options = given_data.get("options", {})
-    # print("given_options", given_options)
-
-    # existing_options.update(given_options)
-
-    # print(existing_options)
-
     # Save back into CRD in array of objects format.
     # Which will be processed while deploying configmaps in operator.
     if updated_options is None:
@@ -155,10 +143,7 @@ def run(args):
         for key,value in updated_options.items():
             options.append({"key": key, "value": value})
 
-    print(options)
-
     data["spec"]["options"] = options
-    print("to data", data)
 
     if args.dry_run:
         return
@@ -186,6 +171,6 @@ def run(args):
         print()
     except FileNotFoundError:
         utils.kubectl_cmd_help(args.kubectl_cmd)
-    # finally:
-    #     if os.path.exists(temp_file_path):
-    #         os.remove(temp_file_path)
+    finally:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)

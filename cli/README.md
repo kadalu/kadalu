@@ -160,7 +160,27 @@ $ kubectl kadalu healinfo --trigger-full-heal --name=storage-pool-1
 > Note:
 > Alternatively can run below as shell scrips by exec-ing into server-pods, without install kubeclt-kadalu.
 
+### Configuring Storage Pool Options
 
+To add/set Storage Pool Options, 'option-set' subcommand can be used. It expects name of Storage Pool to be configured and Option key(s) and value(s).
+
+```
+$ kubectl kadalu option-set storage-pool1 \
+    performance.quick-read off performance.write-behind on
+```
+
+To remove/reset Storage Pool Options, 'option-reset' subcommand can be used. It expects name of Storage Pool to be configured and Option key(s) to be removed.
+
+```
+$ kubectl kadalu option-reset storage-pool1 \
+    performance.quick-read performance.write-behind
+```
+
+Additionally all of configured options for a Storage Pool can be removed with '--all' flag.
+
+```
+$ kubectl kadalu option-reset storage-pool1 --all
+```
 
 ## Contributing
 
