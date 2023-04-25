@@ -20,7 +20,9 @@ SUPPORTED_ARGS = [
     "storage-remove",
     "remove-archived-pv",
     "logs",
-    "healinfo"
+    "healinfo",
+    "option-set",
+    "option-reset"
 ]
 
 def get_args():
