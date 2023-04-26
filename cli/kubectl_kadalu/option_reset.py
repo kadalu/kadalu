@@ -14,7 +14,7 @@ import sys
 import tempfile
 import argparse
 import utils
-import copy
+
 
 def set_args(name, subparsers):
     """ add arguments, and their options """
@@ -27,7 +27,8 @@ def set_args(name, subparsers):
     arg("options",
         help=('Reset or Remove Storage pool options in "<xlator>" format.\n'
               'Example: option-reset <POOL NAME> performance.write-behind\n'
-              'Example: option-reset <POOL NAME> performance.quick-read performance.open-behind on'),
+              'Example: option-reset <POOL NAME> performance.quick-read '
+              'performance.open-behind on'),
         nargs="*",
         action="store")
     arg("--all",
@@ -42,7 +43,7 @@ def validate(args):
     """ validate arguments """
 
     # Error out when options is not specified and --all flag is not set
-    if len(args.options) < 1 and not args.all:
+    if not args.options and not args.all:
         print(
             "Invalid storage pool option-reset details. Please specify options "
             'details in the format "<xlator>" or "<xlator1> <xlator2> <xlator3> ..."',
@@ -50,7 +51,7 @@ def validate(args):
         sys.exit(1)
 
     # Error out when both options and --all used in conjunction.
-    if args.all and len(args.options):
+    if args.all and args.options:
         print(
             "Invalid storage pool option-reset details. Please either specify options "
             'to be removed or use --all to remove all existing options',
@@ -59,6 +60,7 @@ def validate(args):
 
 
 def user_confirmation(args):
+    """ Prompt user for confirmation of changes """
     if not args.script_mode:
         answer = ""
         valid_answers = ["yes", "no", "n", "y"]
@@ -81,16 +83,16 @@ def run(args):
     options = []
 
     cmd = utils.kubectl_cmd(args) + [
-            "get", "kadalustorages.kadalu-operator.storage",
-            args.name, "-ojson"]
+        "get", "kadalustorages.kadalu-operator.storage",
+        args.name, "-ojson"]
 
     try:
         resp = utils.execute(cmd)
         data = json.loads(resp.stdout)
     except utils.CommandError as err:
         print("Failed to get CRD of "
-                "storage \"%s\"" % args.name,
-                file=sys.stderr)
+              "storage \"%s\"" % args.name,
+              file=sys.stderr)
         print(err, file=sys.stderr)
         print()
         sys.exit(1)
@@ -99,8 +101,8 @@ def run(args):
         sys.exit(1)
 
     if data["spec"].get("options", []):
-        options = data["spec"]["options"]
-        for option in options:
+        e_options = data["spec"]["options"]
+        for option in e_options:
             existing_options.update({
                 option.get("key"): option.get("value")
             })
@@ -125,7 +127,7 @@ def run(args):
             if option in updated_options:
                 del updated_options[option]
         print("Storage Options before updation")
-        for key,value in existing_options.items():
+        for key, value in existing_options.items():
             print("Key: %s :: Value: %s" %(key, value))
         print()
         print("Storage Options after updation")
@@ -137,10 +139,8 @@ def run(args):
 
     # Save back into CRD in array of objects format.
     # Which will be processed while deploying configmaps in operator.
-    if updated_options is None:
-        options = []
-    else:
-        for key,value in updated_options.items():
+    if updated_options:
+        for key, value in updated_options.items():
             options.append({"key": key, "value": value})
 
     data["spec"]["options"] = options
@@ -153,20 +153,20 @@ def run(args):
 
     # Create a temporary file named "<pool_name>.json"
     temp_file_path = tempfile.gettempdir() + "/%s.json" % (args.name)
-    with open(temp_file_path, mode="w") as temp_file:
+    with open(temp_file_path, mode="w", encoding="utf-8") as temp_file:
         # Write the data to the file in JSON format
         json.dump(data, temp_file)
         print(temp_file_path)
 
     cmd = utils.kubectl_cmd(args) + [
-            "apply", "-f", temp_file_path]
+        "apply", "-f", temp_file_path]
 
     try:
         resp = utils.execute(cmd)
     except utils.CommandError as err:
         print("Failed to apply CRD for "
-                "storage \"%s\"" % args.name,
-                file=sys.stderr)
+              "storage \"%s\"" % args.name,
+              file=sys.stderr)
         print(err, file=sys.stderr)
         print()
     except FileNotFoundError:
