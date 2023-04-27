@@ -100,7 +100,6 @@ def run(args):
     with open(temp_file_path, mode="w", encoding="utf-8") as temp_file:
         # Write the data to the file in JSON format
         json.dump(data, temp_file)
-        print(temp_file_path)
 
     cmd = utils.kubectl_cmd(args) + [
         "apply", "-f", temp_file_path]

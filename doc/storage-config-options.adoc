@@ -309,11 +309,20 @@ $ kubectl kadalu storage-add storage-pool1 \
 Storage Pool can be modified in their behaviour by configuring with Storage Pool Options available on Kadalu.
 Storage Pool Options can be configured either through storage-config file or using Kubectl Kadalu CLI.
 
-[TODO]
 List of supported Storage Pool Options for Kadalu:
- -
- -
- -
+
+[cols="50,50"]
+|===
+|Option |Value
+
+|performance.client-io-threads |on/off
+|performance.stat-prefetch     |on/off
+|performance.quick-read        |on/off
+|performance.open-behind       |on/off
+|performance.read-ahead        |on/off
+|performance.io-cache          |on/off
+|performance.readdir-ahead     |on/off
+|===
 
 * Configuring 'Storage Pool Options' through config file:
 +

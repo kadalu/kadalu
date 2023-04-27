@@ -117,9 +117,7 @@ def run(args):
         print("All Existing Storage Pool Options below will be cleared")
         for key, value in existing_options.items():
             print("Key: %s :: Value: %s" %(key, value))
-
         updated_options = updated_options.clear()
-        print("updated options after clear()", updated_options)
 
     # Remove user specified options
     else:
@@ -156,7 +154,6 @@ def run(args):
     with open(temp_file_path, mode="w", encoding="utf-8") as temp_file:
         # Write the data to the file in JSON format
         json.dump(data, temp_file)
-        print(temp_file_path)
 
     cmd = utils.kubectl_cmd(args) + [
         "apply", "-f", temp_file_path]
