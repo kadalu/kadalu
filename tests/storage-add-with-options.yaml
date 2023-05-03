@@ -1,0 +1,20 @@
+## -------------------------------------------------------------------
+#  This storage is used for testing storage-options with 3 storage-pods
+---
+apiVersion: kadalu-operator.storage/v1alpha1
+kind: KadaluStorage
+metadata:
+  name: storage-pool-3-with-3-pods
+spec:
+  type: Replica3
+  options:
+    - key: "performance.client-io-threads"
+      value: "on"
+  storage:
+    - node: minikube            # node name as shown in `kubectl get nodes`
+      device: /mnt/DISK/file5.1 # file as a device
+    - node: minikube            # node name as shown in `kubectl get nodes`
+      device: /mnt/DISK/file5.2 # file as a device
+    - node: minikube            # node name as shown in `kubectl get nodes`
+      device: /mnt/DISK/file5.3 # file as a device
+    - node: minikube            # node name as shown in `kubectl get nodes`
