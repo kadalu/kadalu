@@ -52,7 +52,6 @@ def get_options_from_crd(args, storage_name):
     """ Fetch existing storage pool options from CRD """
 
     data = {}
-    existing_options = {}
 
     cmd = utils.kubectl_cmd(args) + [
         "get", "kadalustorages.kadalu-operator.storage",
@@ -72,14 +71,7 @@ def get_options_from_crd(args, storage_name):
         utils.kubectl_cmd_help(args.kubectl_cmd)
         sys.exit(1)
 
-    if data["spec"].get("options", []):
-        options = data["spec"]["options"]
-        for option in options:
-            existing_options.update({
-                option.get("key"): option.get("value")
-            })
-
-    return existing_options
+    return data["spec"].get("options", [])
 
 
 def detailed_output(storages, args):
@@ -123,9 +115,8 @@ def detailed_output(storages, args):
         options = get_options_from_crd(args, storage.storage_name)
         if options:
             print("Configured Storage Options: (%s)" % (len(options)))
-            for key,val in options.items():
-                print("%s : %s" % (key, val))
-
+            for option in options:
+                print(f'{option.get("key")} : {option.get("value")}')
 
 
 def summary_output(storages, args):

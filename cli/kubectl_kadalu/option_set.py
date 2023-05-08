@@ -2,9 +2,6 @@
 'option-set' sub command
 """
 
-# noqa # pylint: disable=duplicate-code
-# noqa # pylint: disable=too-many-branches
-
 #To prevent Py2 to interpreting print(val) as a tuple.
 from __future__ import print_function
 
@@ -79,9 +76,7 @@ def run(args):
             })
 
     for index in range(0, len(args.options), 2):
-        given_options.update({
-            args.options[index]: args.options[index + 1]
-        })
+        given_options[args.options[index]] = args.options[index + 1]
 
     existing_options.update(given_options)
 
@@ -106,6 +101,7 @@ def run(args):
 
     try:
         resp = utils.execute(cmd)
+        print(f"Storage Pool {args.name} storage-options configured.")
     except utils.CommandError as err:
         print("Failed to apply CRD for "
               "storage \"%s\"" % args.name,

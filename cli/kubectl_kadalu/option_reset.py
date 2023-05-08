@@ -2,9 +2,6 @@
 'option-reset' sub command
 """
 
-# noqa # pylint: disable=duplicate-code
-# noqa # pylint: disable=too-many-branches
-
 #To prevent Py2 to interpreting print(val) as a tuple.
 from __future__ import print_function
 
@@ -61,11 +58,11 @@ def validate(args):
 
 def user_confirmation(args):
     """ Prompt user for confirmation of changes """
-    if not args.script_mode:
+    if not args.script_mode and args.all:
         answer = ""
         valid_answers = ["yes", "no", "n", "y"]
         while answer not in valid_answers:
-            answer = input("Is this correct?(Yes/No): ")
+            answer = input("Do you want to proceed removing all configured options?\n")
             answer = answer.strip().lower()
 
         if answer in ["n", "no"]:
@@ -78,9 +75,6 @@ def run(args):
     """ Adds the subcommand arguments back to main CLI tool """
 
     data = {}
-    updated_options = {}
-    existing_options = {}
-    options = []
 
     cmd = utils.kubectl_cmd(args) + [
         "get", "kadalustorages.kadalu-operator.storage",
@@ -100,48 +94,11 @@ def run(args):
         utils.kubectl_cmd_help(args.kubectl_cmd)
         sys.exit(1)
 
-    if data["spec"].get("options", []):
-        e_options = data["spec"]["options"]
-        for option in e_options:
-            existing_options.update({
-                option.get("key"): option.get("value")
-            })
-
-    if existing_options is None:
-        print("No options present in Storage Pool to reset.")
-
-    updated_options = existing_options.copy()
-
-    # Remove all options
-    if args.all:
-        print("All Existing Storage Pool Options below will be cleared")
-        for key, value in existing_options.items():
-            print("Key: %s :: Value: %s" %(key, value))
-        updated_options = updated_options.clear()
-
-    # Remove user specified options
-    else:
-        for option in args.options:
-            if option in updated_options:
-                del updated_options[option]
-        print("Storage Options before updation")
-        for key, value in existing_options.items():
-            print("Key: %s :: Value: %s" %(key, value))
-        print()
-        print("Storage Options after updation")
-        if not updated_options:
-            print("No Storage Options left after updation!")
-        else:
-            for key, value in updated_options.items():
-                print("Key: %s :: Value: %s" %(key, value))
-
-    # Save back into CRD in array of objects format.
-    # Which will be processed while deploying configmaps in operator.
-    if updated_options:
-        for key, value in updated_options.items():
-            options.append({"key": key, "value": value})
-
-    data["spec"]["options"] = options
+    e_options = data["spec"]["options"]
+    data["spec"]["options"] = []
+    for option in e_options:
+        if option["key"] not in args.options and not args.all:
+            data["spec"]["options"].append(option)
 
     if args.dry_run:
         return
@@ -160,6 +117,7 @@ def run(args):
 
     try:
         resp = utils.execute(cmd)
+        print(f"Storage Pool {args.name} storage-options configured.")
     except utils.CommandError as err:
         print("Failed to apply CRD for "
               "storage \"%s\"" % args.name,
