@@ -3,6 +3,7 @@
 """
 from __future__ import print_function
 import sys
+import json
 
 import utils
 
@@ -47,6 +48,32 @@ def human_readable_size(size):
     return "%d" % int(size)
 
 
+def get_options_from_crd(args, storage_name):
+    """ Fetch existing storage pool options from CRD """
+
+    data = {}
+
+    cmd = utils.kubectl_cmd(args) + [
+        "get", "kadalustorages.kadalu-operator.storage",
+        storage_name, "-ojson"]
+
+    try:
+        resp = utils.execute(cmd)
+        data = json.loads(resp.stdout)
+    except utils.CommandError as err:
+        print("Failed to get CRD of "
+                "storage \"%s\"" % args.name,
+                file=sys.stderr)
+        print(err, file=sys.stderr)
+        print()
+        sys.exit(1)
+    except FileNotFoundError:
+        utils.kubectl_cmd_help(args.kubectl_cmd)
+        sys.exit(1)
+
+    return data["spec"].get("options", [])
+
+
 def detailed_output(storages, args):
     """Print the detailed output"""
     for storage in storages:
@@ -84,6 +111,12 @@ def detailed_output(storages, args):
                 print("  PVC: %s" % storage_unit.pvc)
 
             print()
+
+        options = get_options_from_crd(args, storage.storage_name)
+        if options:
+            print("Configured Storage Options: (%s)" % (len(options)))
+            for option in options:
+                print(f'{option.get("key")} : {option.get("value")}')
 
 
 def summary_output(storages, args):

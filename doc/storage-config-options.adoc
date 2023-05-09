@@ -265,7 +265,7 @@ $ kubectl kadalu remove-archived-pv storage-pool-1 --pvc=pvc-e91ab8c8-4a48-48ad-
 ----
 
 * Removing archived pvc(s) through Kadalu CSI provisioner:
-
++
 Exec into Kadalu Provisioner pod. Run the script 'remove_archived_pv.py' with similar arguments as Kadalu CLI.
 +
 [source,console]
@@ -302,4 +302,72 @@ spec:
 ----
 $ kubectl kadalu storage-add storage-pool1 \
     --device kube1:/dev/vdc --volume-id=example-1234-volumeid-7890
+----
+
+== Configuring Storage Pool Options
+
+Storage Pool can be modified in their behaviour by configuring with Storage Pool Options available on Kadalu.
+Storage Pool Options can be configured either through storage-config file or using Kubectl Kadalu CLI.
+
+List of supported Storage Pool Options for Kadalu:
+
+[cols="50,50"]
+|===
+|Option |Value
+
+|performance.client-io-threads |on/off
+|performance.stat-prefetch     |on/off
+|performance.quick-read        |on/off
+|performance.open-behind       |on/off
+|performance.read-ahead        |on/off
+|performance.io-cache          |on/off
+|performance.readdir-ahead     |on/off
+|===
+
+* Configuring 'Storage Pool Options' through config file:
++
+[source,yaml]
+----
+apiVersion: kadalu-operator.storage/v1alpha1
+kind: KadaluStorage
+metadata:
+# This will be used as name of PV Hosting Volume
+  name: storage1
+spec:
+  type: Replica1
+  options:
+    - key: "performance.quick-read"
+      value: "off"
+    - key: "performance.write-behind"
+      value: "on"
+  storage:
+    - node: kube1
+      device: /dev/vdc
+----
++
+If any further Storage Pool Options is to be configured, simply apply the modified storage-config file again so that Kadalu Operator notices the change and will be handled appropriately by Kadalu Server pods.
+
+* Configuring 'Storage Pool Options' through Kadalu CLI:
++
+To add/set Storage Pool Options, 'option-set' subcommand can be used. It expects name of Storage Pool and Option key(s) and value(s).
++
+[source,console]
+----
+$ kubectl kadalu option-set storage-pool1 \
+    performance.quick-read off performance.write-behind on
+----
++
+To remove/reset Storage Pool Options, 'option-reset' subcommand can be used. It expects name of Storage Pool and Option key(s) to be removed.
++
+[source,console]
+----
+$ kubectl kadalu option-reset storage-pool1 \
+    performance.quick-read performance.write-behind
+----
++
+Additionally all of configured options for a Storage Pool can be removed with '--all' flag.
++
+[source,console]
+----
+$ kubectl kadalu option-reset storage-pool1 --all
 ----
