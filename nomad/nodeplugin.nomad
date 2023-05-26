@@ -16,7 +16,7 @@ variable "gluster_volname" {
 }
 
 variable "kadalu_version" {
-  default = "0.8.15"
+  default = "1.1.0"
 }
 
 job "kadalu-csi-nodeplugin" {
@@ -60,7 +60,7 @@ job "kadalu-csi-nodeplugin" {
 
       template {
         data = <<-EOS
-        NODE_ID        = "${node.unique.name}"
+        NODE_ID        = {{ env "node.unique.name" }}
         CSI_ENDPOINT   = "unix://csi/csi.sock"
         KADALU_VERSION = "${var.kadalu_version}"
         CSI_ROLE       = "nodeplugin"

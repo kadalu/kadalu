@@ -2,7 +2,7 @@
 
 - The configuration here is for using external gluster volumes as persistent storage in Nomad using Kadalu CSI
 - Please refer actual job files before proceeding with demo and change config as required and follow along with commands according to your config
-- Locally tested against Nomad v1.3.1
+- Locally tested against Nomad v1.4.0
 - If there's an unreleased Kadalu version mentioned in the vars then it signifies the changes are tested with the commit which'll be part of that release
 
 ## Local Development
@@ -81,7 +81,7 @@ volume quota : success
 -> nomad plugin status kadalu-csi
 ID                   = kadalu-csi
 Provider             = kadalu
-Version              = 0.8.15
+Version              = 1.1.0
 Controllers Healthy  = 1
 Controllers Expected = 1
 Nodes Healthy        = 1
