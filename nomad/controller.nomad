@@ -24,7 +24,7 @@ variable "gluster_volname" {
 }
 
 variable "kadalu_version" {
-  default     = "0.8.15"
+  default     = "1.1.0"
   description = "Kadalu CSI version which is tested against Nomad version mentioned in README.md"
 }
 
@@ -94,7 +94,7 @@ job "kadalu-csi-controller" {
       template {
         # No need to supply  'SECRET_XXX' key if not using gluster native quota
         data = <<-EOS
-        NODE_ID                          = "${node.unique.name}"
+        NODE_ID                          = {{ env "node.unique.name" }}
         CSI_ENDPOINT                     = "unix://csi/csi.sock"
         SECRET_GLUSTERQUOTA_SSH_USERNAME = "${var.gluster_user}"
         KADALU_VERSION                   = "${var.kadalu_version}"
