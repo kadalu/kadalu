@@ -87,15 +87,12 @@ def is_server_pod_reachable(hosts, port=24007, timeout=20):
     Returns False server pods are not reachable even after the timeout.
     """
 
-    socket.setdefaulttimeout(timeout)
-
     for host in hosts:
         retry_count = 0
         while retry_count < 4:
             try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect((host, port))
-                sock.close()
+                sock = socket.create_connection((host, int(port)), timeout=timeout)
+                sock.shutdown(socket.SHUT_RDWR)
                 return True
             except socket.error:
                 logging.info(logf(
@@ -105,6 +102,8 @@ def is_server_pod_reachable(hosts, port=24007, timeout=20):
                 ))
                 time.sleep(30)
                 retry_count += 1
+            finally:
+                sock.close()
     return False
 
 
@@ -112,11 +111,9 @@ def is_host_reachable(hosts, port):
     """Check if glusterd is reachable in the given node"""
 
     timeout = 5
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(timeout)
     for host in hosts:
         try:
-            sock.connect((host, int(port)))
+            sock = socket.create_connection((host, int(port)), timeout=timeout)
             sock.shutdown(socket.SHUT_RDWR)
             return True
         except socket.error as msg:
