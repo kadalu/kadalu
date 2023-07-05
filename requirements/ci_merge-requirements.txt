@@ -26,7 +26,7 @@ exceptiongroup==1.1.1
     # via pytest
 google-auth==2.16.2
     # via kubernetes
-grpcio==1.51.3
+grpcio==1.53.0
     # via Kadalu (setup.py)
 idna==3.4
     # via requests
