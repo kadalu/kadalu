@@ -894,15 +894,16 @@ def unmount_glusterfs(mountpoint):
 
 def unmount_volume(mountpoint):
     """Unmount a Volume"""
-    if mountpoint.find("volumeDevices"):
+    if mountpoint.find("volumeDevices") != -1:
         # Should remove loop device as well or else duplicate loop devices will
         # be setup everytime
-        cmd = ["findmnt", "-T", mountpoint, "-oSOURCE", "-n"]
-        device, _, _ = execute(*cmd)
-        if match := re.search(r'loop\d+', device):
-            loop = match.group(0)
-            cmd = ["losetup", "-d", f"/dev/{loop}"]
-            execute(*cmd)
+        if os.path.exists(mountpoint):
+            cmd = ["findmnt", "-T", mountpoint, "-oSOURCE", "-n"]
+            device, _, _ = execute(*cmd)
+            if match := re.search(r'loop\d+', device):
+                loop = match.group(0)
+                cmd = ["losetup", "-d", f"/dev/{loop}"]
+                execute(*cmd)
 
     if os.path.ismount(mountpoint):
         execute(UNMOUNT_CMD, "-l", mountpoint)
