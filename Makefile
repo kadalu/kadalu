@@ -158,7 +158,7 @@ helm-chart:
 	@echo "Creating tgz archive of helm chart(Version: ${KADALU_VERSION}).."
 	cd helm; grep -rln '0.0.0-0' | grep Chart | xargs -I file sed -i -e "s/0.0.0-0/${KADALU_VERSION}/" file; tar -czf kadalu-helm-chart.tgz kadalu
 
-# Pass PIP_ARGS="-U" for upgrading module deps, compatible with pip-compile v6.8.0
+# Pass PIP_ARGS="-U" for upgrading module deps, compatible with pip-compile v7.1.0
 gen-requirements:
 	@echo "Generating requirements file for all kadalu components and CI"
 	@cd requirements; \
