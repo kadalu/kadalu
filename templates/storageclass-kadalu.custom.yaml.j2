@@ -9,3 +9,4 @@ allowVolumeExpansion: {%- if single_pv_per_pool %} false{%- else %} true{%- endi
 parameters:
   storage_name: {{ hostvol_name }}
   single_pv_per_pool: "{{ single_pv_per_pool }}"
+reclaimPolicy: {{ pv_reclaim_policy }}

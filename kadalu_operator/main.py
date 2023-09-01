@@ -1004,7 +1004,7 @@ def deploy_config_map(core_v1_client):
 def deploy_storage_class(obj):
     """Deploys the default and custom storage class for KaDalu if not exists"""
 
-    # Deploy defalut Storage Class
+    # Deploy default Storage Class
     api_instance = client.StorageV1Api()
     scs = api_instance.list_storage_class()
     sc_names = []
@@ -1021,8 +1021,13 @@ def deploy_storage_class(obj):
             logging.info(logf("StorageClass already present, continuing with Apply",
                               manifest=filename))
 
+        # Retrieve the value from the dictionary
+        reclaim_policy_value = obj["spec"].get("pvReclaimPolicy", "delete")
+        # Check if the value is either 'retain' or 'delete', otherwise default to 'delete'
+        if reclaim_policy_value not in ["retain", "delete"]:
+            reclaim_policy_value = "delete"
         template(filename, namespace=NAMESPACE, kadalu_version=VERSION,
-                 hostvol_name=obj["metadata"]["name"],
+                 hostvol_name=obj["metadata"]["name"],pv_reclaim_policy=reclaim_policy_value.capitalize(),
                  single_pv_per_pool=get_single_pv_per_pool(obj["spec"]))
         lib_execute(KUBECTL_CMD, APPLY_CMD, "-f", filename)
         logging.info(logf("Deployed StorageClass", manifest=filename))
