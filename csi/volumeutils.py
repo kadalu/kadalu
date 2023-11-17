@@ -1100,8 +1100,8 @@ def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None, is_clien
     try:
         execute(*command)
     except CommandException as excep:
-        if  excep.err.find("invalid option") != -1:
-            logging.info(logf(
+        if  excep.err.find("invalid option") != -1 or excep.err.find("unrecognized option") != -1:
+            logging.warning(logf(
                 "proceeding without supplied incorrect mount options",
                 options=g_ops,
                 ))
@@ -1109,13 +1109,13 @@ def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None, is_clien
             try:
                 execute(*command)
             except CommandException as retry_err:
-                logging.info(logf(
+                logging.error(logf(
                     "mount command failed",
                     cmd=command,
                     error=retry_err,
                 ))
                 raise retry_err
-        logging.info(logf(
+        logging.error(logf(
             "mount command failed",
             cmd=command,
             error=excep,
