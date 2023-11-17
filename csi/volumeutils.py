@@ -1108,19 +1108,19 @@ def mount_glusterfs_with_host(volname, mountpoint, hosts, options=None, is_clien
             command = cmd + [mountpoint]
             try:
                 execute(*command)
-            except CommandException as excep:
+            except CommandException as retry_err:
                 logging.info(logf(
                     "mount command failed",
                     cmd=command,
-                    error=excep,
+                    error=retry_err,
                 ))
-            return
+                raise retry_err
         logging.info(logf(
             "mount command failed",
             cmd=command,
             error=excep,
         ))
-    return
+        raise excep
 
 
 def check_external_volume(pv_request, host_volumes):
