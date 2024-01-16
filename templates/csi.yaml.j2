@@ -103,6 +103,7 @@ spec:
               mountPath: "/etc/secret-volume"
         - name: kadalu-logging
           image: {{ images_hub }}/library/busybox
+          imagePullPolicy: IfNotPresent
           command: ["/bin/sh"]
           args: ["-c", "while true; do logcnt=$(/bin/ls /var/log/gluster/ | wc -l); if [ ${logcnt} -gt 0 ]; then break; fi; sleep 5; done; tail -F /var/log/gluster/*.log"]
           volumeMounts:
