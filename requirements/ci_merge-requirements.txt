@@ -108,7 +108,7 @@ six==1.16.0
     #   python-dateutil
 twine==4.0.2
     # via Kadalu (setup.py)
-urllib3==1.26.16
+urllib3==1.26.18
     # via
     #   google-auth
     #   kubernetes
