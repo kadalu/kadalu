@@ -39,7 +39,7 @@ function wait_for_kadalu_pods() {
   local end_time=$(($(date +%s) + $local_timeout))
 
   # wait for kadalu pods creation
-  while [[ 
+  while [[
     $($k get pod --ignore-not-found -o name -l name=kadalu | wc -l) -eq 0 ||
     $($k get pod --ignore-not-found -o name -l app.kubernetes.io/name=kadalu-csi-provisioner | wc -l) -eq 0 ||
     $($k get pod --ignore-not-found -o name -l app.kubernetes.io/name=kadalu-csi-nodeplugin | wc -l) -eq 0 ||
@@ -283,12 +283,16 @@ function run_sanity() {
   check_test_fail
 }
 
+function apply_storage_options() {
+  kubectl apply -f tests/storage-add-with-options.yaml
+}
+
 function verify_storage_options() {
   echo "List of storage-class"
   kubectl get sc -nkadalu
   for p in $(kubectl -n kadalu get pods -o name); do
     if [[ $p == *"nodeplugin"* ]]; then
-      kubectl exec -i -nkadalu $p -c 'kadalu-nodeplugin' -- bash -c 'grep -e "data-self-heal off" -e "nl-cache off" /kadalu/volfiles/* | cat'
+      kubectl logs -nkadalu $p -c 'kadalu-logging' | grep "performance/io-threads" | cat
     fi
   done
 }
@@ -458,7 +462,9 @@ case "${1:-}" in
     run_sanity
 
     # Test Storage-Options
-    # verify_storage_options
+    apply_storage_options
+    sleep 60
+    verify_storage_options
 
     # check for test failure
     check_test_fail
