@@ -9,6 +9,8 @@ spec:
   selector:
     matchLabels: {{- include "common.labels.standard" . | nindent 6 }}
       app.kubernetes.io/component: csi-driver
+  updateStrategy:
+    type: OnDelete
   template:
     metadata:
       labels: {{- include "common.labels.standard" . | nindent 8 }}
