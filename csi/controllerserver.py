@@ -257,14 +257,10 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
 
                 if not is_hosting_volume_free(ext_volume['name'], pvsize):
 
-                    logging.error(logf(
-                        "Hosting volume is full. Add more storage",
+                    logging.info(logf(
+                        "Hosting volume is full...Over-provisioning!",
                         volume=ext_volume['name']
                     ))
-                    errmsg = "External resource is exhausted"
-                    context.set_details(errmsg)
-                    context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
-                    return csi_pb2.CreateVolumeResponse()
 
                 if pvtype in [PV_TYPE_VIRTBLOCK, PV_TYPE_RAWBLOCK]:
                     vol = create_block_volume(
@@ -302,6 +298,8 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                     volpath=vol.volpath,
                     duration_seconds=time.time() - start_time
                 ))
+
+                update_free_size(ext_volume['name'], request.name, -pvsize)
 
                 send_analytics_tracker("pvc-external-kadalu", uid)
                 # Pass required argument to get mount working on
@@ -645,19 +643,25 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hostvol)
         use_gluster_quota = False
 
-        # Check free-size in storage-pool before expansion
-        if not is_hosting_volume_free(hostvol, additional_pvsize_required):
-
-            logging.error(logf(
-                "Hosting volume is full. Add more storage",
-                volume=hostvol
-            ))
-            errmsg = "Host volume resource is exhausted"
-            context.set_details(errmsg)
-            context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
-            return csi_pb2.CreateVolumeResponse()
-
         hostvoltype = existing_volume.extra['hostvoltype']
+
+        # Check free-size in storage-pool before expansion
+        # For external volume we allow over-provisioning
+        if not is_hosting_volume_free(hostvol, additional_pvsize_required):
+            if hostvoltype != 'External':
+                logging.error(logf(
+                    "Hosting volume is full. Add more storage",
+                    volume=hostvol
+                    ))
+                errmsg = "Host volume resource is exhausted"
+                context.set_details(errmsg)
+                context.set_code(grpc.StatusCode.RESOURCE_EXHAUSTED)
+                return csi_pb2.CreateVolumeResponse()
+            else:
+                logging.info(logf(
+                    "Hosting volume is full...Over-provisioning!",
+                    volume=hostvol
+                    ))
 
         if pvtype == PV_TYPE_SUBVOL:
             update_subdir_volume(
