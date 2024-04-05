@@ -1028,16 +1028,16 @@ def handle_external_volume(volume, mountpoint, is_client, hosts):
     secret_private_key = "/etc/secret-volume/ssh-privatekey"
     secret_username = os.environ.get('SECRET_GLUSTERQUOTA_SSH_USERNAME', None)
 
-    # SSH into only first reachable host in volume['g_host'] entry
-    g_host = reachable_host(hosts)
-
-    if g_host is None:
-        logging.error(logf("All hosts are not reachable"))
-        return
-
     if use_gluster_quota is False:
         logging.debug(logf("Do not set quota-deem-statfs"))
     else:
+        # SSH into only first reachable host in volume['g_host'] entry
+        g_host = reachable_host(hosts)
+
+        if g_host is None:
+            logging.error(logf("All hosts are not reachable"))
+            return
+
         logging.debug(logf("Set quota-deem-statfs for gluster directory Quota"))
         quota_deem_cmd = [
             "ssh",
