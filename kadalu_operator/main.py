@@ -880,7 +880,16 @@ def watch_stream(core_v1_client, k8s_client):
     """
     crds = client.CustomObjectsApi(k8s_client)
     k8s_watch = watch.Watch()
-    resource_version = ""
+    initial_list = crds.list_cluster_custom_object("kadalu-operator.storage",
+                                                   "v1alpha1",
+                                                   "kadalustorages")
+
+    for item in initial_list.get("items"):
+        handle_added(core_v1_client, item)
+
+    metadata = initial_list.get("metadata")
+    resource_version = metadata['resourceVersion']
+
     for event in k8s_watch.stream(crds.list_cluster_custom_object,
                                   "kadalu-operator.storage",
                                   "v1alpha1",
