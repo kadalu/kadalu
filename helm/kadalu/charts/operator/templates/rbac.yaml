@@ -22,6 +22,8 @@ rules:
       - kadalustorages
     verbs:
       - watch
+      - get
+      - list
   - apiGroups:
       - ""
     resources:
