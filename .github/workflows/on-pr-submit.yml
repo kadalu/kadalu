@@ -87,7 +87,8 @@ jobs:
     # CLI Tests
     - name: Install Binnacle and build kubectl-kadalu
       run: |
-        curl -L https://github.com/kadalu/binnacle/releases/latest/download/binnacle -o binnacle
+        # Temporary until https://github.com/kadalu/binnacle/issues/44
+        curl -L https://github.com/kadalu/binnacle/releases/download/0.6.1/binnacle -o binnacle
         chmod +x ./binnacle
         sudo mv ./binnacle /usr/local/bin/binnacle
         binnacle --version
