@@ -5,7 +5,6 @@
 [source,console]
 ----
 $ kubectl apply -f https://github.com/kadalu/kadalu/releases/latest/download/kadalu-operator.yaml
-$ kubectl apply -f https://github.com/kadalu/kadalu/releases/latest/download/csi-nodeplugin.yaml
 ----
 
 You have different flavors of operator yaml files available. Mainly for kubernetes (default), openshift, RKE, Microk8s. Find the relevant file from https://github.com/kadalu/kadalu/tree/devel/manifests[here]. Just remember to use the raw file as argument to `kubectl`.
@@ -73,13 +72,13 @@ Check the status of Pods using,
 $ kubectl get pods -n kadalu
 NAME                             READY   STATUS    RESTARTS   AGE
 server-storage-pool-1-kube1-0    1/1     Running   0          84s
-csi-nodeplugin-5hfms             3/3     Running   0          30m
-csi-nodeplugin-924cc             3/3     Running   0          30m
-csi-nodeplugin-cbjl9             3/3     Running   0          30m
-csi-provisioner-0                5/5     Running   0          30m
+csi-nodeplugin-5hfms             2/2     Running   0          30m
+csi-nodeplugin-924cc             2/2     Running   0          30m
+csi-nodeplugin-cbjl9             2/2     Running   0          30m
+csi-provisioner-0                3/3     Running   0          30m
 operator-6dfb65dcdd-r664t        1/1     Running   0          30m
 ----
 
 
-After this, go ahead and link:./csi-to-claim-persistent-volumes.adoc[create your PVC and attach] it to other applications.
+After this, go ahead and link:create-pvc.adoc[create your PVC and attach] it to other applications.
 

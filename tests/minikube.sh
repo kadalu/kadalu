@@ -315,7 +315,6 @@ function deploy_kadalu_resources() {
   sed -i -e 's/"no"/"yes"/g' manifests/csi-nodeplugin.yaml
 
   kubectl apply -f manifests/kadalu-operator.yaml
-  kubectl apply -f manifests/csi-nodeplugin.yaml
 
   sleep 1
   # Start storage

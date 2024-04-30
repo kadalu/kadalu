@@ -30,10 +30,6 @@ def set_args(name, subparsers):
         "--local-yaml",
         help="local operator yaml file path"
     )
-    arg(
-        "--local-csi-yaml",
-        help="local csi-nodeplugin yaml file path"
-    )
     utils.add_global_flags(parser)
 
 
@@ -41,7 +37,7 @@ def validate(_args):
     """No validation available"""
     return
 
-# noqa # pylint: disable=too-many-branches
+
 def run(args):
     """ perform install subcommand """
 
@@ -65,23 +61,20 @@ def run(args):
     except FileNotFoundError:
         utils.kubectl_cmd_help(args.kubectl_cmd)
 
-    file_url = ""
-    insttype = ""
-    if args.version and args.version == "devel":
-        file_url = "https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests"
-    elif args.version:
-        file_url = "https://github.com/kadalu/kadalu/releases/download/%s" % args.version
-
-    if args.type and args.type != "kubernetes":
-        insttype = "-%s" % args.type
-
     operator_file = args.local_yaml
     if not operator_file:
-        operator_file = "%s/kadalu-operator%s.yaml" % (file_url, insttype)
+        file_url = ""
+        insttype = ""
 
-    csi_file = args.local_csi_yaml
-    if not csi_file:
-        csi_file = "%s/csi-nodeplugin%s.yaml" % (file_url, insttype)
+        if args.version and args.version == "devel":
+            file_url = "https://raw.githubusercontent.com/kadalu/kadalu/devel/manifests"
+        elif args.version:
+            file_url = "https://github.com/kadalu/kadalu/releases/download/%s" % args.version
+
+        if args.type and args.type != "kubernetes":
+            insttype = "-%s" % args.type
+
+        operator_file = "%s/kadalu-operator%s.yaml" % (file_url, insttype)
 
     try:
         cmd = utils.kubectl_cmd(args) + ["apply", "-f", operator_file]
@@ -91,16 +84,6 @@ def run(args):
 
         resp = utils.execute(cmd)
         print("Kadalu operator create request sent successfully")
-        print(resp.stdout)
-        print()
-
-        cmd = utils.kubectl_cmd(args) + ["apply", "-f", csi_file]
-        print("Executing '%s'" % " ".join(cmd))
-        if args.dry_run:
-            return
-
-        resp = utils.execute(cmd)
-        print("Kadalu CSI-nodeplugin create request sent successfully")
         print(resp.stdout)
         print()
     except utils.CommandError as err:
