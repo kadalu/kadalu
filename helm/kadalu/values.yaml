@@ -14,8 +14,3 @@ global:
 operator:
   enabled: false
   verbose: 'no'
-
-# Values while deploying csi-nodeplugin
-csi-nodeplugin:
-  enabled: false
-  verbose: 'no'

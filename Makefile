@@ -46,8 +46,6 @@ export namespace
 
 helm-manifest:
 	@echo ---------------------------------------------------------------------
-	@# Since we are using sub charts we can't percolate the version with ease
-	@# and so using 'sed' to replace the tag
 	@helm show crds helm/kadalu > manifests/kadalu-operator${filename_suffix}.yaml
 	@echo "$$namespace" >> manifests/kadalu-operator${filename_suffix}.yaml
 	@helm template --namespace kadalu helm/kadalu \
@@ -56,22 +54,15 @@ helm-manifest:
 		--set global.image.repository=${DOCKER_USER} \
 		--set operator.enabled=true >> manifests/kadalu-operator${filename_suffix}.yaml
 	@sed -i 's,devel,${KADALU_VERSION},g' manifests/kadalu-operator${filename_suffix}.yaml
-	@helm template --namespace kadalu helm/kadalu \
-        --set global.kubernetesDistro=${DISTRO} \
-        --set global.image.registry=${IMAGES_HUB} \
-		--set global.image.repository=${DOCKER_USER} \
-		--set csi-nodeplugin.enabled=true > manifests/csi-nodeplugin${filename_suffix}.yaml
-	@sed -i 's,devel,${KADALU_VERSION},g' manifests/csi-nodeplugin${filename_suffix}.yaml
 
 	@echo "kubectl apply -f manifests/kadalu-operator${filename_suffix}.yaml"
-	@echo "kubectl apply -f manifests/csi-nodeplugin${filename_suffix}.yaml"
 	@echo ---------------------------------------------------------------------
 
 
 gen-manifest:
 	@echo "Generating manifest files, run the following commands"
 	@echo
-	@echo "Install Kadalu Operator followed by CSI Nodeplugin"
+	@echo "Install Kadalu Operator"
 	@echo
 	@mkdir -p manifests
 	@DISTRO=kubernetes $(MAKE) -s helm-manifest
@@ -156,7 +147,7 @@ pypi-build:
 
 helm-chart:
 	@echo "Creating tgz archive of helm chart(Version: ${KADALU_VERSION}).."
-	cd helm; grep -rln '0.0.0-0' | grep Chart | xargs -I file sed -i -e "s/0.0.0-0/${KADALU_VERSION}/" file; tar -czf kadalu-helm-chart.tgz kadalu
+	cd helm; sed -i -e "s/0.0.0-0/${KADALU_VERSION}/" kadalu/Chart.yaml; tar -czf kadalu-helm-chart.tgz kadalu
 
 # Pass PIP_ARGS="-U" for upgrading module deps, compatible with pip-compile v7.1.0
 gen-requirements:

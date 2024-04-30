@@ -1,7 +1,0 @@
-apiVersion: v2
-name: csi-nodeplugin
-icon: https://kadalu.io/static/css/logo.png
-description: kadalu.io CSI Nodeplugin
-type: application
-# Value of 'version' will be replaced with correct version on part of release
-version: 0.0.0-0

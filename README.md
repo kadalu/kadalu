@@ -65,19 +65,6 @@ Where `K8S_DIST` can be one of below values:
 
 If `--set-string` isn't supplied `kubernetes` will be used as default.
 
-For Kadalu Versions >= 0.8.5 helm chart is broken into subcharts, refer below for installation:
-```
-# Takes values as mentioned above
-K8S_DIST=kubernetes
-curl -sL https://github.com/kadalu/kadalu/releases/latest/download/kadalu-helm-chart.tgz -o /tmp/kadalu-helm-chart.tgz
-
-# First install operator
-helm install operator --namespace kadalu --create-namespace /tmp/kadalu-helm-chart.tgz --set operator.enabled=true --set global.kubernetesDistro=$K8S_DIST
-
-# Incase of Kadalu upgrade verify pod eviction and no usage of Kadalu PVCs, for fresh installation just proceed after operator deployment
-helm install csi-nodeplugin --namespace kadalu /tmp/kadalu-helm-chart.tgz --set csi-nodeplugin.enabled=true --set global.kubernetesDistro=$K8S_DIST
-```
-
 NOTE: We are still evolving with Helm chart based development, and happy to get contributions on the same.
 
 ## Platform supports

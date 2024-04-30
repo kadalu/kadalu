@@ -312,7 +312,6 @@ function deploy_kadalu_resources() {
   # set verbose field
   # TODO: Use helm values file
   sed -i -e 's/"no"/"yes"/g' manifests/kadalu-operator.yaml
-  sed -i -e 's/"no"/"yes"/g' manifests/csi-nodeplugin.yaml
 
   kubectl apply -f manifests/kadalu-operator.yaml
 
