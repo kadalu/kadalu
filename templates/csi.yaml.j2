@@ -2,29 +2,6 @@
 ---
 ## Deploy CSI NodePlugin
 ---
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: kadalu-csi-nodeplugin
-rules:
-  - apiGroups: [""]
-    resources: ["events"]
-    verbs: ["get", "list", "watch", "create", "update", "patch"]
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: kadalu-csi-nodeplugin
-  namespace: {{ namespace }}
-subjects:
-  - kind: ServiceAccount
-    name: kadalu-csi-nodeplugin
-    namespace: {{ namespace }}
-roleRef:
-  kind: ClusterRole
-  name: kadalu-csi-nodeplugin
-  apiGroup: rbac.authorization.k8s.io
----
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
@@ -40,6 +17,8 @@ spec:
       app.kubernetes.io/part-of: kadalu
       app.kubernetes.io/component: csi-driver
       app.kubernetes.io/name: kadalu-csi-nodeplugin
+  updateStrategy:
+    type: OnDelete
   template:
     metadata:
       labels:
@@ -64,7 +43,7 @@ spec:
             - name: ADDRESS
               value: /plugin/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              value: {{ kubelet_dir }}/plugins_registry/kadalu/csi.sock
+              value: {{ kubelet_dir }}/plugins/kadalu/csi.sock
             - name: KUBE_NODE_NAME
               valueFrom:
                 fieldRef:
@@ -87,6 +66,18 @@ spec:
               add: ["SYS_ADMIN"]
             allowPrivilegeEscalation: true
           image: {{ images_hub }}/{{ docker_user }}/kadalu-csi:{{ kadalu_version }}
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - /bin/sh
+                  - '-c'
+                  - >
+                    mount | grep glusterfs | awk '{print $1 " " $3}' | sed 's/:/
+                    /' | awk '{print "umount " $3 ";glusterfs --process-name
+                    fuse --volfile-id " $2 " --volfile-server " $1 "
+                    --log-level=DEBUG " $3}' > /tmp/remount.sh ; chmod +x
+                    /tmp/remount.sh ; /tmp/remount.sh
           env:
             - name: NODE_ID
               valueFrom:
@@ -115,7 +106,7 @@ spec:
             - name: varlog
               mountPath: /var/log/gluster
             - name: csi-dir
-              mountPath: /var/lib/kubelet/plugins/kubernetes.io/csi
+              mountPath: {{ kubelet_dir }}/plugins/kubernetes.io/csi
               mountPropagation: "Bidirectional"
         - name: kadalu-logging
           image: {{ images_hub }}/library/busybox
@@ -128,7 +119,7 @@ spec:
       volumes:
         - name: plugin-dir
           hostPath:
-            path: {{ kubelet_dir }}/plugins_registry/kadalu
+            path: {{ kubelet_dir }}/plugins/kadalu
             type: DirectoryOrCreate
         - name: pods-mount-dir
           hostPath:
@@ -148,7 +139,7 @@ spec:
           emptyDir: {}
         - name: csi-dir
           hostPath:
-            path: /var/lib/kubelet/plugins/kubernetes.io/csi/
+            path: {{ kubelet_dir }}/plugins/kubernetes.io/csi/
             type: DirectoryOrCreate
 ---
 ## Deploy CSI Provisioner

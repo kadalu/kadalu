@@ -268,7 +268,9 @@ function run_sanity() {
 
   # Deploy and run CSI Sanity tests
   kubectl apply -f tests/test-csi/sanity-app.yaml
-  kubectl wait --for=condition=ready pod -l app=sanity-app --timeout=15s
+  kubectl wait --for=condition=ready pod -l app=sanity-app --timeout=15s || {
+    echo CSI Sanity app is not ready within 15s && fail=1 && return
+  }
 
   exp_pass=33
 

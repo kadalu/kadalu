@@ -1,8 +1,7 @@
 
 = Upgrade Kadalu
 
-Here the steps to upgrade a Kadalu service from v0.8.1 to the latest version for Kubernetes.
-It should apply to any newer upgrade.
+Here the steps to upgrade a Kadalu service to the latest version for Kubernetes.
 
 == Upgrade kubectl-kadalu binary
 
@@ -10,7 +9,7 @@ It should apply to any newer upgrade.
 ----
 $ curl -fsSL https://github.com/kadalu/kadalu/releases/latest/download/install.sh | sudo bash -x
 $ kubectl-kadalu version
-kubectl-kadalu 0.8.6
+[...]
 ----
 
 == Apply kadalu operator file
@@ -61,7 +60,7 @@ Exemple for a generic Kubernetes Cluster in single command ligne:
 kubectl apply -f csi-nodeplugin.yaml
 ----
 
-Exemple for a generic Kubernetes Cluster in single command line:
+Example for a generic Kubernetes Cluster in single command line:
 
 [source,console]
 ----
@@ -72,4 +71,22 @@ clusterrolebinding.rbac.authorization.k8s.io/kadalu-csi-nodeplugin unchanged
 daemonset.apps/kadalu-csi-nodeplugin configured
 ----
 
-Wait for the kadalu-csi-nodeplugin* pod got all replaced and get in Running state: it can take time since there's 1 pod per node and kadalu upgrade them one at a time
+- As the `.spec.updateStrategy.type` of the Nodeplugin Daemonset is `onDelete` the onus is on the admin to drain the nodes where kadalu-nodeplugin is running and delete the nodeplugin one at a time
+- After the nodeplugin is deleted, the new nodeplugin will be run on that specific node and new workloads can be scheduled to run on that node
+- One of the below three options can be followed for a successful update
+- Assume we have three worker nodes running kadalu nodeplugin, i.e, node-a, node-b, node-c
+
+=== Option 1 (preferred): Use a liveness probe on your workload
+1. Include a liveness probe for your container to list the mounted volume/device as nodeplugin now remounts corrupted mounts and pods having a liveness probe can recovery mount at their end by a container restart due to liveness failure on the mounted volume
+
+=== Option 2: Cordon and drain one node at a time
+1. https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/[Drain] node-a and delete the nodeplugin running on node-a
+2. Uncordon node-a and await new version of nodeplugin come up on node-a
+3. Repeat step-2 for remaining nodes and by the end new version of nodeplugins on all nodes should be in running state
+
+=== Option 3: Evict specific deployments using kubectl-evict plugin
+1. Option 1 evicts all the pods running on a node and however the https://github.com/ueokande/kubectl-evict[kubectl-evict] plugin can be used to evict a specific deployment
+2. Cordon one of the nodes, let's say node-a, evict a deployment running on node-a which is using kadalu pvc
+3. Delete the nodeplugin pod running on node-a and uncordon node-a
+4. Repeat step-2 for remaining nodes and by the end new version of nodeplugins on all nodes should be in running state
+5. This'll be helpful if the nodes are running workloads with less headroom wherein for various reasons the workload which was evicted may never be re-scheduled on other nodes
