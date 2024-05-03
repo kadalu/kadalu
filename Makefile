@@ -5,6 +5,7 @@ DOCKER_USER?=kadalu
 KADALU_VERSION?=devel
 KADALU_LATEST?=latest
 DISTRO?=kubernetes
+VERBOSE?=no
 BUILD_BASE?=yes
 
 help:
@@ -52,6 +53,7 @@ helm-manifest:
 		--set global.kubernetesDistro=${DISTRO} \
 		--set global.image.registry=${IMAGES_HUB} \
 		--set global.image.repository=${DOCKER_USER} \
+		--set operator.verbose=${VERBOSE} \
 		--set operator.enabled=true >> manifests/kadalu-operator${filename_suffix}.yaml
 	@sed -i 's,devel,${KADALU_VERSION},g' manifests/kadalu-operator${filename_suffix}.yaml
 

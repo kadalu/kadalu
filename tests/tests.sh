@@ -1,13 +1,104 @@
 #!/bin/bash -e
+# Format via shfmt -> shfmt -i 2 -ci -w tests/tests.sh
 
-# Format via shfmt -> shfmt -i 2 -ci -w tests/minikube.sh
+K3D_VERSION=${K3D_VERSION:-"v5.6.3"}
+KUBE_IMG=${KUBE_IMG:-"rancher/k3s:v1.29.4-k3s1"}
 
-# Based on ideas from https://github.com/rook/rook/blob/master/tests/scripts/minikube.sh
+CLUSTER_NAME=test
+NODE_NAME=k3d-${CLUSTER_NAME}-server-0
+
 fail=0
 
-ARCH=$(uname -m | sed 's|aarch64|arm64|' | sed 's|x86_64|amd64|')
+DISK=test
+PVC=$(
+  cat <<EOF
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: local-pv
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+  - ReadWriteMany
+  hostPath:
+    path: "/mnt/$DISK/pvc"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: local-pvc
+  namespace: kadalu
+spec:
+  storageClassName: manual
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+---
+EOF
+)
 
-function check_test_fail() {
+function _install_cli_pkg() {
+  make cli-build || (echo "CLI Installation failed" && exit 1)
+}
+
+function _setup_k3d() {
+  # NOTE: GH Runner provides a total of 15GB SSD storage
+  mkdir -p /mnt/${DISK}
+
+  # for Replica 1 testing
+  truncate -s 1g /mnt/${DISK}/file1.{1,2,3}
+
+  # for Replica 2 testing
+  # truncate -s 1g /mnt/${DISK}/file2.{1,2}
+
+  # for Replica 3 testing
+  truncate -s 1g /mnt/${DISK}/file3.1
+  mkdir -p /mnt/${DISK}/dir3.2
+  mkdir -p /mnt/${DISK}/dir3.2_modified
+  mkdir -p /mnt/${DISK}/pvc
+
+  # for Disperse testing
+  truncate -s 1g /mnt/${DISK}/file4.{1,2,3}
+
+  # install k3d binary, no-op if same version already exists
+  curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=${K3D_VERSION} bash
+  cfg=$(mktemp)
+
+  # Use local docker as a pull through registry
+  cat <<EOF >"$cfg"
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+registries:
+  create:
+    image: ligfx/k3d-registry-dockerd:v0.4
+    proxy:
+      remoteURL: "*"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+EOF
+
+  mkdir -p /tmp/k3d/kubelet/pods
+  k3d cluster create ${CLUSTER_NAME} --config "$cfg" --image ${KUBE_IMG} \
+    -v /dev:/dev \
+    -v /tmp/k3d/kubelet/pods:/var/lib/kubelet/pods:shared \
+    -v /mnt/${DISK}:/mnt/${DISK}:shared \
+    --k3s-arg "--disable=local-storage@server:*" --verbose || (echo "Failed to create k3d cluster" && exit 1)
+
+  kubectl cluster-info
+}
+
+function _teardown_k3d() {
+  k3d cluster rm $CLUSTER_NAME
+}
+
+function _check_test_fail() {
   if [ $fail -eq 1 ]; then
     echo "Marking the test as 'FAIL'"
     _log_msgs
@@ -33,7 +124,6 @@ function _log_msgs() {
 
 function wait_for_kadalu_pods() {
   # make sure operator, csi and server pods are all in ready state
-
   local k="kubectl -nkadalu "
   local local_timeout=${1:-200}
   local end_time=$(($(date +%s) + $local_timeout))
@@ -72,11 +162,9 @@ function wait_for_kadalu_pods() {
   }
   echo Kadalu Server pods are in Ready state
 
-  check_test_fail
 }
 
 function get_pvc_and_check() {
-
   local yaml_file=$1
   local log_text=$2
   local pool_name=$3
@@ -145,7 +233,8 @@ function get_pvc_and_check() {
     name=$(kubectl get $p -ojsonpath={'.spec.volumeName'})
     # check for presence of PVC as previous PVC deletion shouldn't delete current PVC
     local json_file=$(kubectl exec -i sts/kadalu-csi-provisioner -c kadalu-provisioner -nkadalu -- /usr/bin/find /mnt/$pool_name/info/ -mindepth 4 -maxdepth 4 -name "*$name.json" -printf '.' | wc -c)
-    local pvc_dir=$(kubectl exec -i sts/kadalu-csi-provisioner -c kadalu-provisioner -nkadalu -- /usr/bin/find /mnt/$pool_name/ -mindepth 4 -maxdepth 4 -name "*$name" -not -path "/mnt/$pool_name/.glusterfs/*" -not -path "/mnt/$pool_name/info/*" -printf '.' | wc -c
+    local pvc_dir=$(
+      kubectl exec -i sts/kadalu-csi-provisioner -c kadalu-provisioner -nkadalu -- /usr/bin/find /mnt/$pool_name/ -mindepth 4 -maxdepth 4 -name "*$name" -not -path "/mnt/$pool_name/.glusterfs/*" -not -path "/mnt/$pool_name/info/*" -printf '.' | wc -c
     )
     if [[ $json_file -ne 1 || $pvc_dir -ne 1 ]]; then
       fail=1 && echo Not able to verify existence of PVC $name
@@ -165,74 +254,9 @@ function get_pvc_and_check() {
     kubectl exec -i sts/kadalu-csi-provisioner -c kadalu-provisioner -nkadalu -- /usr/bin/find /mnt/$pool_name/info/ -mindepth 2 -maxdepth 4
     kubectl exec -i sts/kadalu-csi-provisioner -c kadalu-provisioner -nkadalu -- /usr/bin/find /mnt/$pool_name/ -mindepth 2 -maxdepth 4 -not -path "/mnt/$pool_name/.glusterfs/*" -not -path "/mnt/$pool_name/info/*"
   fi
-
-}
-
-function wait_for_ssh() {
-  local tries=100
-  while ((tries > 0)); do
-    if minikube ssh echo connected &>/dev/null; then
-      return 0
-    fi
-    tries=$((tries - 1))
-    sleep 0.1
-  done
-  echo ERROR: ssh did not come up >&2
-  exit 1
-}
-
-function copy_image_to_cluster() {
-  local build_image=$1
-  local final_image=$2
-  if [ -z "$(docker images -q "${build_image}")" ]; then
-    docker pull "${build_image}"
-  fi
-  if [[ "${VM_DRIVER}" == "none" ]]; then
-    docker tag "${build_image}" "${final_image}"
-    return
-  fi
-  docker save "${build_image}" |
-    (eval "$(minikube docker-env --shell bash)" &&
-      docker load && docker tag "${build_image}" "${final_image}")
-}
-
-# install minikube
-function install_minikube() {
-  if type minikube >/dev/null 2>&1; then
-    local version
-    version=$(minikube version)
-    read -ra version <<<"${version}"
-    version=${version[2]}
-    if [[ "${version}" != "${MINIKUBE_VERSION}" ]]; then
-      echo "installed minikube version ${version} is not matching requested version ${MINIKUBE_VERSION}"
-      #exit 1
-    fi
-    echo "minikube already installed with ${version}"
-    return 0
-  fi
-
-  echo "Installing minikube. Version: ${MINIKUBE_VERSION}"
-  curl -Lo minikube https://storage.googleapis.com/minikube/releases/"${MINIKUBE_VERSION}"/minikube-linux-${ARCH} && chmod +x minikube && mv minikube /usr/local/bin/
-}
-
-function install_kubectl() {
-  if type kubectl >/dev/null 2>&1; then
-    local version
-    version=$(kubectl version --client | grep "${KUBE_VERSION}")
-    if [[ "x${version}" != "x" ]]; then
-      echo "kubectl already installed with ${KUBE_VERSION}"
-      return 0
-    fi
-    echo "installed kubectl version ${version} is not matching requested version ${KUBE_VERSION}"
-    # exit 1
-  fi
-  # Download kubectl, which is a requirement for using minikube.
-  echo "Installing kubectl. Version: ${KUBE_VERSION}"
-  curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/"${KUBE_VERSION}"/bin/linux/${ARCH}/kubectl && chmod +x kubectl && mv kubectl /usr/local/bin/
 }
 
 function run_io() {
-
   # Deploy io-app deployment with 2 replicas
   kubectl apply -f tests/test-io/io-app.yaml
 
@@ -261,11 +285,10 @@ function run_io() {
   echo Validate checksum between first and second pod [Empty for checksum match]
   diff <(echo "$first_sum") <(echo "$second_sum") || fail=1
 
-  check_test_fail
+  _check_test_fail
 }
 
 function run_sanity() {
-
   # Deploy and run CSI Sanity tests
   kubectl apply -f tests/test-csi/sanity-app.yaml
   kubectl wait --for=condition=ready pod -l app=sanity-app --timeout=15s || {
@@ -282,7 +305,27 @@ function run_sanity() {
   [ $act_pass -ge $exp_pass ] || fail=1
   echo Sanity [Pass %]: Expected: $exp_pass and Actual: $act_pass
 
-  check_test_fail
+  _check_test_fail
+}
+
+function run_sanity() {
+  # Deploy and run CSI Sanity tests
+  kubectl apply -f tests/test-csi/sanity-app.yaml
+  kubectl wait --for=condition=ready pod -l app=sanity-app --timeout=15s || {
+    echo CSI Sanity app is not ready within 15s && fail=1 && return
+  }
+
+  exp_pass=33
+
+  # Set expand vol size to 10MB
+  kubectl exec sanity-app -i -- sh -c 'csi-sanity -ginkgo.v --csi.endpoint $CSI_ENDPOINT -ginkgo.skip pagination -csi.testvolumesize 10485760 -csi.testvolumeexpandsize 10485760' | tee /tmp/sanity-result.txt
+
+  # Make sure no more failures than above stats
+  act_pass=$(grep -Po '(\d+)(?= Passed)' /tmp/sanity-result.txt 2>/dev/null || echo 0)
+  [ $act_pass -ge $exp_pass ] || fail=1
+  echo Sanity [Pass %]: Expected: $exp_pass and Actual: $act_pass
+
+  _check_test_fail
 }
 
 function verify_storage_options() {
@@ -296,200 +339,123 @@ function verify_storage_options() {
 }
 
 function display_metrics() {
-
   echo "Displaying Kadalu metrics"
   kubectl exec -i -nkadalu deploy/operator -- python -c 'import requests; import json; print(json.dumps(requests.get("http://localhost:8050/metrics.json").json(), indent=2))'
 
   echo "Displaying Kadalu Prometheus metrics"
   kubectl exec -i -nkadalu deploy/operator -- python -c 'import requests; print(requests.get("http://localhost:8050/metrics").text)'
-
 }
 
 function deploy_kadalu_resources() {
-  echo "Deploying kadalu operator and csi driver"
+  echo "Deploying kadalu operator"
 
-  # pick the operator file from repo
-  sed -i -e 's/imagePullPolicy: Always/imagePullPolicy: IfNotPresent/g' manifests/kadalu-operator.yaml
+  # Install operator
+  cli/build/kubectl-kadalu install --local-yaml manifests/kadalu-operator.yaml
 
-  # set verbose field
-  # TODO: Use helm values file
-  sed -i -e 's/"no"/"yes"/g' manifests/kadalu-operator.yaml
+  # Create local PVC
+  echo "$PVC" | kubectl apply -f -
 
-  kubectl apply -f manifests/kadalu-operator.yaml
+  # Replica 3
+  cli/build/kubectl-kadalu storage-add storage-pool-3 --script-mode --type Replica3 \
+    --device ${NODE_NAME}:/mnt/${DISK}/file3.1 --path ${NODE_NAME}:/mnt/${DISK}/dir3.2 --pvc local-pvc
 
-  sleep 1
-  # Start storage
-  output=$(kubectl get nodes -o=name)
-  # output will be in format 'node/hostname'. We need 'hostname'
-  HOSTNAME=$(basename $output)
-  echo "Hostname is ${HOSTNAME}"
-  cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
-  sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
-  sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
+  # Replica 1
+  cli/build/kubectl-kadalu storage-add storage-pool-1 --script-mode --type Replica1 \
+    --device ${NODE_NAME}:/mnt/${DISK}/file1.1 --device ${NODE_NAME}:/mnt/${DISK}/file1.2 --device ${NODE_NAME}:/mnt/${DISK}/file1.3
 
-  # Prepare PVC also as a storage
-  sed -i -e "s/DISK/${DISK}/g" tests/get-minikube-pvc.yaml
-  kubectl apply -f tests/get-minikube-pvc.yaml
-  kubectl apply -f /tmp/kadalu-storage.yaml
+  # Disperse
+  cli/build/kubectl-kadalu storage-add storage-pool-4 --script-mode --type Disperse \
+    --data 2 --redundancy 1 --device ${NODE_NAME}:/mnt/${DISK}/file4.1 --device ${NODE_NAME}:/mnt/${DISK}/file4.2 \
+    --device ${NODE_NAME}:/mnt/${DISK}/file4.3
 
+  # Replica 2 (untested)
+  # cli/build/kubectl-kadalu storage-add storage-pool-2 --script-mode --type Replica2 \
+  # --device ${NODE_NAME}:/mnt/${DISK}/file2.1 --device ${NODE_NAME}:/mnt/${DISK}/file2.2 || return 1
+
+  # External non native (untested)
+  # cli/build/kubectl-kadalu storage-add ext-config --script-mode --external gluster1.kadalu.io:/kadalu --single-pv-per-pool
+
+  # External native (untested)
+  # cli/build/kubectl-kadalu storage-add ext-config --script-mode --external gluster1.kadalu.io:/kadalu
 }
 
 function deploy_app_pods() {
 
   # type: Replica3
   get_pvc_and_check examples/sample-test-app3.yaml "Replica3" "storage-pool-3" 6 180
-  check_test_fail
+  _check_test_fail
 
   # type: Replica1
   get_pvc_and_check examples/sample-test-app1.yaml "Replica1" "storage-pool-1" 4 120
-  check_test_fail
+  _check_test_fail
 
   # type: Disperse
   get_pvc_and_check examples/sample-test-app4.yaml "Disperse" "storage-pool-4" 4 120
-  check_test_fail
+  _check_test_fail
 
   # type: Replica2
   # get_pvc_and_check examples/sample-test-app2.yaml "Replica2" "storage-pool-2" 4 120
+  # _check_test_fail
 
   # type: External-non-native
   # get_pvc_and_check examples/sample-external-storage.yaml "External (PV)" 1 60
+  # _check_test_fail
 
   # type: External-native
   # get_pvc_and_check examples/sample-external-kadalu-storage.yaml "External (Kadalu)" 2 90
+  # _check_test_fail
 }
 
 function modify_pool() {
-  cp tests/storage-add.yaml /tmp/kadalu-storage.yaml
-  sed -i -e "s/DISK/${DISK}/g" /tmp/kadalu-storage.yaml
-  sed -i -e "s/node: minikube/node: ${HOSTNAME}/g" /tmp/kadalu-storage.yaml
-  sed -i -e "s/dir3.2/dir3.2_modified/g" /tmp/kadalu-storage.yaml
-  kubectl apply -f /tmp/kadalu-storage.yaml
+  # changes the path of Replica 3 pool to test self heal
+  cli/build/kubectl-kadalu storage-add storage-pool-3 --script-mode --type Replica3 \
+    --device ${NODE_NAME}:/mnt/${DISK}/file3.1 --path ${NODE_NAME}:/mnt/${DISK}/dir3.2_modified --pvc local-pvc
 }
 
-# configure minikube
-MINIKUBE_VERSION=${MINIKUBE_VERSION:-"v1.15.1"}
-KUBE_VERSION=${KUBE_VERSION:-"v1.20.0"}
-COMMIT_MSG=${COMMIT_MSG:-""}
-MEMORY=${MEMORY:-"3000"}
-VM_DRIVER=${VM_DRIVER:-"none"}
-# configure image repo
-KADALU_IMAGE_REPO=${KADALU_IMAGE_REPO:-"docker.io/kadalu"}
-K8S_IMAGE_REPO=${K8S_IMAGE_REPO:-"quay.io/k8scsi"}
+function main() {
+  # list docker images
+  docker images
 
-# feature-gates for kube
-K8S_FEATURE_GATES=${K8S_FEATURE_GATES:-"BlockVolume=true,CSIBlockVolume=true,VolumeSnapshotDataSource=true,CSIDriverRegistry=true"}
+  # make kubectl_kadalu binary
+  _install_cli_pkg
 
-DISK="sda1"
-if [[ "${VM_DRIVER}" == "kvm2" ]]; then
-  # use vda1 instead of sda1 when running with the libvirt driver
-  DISK="vda1"
-fi
+  # install k3d
+  _setup_k3d
 
-case "${1:-}" in
-  up)
-    echo "here"
-    install_minikube || echo "failure"
-    # if driver  is 'none' install kubectl with KUBE_VERSION
-    if [[ "${VM_DRIVER}" == "none" ]]; then
-      mkdir -p "$HOME"/.kube "$HOME"/.minikube
-      install_kubectl || echo "failure to install kubectl"
-    fi
+  # deploys kadalu operator, storage pools
+  deploy_kadalu_resources
 
-    echo "starting minikube with kubeadm bootstrapper"
-    minikube start --memory="${MEMORY}" -b kubeadm --kubernetes-version="${KUBE_VERSION}" --vm-driver="${VM_DRIVER}" --feature-gates="${K8S_FEATURE_GATES}"
+  # validates all kadalu resource pods are up or not
+  wait_for_kadalu_pods
+  _check_test_fail
 
-    # environment
-    if [[ "${VM_DRIVER}" != "none" ]]; then
-      wait_for_ssh
-      # shellcheck disable=SC2086
-      minikube ssh "sudo mkdir -p /mnt/${DISK};sudo rm -rf /mnt/${DISK}/*; sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9}; sudo mkdir -p /mnt/${DISK}/{dir3.2,dir3.2_modified,pvc}"
-    else
-      sudo mkdir -p /mnt/${DISK}
-      sudo rm -rf /mnt/${DISK}/*
-      sudo truncate -s 4g /mnt/${DISK}/file{1.1,1.2,1.3,2.1,2.2,3.1,4.1,4.2,4.3,5.1,5.2,5.3,5.4,5.5,5.6,5.7,5.8,5.9}
-      sudo mkdir -p /mnt/${DISK}/dir3.2
-      sudo mkdir -p /mnt/${DISK}/dir3.2_modified
-      sudo mkdir -p /mnt/${DISK}/pvc
-    fi
+  # deploy and validate app pods on storage pools and expand PVCs created as part of 'kadalu_operator' case
+  deploy_app_pods
 
-    # Dump Cluster Info
-    kubectl cluster-info
-    ;;
-  down)
-    minikube stop
-    ;;
-  copy-image)
-    echo "copying the kadalu-operator image"
-    copy_image_to_cluster kadalu/kadalu-operator:${KADALU_VERSION} "${KADALU_IMAGE_REPO}"/kadalu-operator:${KADALU_VERSION}
-    ;;
-  ssh)
-    echo "connecting to minikube"
-    minikube ssh
-    ;;
+  # modifies existing storage pool to check for changes in kadalu resources
+  modify_pool
 
-  kadalu_operator)
+  # validates all kadalu resource pods are up or not after modifying pools
+  wait_for_kadalu_pods 400
+  _check_test_fail
 
-    # list docker images
-    docker images
+  # Run minimal IO test
+  run_io
 
-    # deploys kadalu operator, csi driver and storage pools
-    deploy_kadalu_resources
+  # Run CSI Sanity tests
+  run_sanity
 
-    # validates all kadalu resource pods are up or not
-    wait_for_kadalu_pods
+  # Test Storage-Options
+  # verify_storage_options
 
-    ;;
+  # check for test failure
+  _check_test_fail
 
-  test_kadalu)
+  # log required containers logs to stdout
+  _log_msgs
 
-    # deploy and validate app pods on storage pools and expand PVCs created as part of 'kadalu_operator' case
-    deploy_app_pods
+  # delete k3d cluster
+  _teardown_k3d
+}
 
-    # modifies existing storage pool to check for changes in kadalu resources
-    modify_pool
-
-    # validates all kadalu resource pods are up or not after modifying pools
-    wait_for_kadalu_pods 400
-
-    # Run minimal IO test
-    run_io
-
-    # Run CSI Sanity tests
-    run_sanity
-
-    # Test Storage-Options
-    # verify_storage_options
-
-    # check for test failure
-    check_test_fail
-
-    # log required containers logs to stdout
-    _log_msgs
-
-    ;;
-
-  cli_tests)
-    output=$(kubectl get nodes -o=name)
-    # output will be in format 'node/hostname'. We need 'hostname'
-    HOSTNAME=$(basename $output)
-    echo "Hostname is ${HOSTNAME}"
-    bash tests/kubectl_kadalu_tests.sh "$DISK" "${HOSTNAME}"
-    wait_for_kadalu_pods
-    ;;
-
-  clean)
-    minikube delete
-    ;;
-  *)
-    echo " $0 [command]
-Available Commands:
-  up               Starts a local kubernetes cluster and prepare disks for gluster
-  down             Stops a running local kubernetes cluster
-  clean            Deletes a local kubernetes cluster
-  ssh              Log into or run a command on a minikube machine with SSH
-  copy-image       copy kadalu-operator docker image
-  kadalu_operator  start kadalu operator
-  test_kadalu      test kadalu storage
-" >&2
-    ;;
-esac
+main
