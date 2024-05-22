@@ -76,7 +76,7 @@ spec:
                     mount | grep glusterfs | awk '{print $1 " " $3}' | sed 's/:/
                     /' | awk '{print "umount " $3 ";glusterfs --process-name
                     fuse --volfile-id " $2 " --volfile-server " $1 "
-                    --log-level=DEBUG " $3}' > /tmp/remount.sh ; chmod +x
+                    --log-level=WARNING " $3}' > /tmp/remount.sh ; chmod +x
                     /tmp/remount.sh ; /tmp/remount.sh
           env:
             - name: NODE_ID
