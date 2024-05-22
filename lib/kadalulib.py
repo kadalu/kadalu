@@ -91,8 +91,8 @@ def is_server_pod_reachable(hosts, port=24007, timeout=20):
         retry_count = 0
         while retry_count < 4:
             try:
-                sock = socket.create_connection((host, int(port)), timeout=timeout)
-                sock.shutdown(socket.SHUT_RDWR)
+                with socket.create_connection((host, int(port)), timeout=timeout) as sock:
+                    sock.shutdown(socket.SHUT_RDWR)
                 return True
             except socket.error:
                 logging.info(logf(
@@ -102,8 +102,6 @@ def is_server_pod_reachable(hosts, port=24007, timeout=20):
                 ))
                 time.sleep(30)
                 retry_count += 1
-            finally:
-                sock.close()
     return False
 
 
