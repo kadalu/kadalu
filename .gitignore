@@ -12,3 +12,4 @@ server/LICENSE
 server/kadalu_quotad/kadalulib.py*
 server/kadalu_quotad.egg-info
 *egg-info*
+cli/build/kubectl-kadalu
