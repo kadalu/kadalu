@@ -12,7 +12,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 200Mi
+      storage: 100Mi
 # -*- mode: yaml -*-
 ---
 kind: PersistentVolumeClaim
@@ -27,7 +27,7 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 200Mi
+      storage: 100Mi
 # -*- mode: yaml -*-
 ---
 apiVersion: v1
@@ -94,7 +94,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 200Mi
+      storage: 100Mi
 ---
 apiVersion: v1
 kind: Pod
@@ -130,7 +130,7 @@ spec:
   storageClassName: kadalu.storage-pool-1
   resources:
     requests:
-      storage: 200Mi
+      storage: 100Mi
 ---
 apiVersion: v1
 kind: Pod

@@ -161,7 +161,6 @@ function wait_for_kadalu_pods() {
     echo Kadalu Server pods are not up within ${local_timeout}s && fail=1 && return
   }
   echo Kadalu Server pods are in Ready state
-
 }
 
 function get_pvc_and_check() {
@@ -190,7 +189,7 @@ function get_pvc_and_check() {
   # for kubectl >= v1.23 -> k wait --for=jsonpath='{.status.phase}'=Succeeded pod -l type=${label}
   # status should be Succeeded for all app pods
   end_time=$(($(date +%s) + $time_limit))
-  while [[ $($k get pod -l type=${label} -ojsonpath={'.items[].status.phase'} | grep -cv Succeeded) -ne 0 ]]; do
+  while [[ $($k get pod -l type=${label} -ojsonpath={'.items[*].status.phase'} | grep -cv Succeeded) -ne 0 ]]; do
     [[ $end_time -lt $(date +%s) ]] && echo Sample pods for pool type "${log_text}" are not in complete state within ${time_limit}s && fail=1 && return
     sleep 2
   done
@@ -198,22 +197,14 @@ function get_pvc_and_check() {
   echo Sample pods of type $log_text are in Complete state
 
   # expand PVCs
-  local original='200Mi'
-  local final='300Mi'
+  local original='100Mi'
+  local final='200Mi'
 
   echo Expanding PVCs from $log_text pool type
   sed "s/$original/$final/g" ${yaml_file} | kubectl apply -f -
 
-  # wait for pods to restart
-  sleep 60
   end_time=$(($(date +%s) + $time_limit))
-  while [[ $($k get pod -l type=${label} -ojsonpath={'.items[].status.phase'} | grep -cv Succeeded) -ne 0 ]]; do
-    [[ $end_time -lt $(date +%s) ]] && echo Sample pods for pool type "${log_text}" are not in complete state within ${time_limit}s after PVC expand && fail=1 && return
-    sleep 2
-  done
-
-  end_time=$(($(date +%s) + $time_limit))
-  while [[ $(kubectl get pvc -ojsonpath={'.items[].status.capacity.storage'} | grep -c $original) -ne 0 ]]; do
+  while [[ $(kubectl get pvc -ojsonpath={'.items[*].status.capacity.storage'} | grep -c $original) -ne 0 ]]; do
     [[ $end_time -lt $(date +%s) ]] && echo Not all PVCs are expanded from $original to $final && fail=1 && return
     sleep 2
   done

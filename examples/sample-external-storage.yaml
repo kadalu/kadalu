@@ -23,7 +23,7 @@ spec:
     - ReadWriteMany
   resources:
     requests:
-      storage: 200Mi # This gets ignored in this case.
+      storage: 100Mi # This gets ignored in this case.
 
 ---
 apiVersion: v1

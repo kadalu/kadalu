@@ -519,7 +519,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
         except StopIteration as errmsg:
             # Handle no PVC created from a storage volume yet
             logging.error(errmsg)
-            context.set_details(errmsg)
+            context.set_details(errmsg.value)
             context.set_code(grpc.StatusCode.ABORTED)
             return csi_pb2.ListVolumesResponse()
 
@@ -528,7 +528,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
             pvcs, next_token = GEN.send(starting_token)
         except StopIteration as errmsg:
             logging.error(errmsg)
-            context.set_details(errmsg)
+            context.set_details(errmsg.value)
             context.set_code(grpc.StatusCode.ABORTED)
             return csi_pb2.ListVolumesResponse()
 
