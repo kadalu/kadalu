@@ -31,7 +31,7 @@ spec:
       - name: io-pod
         image: docker.io/kadalu/test-io:devel
         imagePullPolicy: IfNotPresent
-        command: ['sh', '-c', 'echo "Ready!" && while true; do sleep 10; done;']
+        command: ['sh', '-c', 'echo "Ready!" && tail -f /dev/null']
         volumeMounts:
         - mountPath: '/mnt/alpha'
           name: csivol

@@ -265,6 +265,17 @@ function run_io() {
   kubectl exec -i ${pods[0]} -- sh -c 'cd /mnt/alpha; mkdir -p io-1; for j in create rename chmod chown chgrp symlink hardlink truncate setxattr create; \
   do crefi --multi -n 5 -b 5 -d 5 --max=10K --min=500 --random -t text -T=3 --fop=$j io-1/ 2>/dev/null; done'
 
+  # changes the path of Replica 3 pool to test self heal
+  cli/build/kubectl-kadalu storage-add storage-pool-3 --script-mode --type Replica3 \
+    --device ${NODE_NAME}:/mnt/${DISK}/file3.1 --path ${NODE_NAME}:/mnt/${DISK}/dir3.2_modified --pvc local-pvc
+
+  local end_time=$(($(date +%s) + 60))
+  echo Waiting for server to have modified pool mounted
+  while [[ ! $(kubectl -nkadalu get pod server-storage-pool-3-1-0 -ojsonpath='{.spec.volumes[?(@.name=="glusterfsd-mountdir")].hostPath.path}') =~ "dir3.2_modified" ]]; do
+    [[ $end_time -lt $(date +%s) ]] && echo Server is not updated with modified pool && fail=1 && return
+    sleep 2
+  done
+
   echo Run IO from second pod [~30s]
   kubectl exec -i ${pods[1]} -- sh -c 'cd /mnt/alpha; mkdir -p io-2; for j in create rename chmod chown chgrp symlink hardlink truncate setxattr create; \
   do crefi --multi -n 5 -b 5 -d 5 --max=10K --min=500 --random -t text -T=3 --fop=$j io-2/ 2>/dev/null; done'
@@ -397,10 +408,12 @@ function deploy_app_pods() {
   # _check_test_fail
 }
 
-function modify_pool() {
-  # changes the path of Replica 3 pool to test self heal
-  cli/build/kubectl-kadalu storage-add storage-pool-3 --script-mode --type Replica3 \
-    --device ${NODE_NAME}:/mnt/${DISK}/file3.1 --path ${NODE_NAME}:/mnt/${DISK}/dir3.2_modified --pvc local-pvc
+function remove_non_replica3() {
+  # Replica 1
+  cli/build/kubectl-kadalu storage-remove storage-pool-1 --script-mode
+
+  # Disperse
+  cli/build/kubectl-kadalu storage-remove storage-pool-4 --script-mode
 }
 
 function main() {
@@ -423,12 +436,8 @@ function main() {
   # deploy and validate app pods on storage pools and expand PVCs created as part of 'kadalu_operator' case
   deploy_app_pods
 
-  # modifies existing storage pool to check for changes in kadalu resources
-  modify_pool
-
-  # validates all kadalu resource pods are up or not after modifying pools
-  wait_for_kadalu_pods 400
-  _check_test_fail
+  # remove pools except replica3
+  remove_non_replica3
 
   # Run minimal IO test
   run_io
