@@ -8,6 +8,8 @@ import sqlite3
 import subprocess
 import sys
 import time
+import select
+import errno
 
 import xxhash
 
@@ -87,23 +89,64 @@ def is_server_pod_reachable(hosts, port=24007, timeout=20):
     Returns False server pods are not reachable even after the timeout.
     """
 
-    for host in hosts:
-        retry_count = 0
-        while retry_count < 4:
-            try:
-                with socket.create_connection((host, int(port)), timeout=timeout) as sock:
-                    sock.shutdown(socket.SHUT_RDWR)
-                return True
-            except socket.error:
-                logging.info(logf(
-                    "Waiting for the server pod to come up...",
-                    server_pod=host,
-                    retry_count=retry_count+1
-                ))
-                time.sleep(30)
-                retry_count += 1
-    return False
+    connected = False
+    retry_count = 0
 
+    while retry_count < 4:
+        sockets = []
+
+        for host in hosts:
+            connect_started = False
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+                sock.setblocking(False)
+                sock.connect((host, int(port)))
+
+                connect_started = True
+
+            except socket.error as e:
+                if e.errno == errno.EINPROGRESS:
+                    connect_started = True
+                else:
+                    logging.info(logf(
+                        "Error encountered for server pod...",
+                        error=e,
+                        server_pod=host,
+                        retry_count=retry_count+1
+                    ))
+
+            if connect_started:
+                sockets.append(sock)
+
+        # Only care about output sockets (not input or exception)
+        readable, writable, exceptional = select.select([], sockets, [], timeout)
+
+        if not (readable or writable or exceptional):
+            logging.info(logf(
+                    "Failed to connect to any server pod..."
+                ))
+
+        for sock in writable:
+            logging.info(logf(
+                    "Connected to server pod...",
+                    server_pod=sock.getpeername()[0]
+                ))
+            connected = True
+
+        for sock in sockets:
+            try:
+                sock.shutdown(socket.SHUT_RDWR)
+            except socket.error:
+                pass
+
+        if connected:
+            return True
+
+        time.sleep(30)
+        retry_count += 1
+
+    return False
 
 def is_host_reachable(hosts, port):
     """Check if glusterd is reachable in the given node"""
