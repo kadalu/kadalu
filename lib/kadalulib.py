@@ -120,9 +120,9 @@ def is_server_pod_reachable(hosts, port=24007, timeout=20):
                 sockets.append(sock)
 
         # Only care about output sockets (not input or exception)
-        readable, writable, exceptional = select.select([], sockets, [], timeout)
+        _, writable, _ = select.select([], sockets, [], timeout)
 
-        if not (readable or writable or exceptional):
+        if not writable:
             logging.info(logf(
                     "Failed to connect to any server pod..."
                 ))
