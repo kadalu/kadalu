@@ -105,13 +105,13 @@ def is_server_pod_reachable(hosts, port=24007, timeout=20):
 
                 connect_started = True
 
-            except socket.error as e:
-                if e.errno == errno.EINPROGRESS:
+            except socket.error as msg:
+                if msg.errno == errno.EINPROGRESS:
                     connect_started = True
                 else:
                     logging.info(logf(
                         "Error encountered for server pod...",
-                        error=e,
+                        error=msg,
                         server_pod=host,
                         retry_count=retry_count+1
                     ))
