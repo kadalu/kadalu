@@ -67,7 +67,7 @@ def is_gluster_mount_proc_running(volname, mountpoint):
     cmd = (
         r'ps ax | grep -w "/opt/sbin/glusterfs" '
         r'| grep -w "\-\-volfile\-id %s " '
-        r'| grep -w -q "%s "' % (volname, mountpoint)
+        r'| grep -G -q "%s$"' % (volname, mountpoint)
     )
 
     with subprocess.Popen(cmd,
