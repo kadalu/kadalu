@@ -222,7 +222,7 @@ class ControllerServer(csi_pb2_grpc.ControllerServicer):
                     # considered as to map 1 PV to 1 Gluster volume
 
                     # No need to keep the mount on controller
-                    unmount_glusterfs(mntdir)
+                    unmount_glusterfs(mntdir,ext_volume['g_volname'])
 
                     logging.info(logf(
                         "Volume (External) created",

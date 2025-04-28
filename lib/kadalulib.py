@@ -132,6 +132,57 @@ def reachable_host(hosts):
             return host
     return None
 
+def get_gvolname_from_volumeid(volumeid):
+    """Returns the gluster volumename for a PVC volume ID"""
+    cmd = (
+        r'grep %s /proc/mounts '
+        r'| head -n 1 '
+        r'| cut -f 1 -d " " '
+        r'| cut -f 2 -d ":"' % (volumeid)
+    )
+
+    with subprocess.Popen(cmd,
+                          shell=True,
+                          stderr=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          universal_newlines=True) as proc:
+        out, err = proc.communicate()
+
+        return out.strip()
+
+def get_mntdir_from_gvolname(gvolname):
+    """Returns the mount directory for gluster volume name
+    Expectation is only one mount exists for the gluster volume"""
+    cmd = (
+        r'grep %s /proc/mounts '
+        r'| cut -f 2 -d " "' % (gvolname)
+    )
+
+    with subprocess.Popen(cmd,
+                          shell=True,
+                          stderr=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          universal_newlines=True) as proc:
+        out, err = proc.communicate()
+
+        return out.strip()
+
+def get_mounts_per_gvolname(gvolname):
+    """Returns how often a gluster volume is mounted"""
+    cmd = (
+        r'grep "fuse.glusterfs" /proc/mounts '
+        r'| grep ":%s " '
+        r'| wc -l' % (gvolname)
+    )
+
+    with subprocess.Popen(cmd,
+                          shell=True,
+                          stderr=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          universal_newlines=True) as proc:
+        out, err = proc.communicate()
+
+        return int(out)
 
 def makedirs(dirpath):
     """exist_ok=True parameter will raise exception even if directory
