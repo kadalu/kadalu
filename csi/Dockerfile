@@ -14,7 +14,7 @@ RUN python3 -m pip install $(grep -vE '^(grpcio|\s*#)' /tmp/csi-requirements.txt
 FROM python:3.10-slim-bullseye as prod
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -yq && \
-    apt-get install -y --no-install-recommends sqlite3 psmisc logrotate xfsprogs attr libtirpc3 bash inotify-tools ssh liburcu6 libgoogle-perftools4 && \
+    apt-get install -y --no-install-recommends sqlite3 psmisc logrotate xfsprogs attr libtirpc3 bash inotify-tools ssh liburcu6 libgoogle-perftools4 tini && \
     apt-get -y clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -69,7 +69,8 @@ LABEL vcs-url="https://github.com/kadalu/kadalu"
 LABEL vendor="kadalu"
 LABEL version="${version}"
 
-ENTRYPOINT ["python3", "/kadalu/start.py"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["python3", "/kadalu/start.py"]
 
 # Debugging, Comment the above line and
 # uncomment below line

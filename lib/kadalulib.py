@@ -167,7 +167,7 @@ def get_volume_path(voltype, volhash, volname):
     )
 
 
-def execute(*cmd):
+def execute(*cmd,shell=False):
     """
     Execute command. Returns output and error.
     Raises CommandException on error
@@ -175,6 +175,7 @@ def execute(*cmd):
     with subprocess.Popen(cmd,
                           stderr=subprocess.PIPE,
                           stdout=subprocess.PIPE,
+                          shell=shell,
                           cwd=None,
                           universal_newlines=True) as proc:
         out, err = proc.communicate()

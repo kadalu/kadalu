@@ -8,8 +8,8 @@ import time
 import csi_pb2
 import csi_pb2_grpc
 import grpc
-from kadalulib import logf
-from volumeutils import mount_glusterfs, mount_volume, unmount_volume
+from kadalulib import logf, execute
+from volumeutils import mount_glusterfs, unmount_glusterfs, mount_volume, unmount_volume
 
 HOSTVOL_MOUNTDIR = "/mnt"
 GLUSTERFS_CMD = "/opt/sbin/glusterfs"
@@ -140,9 +140,47 @@ class NodeServer(csi_pb2_grpc.NodeServicer):
 
         logging.debug(logf(
             "Received the unmount request",
-            volume=request.volume_id,
+            request=request,
         ))
+
+        # Get the gluster volumename for a PVC volume ID
+        cmd = (
+            r'grep %s /proc/mounts '
+            r'| head -n 1 '
+            r'| cut -f 1 -d " " '
+            r'| cut -f 2 -d ":"' % (request.volume_id)
+        )
+
+        gvolname, _, _ = execute(cmd,shell=True)
+
+        logging.debug(logf(
+            "Got gluster volume name %s" % gvolname
+        ))
+
         unmount_volume(request.target_path)
+
+        # Count remaining mounts
+        cmd = (
+            r'grep "fuse.glusterfs" /proc/mounts '
+            r'| grep ":%s " '
+            r'| wc -l' % (gvolname)
+        )
+
+        count, _, _ = execute(cmd,shell=True)
+
+        # If only PV mount is left, unmount this too
+        if int(count) == 1:
+            cmd = (
+                r'grep %s /proc/mounts '
+                r'| cut -f 2 -d " "' % (gvolname)
+            )
+
+            mntdir, _, _ = execute(cmd,shell=True)
+            logging.debug(logf(
+                "Only one mount left, going to unmount %s" % mntdir
+            ))
+
+            unmount_glusterfs(mntdir,gvolname)
 
         return csi_pb2.NodeUnpublishVolumeResponse()
 

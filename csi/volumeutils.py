@@ -775,6 +775,8 @@ def search_volume(volname):
 
     host_volumes = get_pv_hosting_volumes({})
     for volume in host_volumes:
+        if volname != volume['name']:
+            continue
         hvol = volume['name']
         mntdir = os.path.join(HOSTVOL_MOUNTDIR, hvol)
         mount_glusterfs(volume, mntdir)
@@ -888,10 +890,13 @@ def mount_volume(pvpath, mountpoint, pvtype, fstype=None):
     return True
 
 
-def unmount_glusterfs(mountpoint):
+def unmount_glusterfs(mountpoint,volname):
     """Unmount GlusterFS mount"""
-    volname = os.path.basename(mountpoint)
     if is_gluster_mount_proc_running(volname, mountpoint):
+        logging.debug(
+            logf("Executing unmount",
+                 volname=volname,
+                 mountpoint=mountpoint))
         execute(UNMOUNT_CMD, "-l", mountpoint)
 
 
