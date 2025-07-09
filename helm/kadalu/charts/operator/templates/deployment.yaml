@@ -24,7 +24,11 @@ spec:
         - name: kadalu-operator
           securityContext:
             capabilities: {}
-            privileged: true
+            runAsUser: 1000
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            privileged: false
           image: {{ include "common.images.image" . }}/kadalu-operator:{{ include "common.version" . }}
           imagePullPolicy: {{ .Values.global.image.pullPolicy }}
           env:
