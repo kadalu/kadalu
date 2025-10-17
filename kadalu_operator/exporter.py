@@ -252,19 +252,11 @@ def set_provisioner_data(response, metrics, pod_name, pod_details):
     # provisioner, rest will remain with default values.
     storage_data_from_csi = response.json()["storages"]
 
-    for index, storage in enumerate(metrics.storages):
-        try:
-            if storage["name"] == storage_data_from_csi[index]["name"]:
-                storage.update(storage_data_from_csi[index])
+    storage_map = {s["name"]: s for s in storage_data_from_csi}
 
-        except IndexError:
-            # skip comparing rest of storages in metrics[default],
-            # since storage_data_from_csi has reached its end,
-            # and it contains no more data from healthy storage-pools
-            logging.debug(logf(
-                "Reached end of list of storages from csi. Skip comparing the rest."
-            ))
-            break
+    for storage in metrics.storages:
+        if storage["name"] in storage_map:
+            storage.update(storage_map[storage["name"]])
 
     metrics.provisioner.update({"pod_name": pod_name})
     metrics.provisioner.update(response.json()["pod"])
