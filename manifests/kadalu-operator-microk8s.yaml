@@ -424,7 +424,11 @@ spec:
         - name: kadalu-operator
           securityContext:
             capabilities: {}
-            privileged: true
+            runAsUser: 1000
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            privileged: false
           image: docker.io/kadalu/kadalu-operator:devel
           imagePullPolicy: IfNotPresent
           env:
