@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Operator, Server, CLI: Add feature of Storage Pool Options
 - Fix NodeUnpublishVolume RPC idempotency
 - Lib: Add INET6 to include IPV6 address family.
+- cli: Add argument for namespace to support installation in other namespaces
 
 ## [0.9.0] - 2022-11-21
 

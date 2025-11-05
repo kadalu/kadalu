@@ -169,7 +169,7 @@ def fetch_status(storages, args):
                  "avg(size), max(size) from pv_stats")
 
         cmd = utils.kubectl_cmd(args) + [
-            "exec", "-it", "-nkadalu",
+            "exec", "-it", f"-n{args.namespace}",
             "kadalu-csi-provisioner-0",
             "-c", "kadalu-provisioner",
             "--", "sqlite3",
@@ -205,7 +205,8 @@ def fetch_status(storages, args):
 
 def run(args):
     """Shows List of Storages"""
-    cmd = utils.kubectl_cmd(args) + ["get", "configmap", "kadalu-info", "-nkadalu", "-ojson"]
+    cmd = utils.kubectl_cmd(args) + [
+        "get", "configmap", "kadalu-info", f"-n{args.namespace}", "-ojson"]
 
     try:
         resp = utils.execute(cmd)

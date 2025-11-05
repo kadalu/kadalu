@@ -28,25 +28,30 @@ SUPPORTED_ARGS = [
 def get_args():
     """Argument Parser"""
     parser = ArgumentParser()
+
+    parser.add_argument("-n", "--namespace", metavar="NAMESPACE", default="kadalu",
+        help="Namespace for Kadalu installation (default: kadalu)")
+
     subparsers = parser.add_subparsers(dest="mode")
     version_set_args("version", subparsers)
     for arg in SUPPORTED_ARGS:
         mod = __import__(arg.replace("-", "_"))
         mod.set_args(arg, subparsers)
 
+    args = parser.parse_args()
+
     # If no argument is provided display help text and exit
-    if len(sys.argv) == 1:
+    if args.mode is None:
         parser.print_help(sys.stderr)
         sys.exit(1)
 
-    return parser.parse_args()
+    return args
 
-
-def get_all_kadalu_pods():
+def get_all_kadalu_pods(args):
     """ List of all pods in kadalu namespace """
 
     try:
-        cmd = ["kubectl", "get", "pods", "-nkadalu", "-oname"]
+        cmd = ["kubectl", "get", "pods", f"-n{args.namespace}", "-oname"]
         resp = utils.execute(cmd)
         # Remove empty lines(pod-names) from command response
         pods = resp.stdout.split()
@@ -56,12 +61,12 @@ def get_all_kadalu_pods():
         return None
 
 
-def get_kadalu_version_in_pod(pod):
+def get_kadalu_version_in_pod(pod, args):
     """ Get kadalu version from pods inside kadalu-namespace by exec """
 
     try:
 
-        cmd = ["kubectl", "exec", "-nkadalu", pod, "--", "bash",
+        cmd = ["kubectl", "exec", f"-n{args.namespace}", pod, "--", "bash",
                 "-c", "echo $KADALU_VERSION"]
 
         if "nodeplugin" in pod or "provisioner" in pod:
@@ -81,14 +86,14 @@ def get_kadalu_version_in_pod(pod):
         return None
 
 
-def show_version():
+def show_version(args):
     """Show version information"""
     print("kubectl-kadalu plugin: %s" % VERSION)
-    pods = get_all_kadalu_pods()
+    pods = get_all_kadalu_pods(args)
     if pods:
         print("kadalu pod(s) versions")
         for pod in pods:
-            version = get_kadalu_version_in_pod(pod)
+            version = get_kadalu_version_in_pod(pod, args)
             print("%s: %s" %(pod, version))
 
 
@@ -102,7 +107,7 @@ def main():
     try:
         args = get_args()
         if args.mode == "version":
-            show_version()
+            show_version(args)
             sys.exit(0)
         try:
             mod = __import__(args.mode.replace("-", "_"))

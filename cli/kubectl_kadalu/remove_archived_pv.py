@@ -43,7 +43,7 @@ def get_configmap_data(args):
     """
 
     cmd = utils.kubectl_cmd(args) + [
-        "get", "configmap", "kadalu-info", "-nkadalu", "-ojson"
+        "get", "configmap", "kadalu-info", f"-n{args.namespace}", "-ojson"
     ]
 
     try:
@@ -71,7 +71,9 @@ def request_pv_delete(args):
     """ Send PVC delete request to CSI"""
 
     cmd = utils.kubectl_cmd(args) + [
-         "exec", "-it", "kadalu-csi-provisioner-0", "-c", "kadalu-provisioner", "-nkadalu",
+         "exec", "-it", "kadalu-csi-provisioner-0", 
+         "-c", "kadalu-provisioner", 
+         f"-n{args.namespace}",
          "--", "bash",
          "-c", "cd /kadalu; python3 remove_archived_pv.py %s" %(args.name)
     ]

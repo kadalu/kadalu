@@ -43,7 +43,7 @@ def run(args):
 
     # Check if kadalu operator is present already.
     try:
-        cmd = utils.kubectl_cmd(args) + ["get", "deployments", "-nkadalu", "-ojson"]
+        cmd = utils.kubectl_cmd(args) + ["get", "deployments", f"-n{args.namespace}", "-ojson"]
         resp = utils.execute(cmd)
         data = json.loads(resp.stdout)
         items = data["items"]

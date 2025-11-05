@@ -65,6 +65,8 @@ Where `K8S_DIST` can be one of below values:
 
 If `--set-string` isn't supplied `kubernetes` will be used as default.
 
+It is possible to install Kadalu in a namespace other than `kadalu`. The CLI supports custom namespaces using `kadalu kubecetl -n $NAMESPACE`.
+
 NOTE: We are still evolving with Helm chart based development, and happy to get contributions on the same.
 
 ## Platform supports

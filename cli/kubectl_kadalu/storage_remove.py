@@ -56,7 +56,8 @@ def get_configmap_data(args):
     Get storage info data from kadalu configmap
     """
 
-    cmd = utils.kubectl_cmd(args) + ["get", "configmap", "kadalu-info", "-nkadalu", "-ojson"]
+    cmd = utils.kubectl_cmd(args) + [
+        "get", "configmap", "kadalu-info", f"-n{args.namespace}", "-ojson"]
 
     try:
         resp = utils.execute(cmd)
