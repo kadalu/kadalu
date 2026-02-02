@@ -73,7 +73,7 @@ zope-interface==6.0
     # via datetime
 
 # The following packages are considered to be unsafe in a requirements file:
-pip==23.2.1
+pip==26.0
     # via Kadalu (setup.py)
 setuptools==68.0.0
     # via
